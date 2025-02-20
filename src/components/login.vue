@@ -75,6 +75,13 @@
         rules: {
           username: [{ required: true, message: "Please enter your username", trigger: "blur" }],
           password: [{ required: true, message: "Please enter your password", trigger: "blur" }],
+          email: [{ required: true, message: 'Please enter your email', trigger: 'blur' },
+            {
+              pattern: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
+              message: 'Please fill a valid email address',
+              trigger: ['blur', 'change']
+            }
+          ]
         },
       };
     },
