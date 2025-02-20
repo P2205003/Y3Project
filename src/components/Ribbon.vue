@@ -31,18 +31,20 @@ export default {
 
 <style scoped>
 .ribbon {
-  background-color: #f1f1f1;
+  background-color: #93a74b;
   padding: 10px;
   display: flex;
   justify-content: center;
 }
 .ribbon button {
   margin: 0 10px;
-  padding: 10px;
-  background-color: #007bff;
+  padding: 5px;
+  background-color: transparent;
   border: none;
-  color: white;
+  color: #ffffff;
   cursor: pointer;
   border-radius: 4px;
+  font-size: large;
+  font-weight: 700;
 }
 </style>

@@ -5,7 +5,10 @@ import Page2 from '../views/Page2.vue';
 import ShoppingCart from '../components/ShoppingCart.vue';
 import SearchPage from '../components/SearchPage.vue';
 import ProductPage from '../components/ProductPage.vue';
-import AddItem from '@/components/AddItem.vue';
+import AddItem from '../components/AddItem.vue';
+import Login from '../components/login.vue';
+import Register from '../components/Register.vue';
+
 
 const routes = [
   {
@@ -43,7 +46,18 @@ const routes = [
         component: AddItem
       }
     ]
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
   }
+
 ];
 
 const router = createRouter({
