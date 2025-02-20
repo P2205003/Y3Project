@@ -41,14 +41,20 @@
       },
       async checkLoginStatus() {
         try {
-          const response = await fetch('/api/users/check-login');
-          if (response.ok) {
-            const data = await response.json();
-            this.appContext.isLoggedIn = true; // Update context directly
-            this.appContext.user = data.user;
+          const response = await fetch('/api/users/check-login', {
+            credentials: 'include' // Required for cookies
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+
           }
+          const data = await response.json();
+          this.appContext.isLoggedIn = data.isLoggedIn;
+          this.appContext.user = data.user || null;
         } catch (error) {
           console.error('Session check failed:', error);
+          this.appContext.isLoggedIn = false;
+          this.appContext.user = null;
         }
       }
     },
