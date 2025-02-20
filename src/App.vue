@@ -118,6 +118,6 @@ import Ribbon from './components/Ribbon.vue';
       border-radius: 4px;
   }
   .context {
-      padding: 20px;
+      padding: 0px;
   }
 </style>

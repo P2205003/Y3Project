@@ -1,21 +1,26 @@
 <template>
   <div class="top">
     <router-link to="/">
-      <img src="./icon_result.ico" alt="Website Icon">
+      <img src="./icon_result.ico" alt="Website Icon" />
     </router-link>
     <div class="search-bar">
-      <input type="text" placeholder="Search...">
+      <input type="text" placeholder="Search..." />
       <button @click="search">Search</button>
     </div>
     <div class="buttons">
-      <button>Login</button>
+      <router-link to="/login">
+        <button>Login</button>
+      </router-link>
+      <router-link to="/register">
+        <button>Register</button>
+      </router-link>
       <router-link to="/shopping-cart">
         <button>Shopping Cart</button>
       </router-link>
     </div>
   </div>
 </template>
-  
+
 <script>
 export default {
   name: 'TopBar',
@@ -31,13 +36,13 @@ export default {
   }
 };
 </script>
-  
+
 <style scoped>
 .top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #333;
+  background-color: #000000;
   color: white;
   padding: 10px 20px;
 }
@@ -48,11 +53,13 @@ export default {
   display: flex;
   align-items: center;
 }
-.search-bar input[type="text"] {
-  width: 200px;
+.search-bar input[type='text'] {
+  width: 400px;
   padding: 8px;
   border: none;
   border-radius: 4px;
+
+  ;
 }
 .search-bar button {
   padding: 8px 12px;
@@ -76,4 +83,3 @@ export default {
   border-radius: 4px;
 }
 </style>
-  
