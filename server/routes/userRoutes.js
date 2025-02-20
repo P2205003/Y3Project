@@ -44,30 +44,47 @@ router.post('/register', async (req, res) => {
 // --- Login Route ---
 router.post('/login', async (req, res) => {
   try {
-    // 1. Get Username and Password
-    const { username, password } = req.body;
+    // Check if the user is ALREADY logged in
+    if (req.session && req.session.userId) {
+      // User is already logged in.  Return user info.
+      const user = await User.findById(req.session.userId);
+      if (user) {
+        return res.status(200).json({
+          message: 'Already logged in',
+          user: { username: user.username, fullName: user.fullName },
+        });
+      } else {
+        // This shouldn't happen, but handle it gracefully
+        return res.status(401).json({ message: 'Invalid session' });
+      }
+    }
 
-    // 2. Find User by Username
+    // If not already logged in, proceed with normal login
+    const { username, password } = req.body;
     const user = await User.findOne({ username });
 
-    // 3. User Not Found
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // 4. Compare Passwords
     const isMatch = await user.comparePassword(password);
 
-    // 5. Incorrect Password
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // 6. Create Session (Store User ID)
     req.session.userId = user._id;
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
 
-    // 7. Respond with Success
-    res.status(200).json({ message: 'Login successful', user: { username: user.username, fullName: user.fullName } }); // Send limited user data
+    res.status(200).json({ message: 'Login successful', user: { username: user.username, fullName: user.fullName } });
 
   } catch (error) {
     console.error("Login error:", error);

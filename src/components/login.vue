@@ -76,11 +76,11 @@
           username: [{ required: true, message: "Please enter your username", trigger: "blur" }],
           password: [{ required: true, message: "Please enter your password", trigger: "blur" }],
           email: [{ required: true, message: 'Please enter your email', trigger: 'blur' },
-            {
-              pattern: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
-              message: 'Please fill a valid email address',
-              trigger: ['blur', 'change']
-            }
+          {
+            pattern: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
+            message: 'Please fill a valid email address',
+            trigger: ['blur', 'change']
+          }
           ]
         },
       };
@@ -102,6 +102,15 @@
 
               if (response.ok) {
                 const data = await response.json(); // Get user data from the response
+                // Check for the "already logged in" message
+                if (data.message === 'Already logged in') {
+                  ElMessage.info('You are already logged in!');
+                  this.appContext.isLoggedIn = true;
+                  this.appContext.user = data.user;
+                  this.$router.push('/');
+                  return; // Stop further processing
+                }
+
                 ElMessage.success('Login successful!');
                 // Update the global login state in App.vue
                 this.appContext.isLoggedIn = true;

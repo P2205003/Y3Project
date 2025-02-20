@@ -40,6 +40,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error(err));
 
+//request error logging middleware
 app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 400) {
