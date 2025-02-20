@@ -1,3 +1,4 @@
+<!-- src/App.vue -->
 <script>
   import SideMenu from './components/SideMenu.vue';
   import SiteNav from './components/SiteNav.vue';
@@ -5,38 +6,21 @@
   import Ribbon from './components/Ribbon.vue';
   import { ElMessage } from 'element-plus';
 
-
   export default {
     name: 'App',
-    components: {
-      SideMenu,
-      SiteNav,
-      TopBar,
-      Ribbon
-    },
+    components: { SideMenu, SiteNav, TopBar, Ribbon },
     data() {
       return {
         isMenuVisible: false,
-        isLoggedIn: false, // Track login status
-        user: null,       // Store user information (e.g., username)
+        appContext: { // Move all auth state into a single reactive object
+          isLoggedIn: false,
+          user: null,
+          logout: () => this.logout()
+        }
       };
     },
     provide() {
-      return {
-        appContext: { //provide is a built-in function in vue
-          isLoggedIn: this.isLoggedIn,
-          user: this.user,
-          logout: this.logout, // Expose the logout function
-        },
-      };
-    },
-    watch: { //use watch to make data and provider always in synchronization
-      isLoggedIn(newValue) {
-        this.appContext.isLoggedIn = newValue;
-      },
-      user(newValue) {
-        this.appContext.user = newValue;
-      },
+      return { appContext: this.appContext }; // Provide the reactive object directly
     },
     methods: {
       toggleMenu() {
@@ -46,36 +30,31 @@
         try {
           const response = await fetch('/api/users/logout', { method: 'POST' });
           if (response.ok) {
-            this.isLoggedIn = false; // Update login status
-            this.user = null;       // Clear user data
+            this.appContext.isLoggedIn = false; // Update context directly
+            this.appContext.user = null;
             ElMessage.success('Logout successful!');
-            this.$router.push('/'); // Redirect to home page.
-          } else {
-            const errorData = await response.json();
-            ElMessage.error(errorData.message || 'Logout failed');
+            this.$router.push('/');
           }
         } catch (error) {
-          console.error('Logout error:', error);
-          ElMessage.error('An unexpected error occurred during logout.');
+          ElMessage.error('Logout failed');
         }
       },
-      async checkLoginStatus() { // Check for existing session on app load
+      async checkLoginStatus() {
         try {
-          const response = await fetch('/api/users/check-login'); // New route
+          const response = await fetch('/api/users/check-login');
           if (response.ok) {
             const data = await response.json();
-            this.isLoggedIn = true;
-            this.user = data.user;
-          } // No 'else' needed - if not logged in, defaults are fine
+            this.appContext.isLoggedIn = true; // Update context directly
+            this.appContext.user = data.user;
+          }
         } catch (error) {
-          console.error('Error checking login status:', error);
-          // Don't show an error message here - it's expected on first load if not logged in
+          console.error('Session check failed:', error);
         }
       }
     },
     created() {
       this.checkLoginStatus();
-    },
+    }
   };
 </script>
 

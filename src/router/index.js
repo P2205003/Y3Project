@@ -65,12 +65,24 @@ const router = createRouter({
 });
 
 // Navigation Guard
-router.beforeEach((to, from, next) => {
-  if (to.meta.requiresAuth && !router.app.config.globalProperties.appContext.isLoggedIn) {
-    next('/login'); // Redirect to login page
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth) {
+    try {
+      const response = await fetch('/api/users/check-login');
+      const data = await response.json();
+      if (data.isLoggedIn) {
+        next(); // User is authenticated
+      } else {
+        next('/login'); // Redirect to login
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      next('/login');
+    }
   } else {
-    next(); // Proceed to the route
+    next();
   }
 });
+
 
 export default router;
