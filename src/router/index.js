@@ -9,7 +9,6 @@ import AddItem from '../components/AddItem.vue';
 import Login from '../components/login.vue';
 import Register from '../components/Register.vue';
 
-
 const routes = [
   {
     path: '/',
@@ -28,7 +27,7 @@ const routes = [
       {
         path: 'shopping-cart',
         name: 'ShoppingCart',
-        component: ShoppingCart
+        component: ShoppingCart,
       },
       {
         path: 'search',
@@ -43,7 +42,8 @@ const routes = [
       {
         path: 'add-item',
         name: 'AddItem',
-        component: AddItem
+        component: AddItem,
+        meta: { requiresAuth: true } // Requires authentication
       }
     ]
   },
@@ -57,12 +57,20 @@ const routes = [
     name: 'Register',
     component: Register
   }
-
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+// Navigation Guard
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !router.app.config.globalProperties.appContext.isLoggedIn) {
+    next('/login'); // Redirect to login page
+  } else {
+    next(); // Proceed to the route
+  }
 });
 
 export default router;
