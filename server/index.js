@@ -5,13 +5,17 @@ import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js'; // Import user routes
 import { isAuthenticated } from './middleware/auth.js'; // Import authentication middleware
 import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import MongoStore from 'connect-mongo';
 import 'dotenv/config'; // Load environment variables
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Your frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
 // --- Session Configuration ---
@@ -55,3 +59,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+app.use(cookieParser());
