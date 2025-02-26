@@ -1,31 +1,33 @@
 <template>
   <div class="ribbon">
-    <button @click="toggleMenu">All</button>
+    <button @click="toggleMenu">≡ All</button>
     <router-link to="/add-item">
       <button>Add Item</button>
     </router-link>
     <button>Button 3</button>
+    <!-- SideMenu component with overlay click handling -->
+    <SideMenu :visible="isMenuVisible" @close="toggleMenu" />
   </div>
-  <SideMenu :visible="isMenuVisible" @close="toggleMenu" />
 </template>
 
 <script>
-import SideMenu from './SideMenu.vue';
+import SideMenu from "./SideMenu.vue";
+
 export default {
-  name: 'Ribbon',
+  name: "Ribbon",
   components: {
-    SideMenu
+    SideMenu,
   },
   data() {
     return {
-      isMenuVisible: false
+      isMenuVisible: false, // Menu visibility state
     };
   },
   methods: {
     toggleMenu() {
-      this.isMenuVisible = !this.isMenuVisible;
-    }
-  }
+      this.isMenuVisible = !this.isMenuVisible; // Show or hide the menu
+    },
+  },
 };
 </script>
 
