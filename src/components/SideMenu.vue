@@ -1,18 +1,18 @@
 <script>
-    export default{
-        name: 'SideMenu',
-        props: {
-            visible: {
-                type: Boolean,
-                required: true
-            }
-        },
-        methods: {
-            closeMenu() {
-                this.$emit('close');
-            }
-        }
-    };
+  export default {
+    name: 'SideMenu',
+    props: {
+      visible: {
+        type: Boolean,
+        required: true
+      }
+    },
+    methods: {
+      closeMenu() {
+        this.$emit('close');
+      }
+    }
+  };
 </script>
 
 <template>
@@ -28,20 +28,22 @@
 </template>
 
 <style>
-.side-menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 250px;
-  height: 100%;
-  background-color: #333;
-  color: white;
-  padding: 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s ease-in-out;
-  transform: translateX(0);
-}
-.side-menu-hidden {
-  transform: translateX(-100%);
-}
+  .side-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100%;
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(0);
+    z-index: 100; /* High z-index to ensure it appears above other elements */
+  }
+
+  .side-menu-hidden {
+    transform: translateX(-100%);
+  }
 </style>

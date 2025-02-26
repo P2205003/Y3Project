@@ -18,8 +18,8 @@
         </router-link>
       </template>
       <template v-else>
-        <button @click="appContext.logout">Logout</button> <!-- Use appContext.logout -->
         <span>Welcome, {{ appContext.user.username }}!</span>
+        <button @click="appContext.logout">Logout</button> <!-- Use appContext.logout -->
       </template>
       <router-link to="/shopping-cart">
         <button>Shopping Cart</button>
