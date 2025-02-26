@@ -5,7 +5,26 @@
     <template v-else>
       <div class="product-container">
         <div class="left-side">
-          <img :src="productImage" alt="Product Image" class="product-image">
+          <!-- Image gallery with navigation controls -->
+          <div class="image-gallery">
+            <div class="main-image-container">
+              <img :src="currentImage" alt="Product Image" class="product-image">
+            </div>
+            <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
+              <div v-for="(image, index) in product.images"
+                   :key="index"
+                   class="thumbnail-container"
+                   :class="{ active: currentImageIndex === index }"
+                   @click="selectImage(index)">
+                <img :src="image" alt="Product Thumbnail" class="thumbnail-image">
+              </div>
+            </div>
+            <div v-if="product.images && product.images.length > 1" class="image-controls">
+              <button @click="prevImage" class="control-button">&lt;</button>
+              <span>{{ currentImageIndex + 1 }} / {{ product.images.length }}</span>
+              <button @click="nextImage" class="control-button">&gt;</button>
+            </div>
+          </div>
         </div>
         <div class="right-side">
           <div class="top">
@@ -79,7 +98,8 @@
         error: null,
         product: null,
         quantity: 1,
-        selectedAttribute: null,
+        selectedAttributes: {},
+        currentImageIndex: 0,
         // Keep static recommendations unchanged
         recommendations: [
           { id: 1, name: 'Recommended 1', price: 19.99, image: placeholderImage },
@@ -89,8 +109,11 @@
       };
     },
     computed: {
-      productImage() {
-        return this.product?.images?.[0] || placeholderImage;
+      currentImage() {
+        if (!this.product || !this.product.images || this.product.images.length === 0) {
+          return placeholderImage;
+        }
+        return this.product.images[this.currentImageIndex];
       },
       attributeLabel() {
         if (!this.product?.attributes) return '';
@@ -148,8 +171,7 @@
           name: this.product.name,
           price: this.product.price,
           quantity: this.quantity,
-          attribute: this.selectedAttribute,
-          image: this.productImage,
+          image: this.currentImage,
           attributes: this.selectedAttributes
         };
 
@@ -158,7 +180,18 @@
 
         // Reset selection
         this.quantity = 1;
-        this.selectedAttribute = this.attributeOptions[0];
+      },
+      // New image gallery methods
+      selectImage(index) {
+        this.currentImageIndex = index;
+      },
+      nextImage() {
+        if (!this.product || !this.product.images) return;
+        this.currentImageIndex = (this.currentImageIndex + 1) % this.product.images.length;
+      },
+      prevImage() {
+        if (!this.product || !this.product.images) return;
+        this.currentImageIndex = (this.currentImageIndex - 1 + this.product.images.length) % this.product.images.length;
       }
     }
   };
@@ -185,6 +218,82 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 
+  /* Image gallery styles */
+  .image-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .main-image-container {
+    width: 100%;
+    position: relative;
+    aspect-ratio: 4/3;
+    background: #f8f8f8;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+    .main-image-container .product-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+  .image-thumbnails {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  .thumbnail-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+  }
+
+    .thumbnail-container.active {
+      border-color: #42b983;
+    }
+
+  .thumbnail-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .image-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .control-button {
+    padding: 0.5rem 1rem;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+    .control-button:hover {
+      background-color: #eee;
+    }
+
   .price {
     font-size: 1.5rem;
     color: #42b983;
@@ -196,6 +305,10 @@
     color: white;
     padding: 1rem 2rem;
     font-size: 1.1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 1rem;
   }
 
   .attributes {
@@ -205,21 +318,20 @@
     border-radius: 8px;
   }
 
-  .attributes ul {
-    list-style: none;
-    padding: 0;
-  }
+    .attributes ul {
+      list-style: none;
+      padding: 0;
+    }
 
     .attributes li {
       padding: 0.5rem 0;
       border-bottom: 1px solid #eee;
     }
 
-
-    .recommendation {
-      margin-top: 3rem;
-      padding: 0 2rem;
-    }
+  .recommendation {
+    margin-top: 3rem;
+    padding: 0 2rem;
+  }
 
     .recommendation h2 {
       font-size: 1.5rem;
@@ -246,9 +358,9 @@
       list-style: none;
     }
 
-    .recommendation li:hover {
-      transform: translateY(-3px);
-    }
+      .recommendation li:hover {
+        transform: translateY(-3px);
+      }
 
     .recommendation img {
       width: 100%;
@@ -263,16 +375,16 @@
       font-size: 0.9rem;
     }
 
-    .recommendation p:first-of-type {
-      font-weight: 600;
-      color: #333;
-    }
+      .recommendation p:first-of-type {
+        font-weight: 600;
+        color: #333;
+      }
 
-    .recommendation p:last-of-type {
-      color: #42b983;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
+      .recommendation p:last-of-type {
+        color: #42b983;
+        font-size: 1.1rem;
+        font-weight: bold;
+      }
 
   /* Responsive adjustments */
   @media (max-width: 768px) {
@@ -287,6 +399,10 @@
 
     .right-side {
       padding-top: 0;
+    }
+
+    .image-thumbnails {
+      justify-content: center;
     }
   }
 </style>

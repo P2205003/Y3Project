@@ -8,7 +8,7 @@ import ProductPage from '../components/ProductPage.vue';
 import AddItem from '../components/AddItem.vue';
 import Login from '../components/login.vue';
 import Register from '../components/Register.vue';
-
+import AdminDashboard from '../components/AdminDashboard.vue';
 
 const routes = [
   {
@@ -28,7 +28,7 @@ const routes = [
       {
         path: 'shopping-cart',
         name: 'ShoppingCart',
-        component: ShoppingCart
+        component: ShoppingCart,
       },
       {
         path: 'search',
@@ -43,7 +43,14 @@ const routes = [
       {
         path: 'add-item',
         name: 'AddItem',
-        component: AddItem
+        component: AddItem,
+        meta: { requiresAuth: true } // Requires authentication
+      },
+      {
+        path: 'admin',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+        meta: { requiresAuth: true } // Admin route requires authentication
       }
     ]
   },
@@ -57,12 +64,31 @@ const routes = [
     name: 'Register',
     component: Register
   }
-
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+// Navigation Guard
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth) {
+    try {
+      const response = await fetch('/api/users/check-login');
+      const data = await response.json();
+      if (data.isLoggedIn) {
+        next(); // User is authenticated
+      } else {
+        next('/login'); // Redirect to login
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      next('/login');
+    }
+  } else {
+    next();
+  }
 });
 
 export default router;

@@ -46,9 +46,28 @@
         </button>
       </div>
 
+      <!-- Multiple Images Section -->
       <div class="form-group">
-        <label for="imageUrl">Image URL:</label>
-        <input type="url" id="imageUrl" v-model="formData.images[0]" required>
+        <label>Product Images:</label>
+        <div v-for="(imageUrl, index) in formData.images" :key="index" class="image-row">
+          <input type="url"
+                 v-model="formData.images[index]"
+                 placeholder="Image URL"
+                 class="image-input"
+                 required>
+          <button type="button"
+                  @click="removeImage(index)"
+                  class="remove-image"
+                  :disabled="formData.images.length === 1">
+            ×
+          </button>
+        </div>
+        <button type="button"
+                @click="addImage"
+                class="add-image">
+          Add Another Image
+        </button>
+        <p class="help-text">First image will be used as the main product image.</p>
       </div>
 
       <button type="submit" :disabled="isSubmitting">
@@ -60,9 +79,15 @@
       </div>
     </form>
 
-    <div v-if="formData.images[0]" class="preview">
+    <div class="preview">
       <h3>Preview</h3>
-      <img :src="formData.images[0]" alt="Product preview" class="preview-image">
+      <div class="image-preview-container">
+        <div v-for="(imageUrl, index) in formData.images" :key="index" class="image-preview">
+          <img v-if="imageUrl" :src="imageUrl" :alt="`Product preview ${index + 1}`" class="preview-image">
+          <div v-else class="preview-placeholder">No image</div>
+          <div class="image-number">{{ index === 0 ? 'Main Image' : `Image ${index + 1}` }}</div>
+        </div>
+      </div>
       <div class="preview-info">
         <h4>{{ formData.name || 'Product Name' }}</h4>
         <p>${{ (formData.price || 0).toFixed(2) }}</p>
@@ -96,7 +121,16 @@
       removeAttribute(index) {
         this.formData.attributes.splice(index, 1);
       },
-
+      // Image management methods
+      addImage() {
+        this.formData.images.push('');
+      },
+      removeImage(index) {
+        // Keep at least one image
+        if (this.formData.images.length > 1) {
+          this.formData.images.splice(index, 1);
+        }
+      },
       async handleSubmit() {
         // Add validation for attribute keys
         const uniqueKeys = new Set();
@@ -110,6 +144,13 @@
           }
         }
 
+        // Filter out empty image URLs
+        const validImages = this.formData.images.filter(url => url.trim() !== '');
+        if (validImages.length === 0) {
+          this.errorMessage = 'Please provide at least one image URL';
+          return;
+        }
+
         // Convert attributes array to object before sending
         const attributes = this.formData.attributes.reduce((acc, attr) => {
           if (attr.key && attr.value) {
@@ -120,6 +161,7 @@
 
         const payload = {
           ...this.formData,
+          images: validImages, // Use the filtered images array
           attributes,
           price: parseFloat(this.formData.price),
           enabled: true
@@ -207,9 +249,87 @@
   }
 
   .preview-image {
-    max-width: 200px;
-    height: auto;
+    max-width: 100%;
+    height: 150px;
+    object-fit: contain;
+  }
+
+  .preview-placeholder {
+    width: 100%;
+    height: 150px;
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-style: italic;
+  }
+
+  .attribute-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .attribute-input {
+    flex: 1;
+  }
+
+  .image-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+  }
+
+  .image-input {
+    flex: 1;
+  }
+
+  .remove-attribute,
+  .remove-image {
+    background-color: #ff6b6b;
+    color: white;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .add-attribute,
+  .add-image {
+    background-color: #4d7eff;
+    margin-top: 0.5rem;
+  }
+
+  .help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+  }
+
+  .image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
     margin-bottom: 1rem;
+  }
+
+  .image-preview {
+    width: 150px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .image-number {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
   }
 
   .attribute-row:has(.attribute-input:invalid) {
@@ -219,13 +339,13 @@
     border-radius: 4px;
   }
 
-   .attribute-row:has(.attribute-input:invalid)::after {
-     content: "Both fields required";
-     position: absolute;
-     right: 0;
-     bottom: -1.2rem;
-     color: #ff4444;
-     font-size: 0.8rem;
+    .attribute-row:has(.attribute-input:invalid)::after {
+      content: "Both fields required";
+      position: absolute;
+      right: 0;
+      bottom: -1.2rem;
+      color: #ff4444;
+      font-size: 0.8rem;
     }
 
   .error-message {
@@ -236,4 +356,3 @@
     border-radius: 4px;
   }
 </style>
-
