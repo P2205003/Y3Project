@@ -1,6 +1,6 @@
 <template>
   <div class="ribbon">
-    <button @click="toggleMenu">All</button>
+    <button @click="toggleMenu">≡ All</button>
     <router-link to="/add-item">
       <button>Add Item</button>
     </router-link>
@@ -8,6 +8,7 @@
       <button>Admin Dashboard</button>
     </router-link>
   </div>
+  <!-- SideMenu component with overlay click handling -->
   <SideMenu :visible="isMenuVisible" @close="toggleMenu" />
 </template>
 
