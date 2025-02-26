@@ -8,6 +8,7 @@ import ProductPage from '../components/ProductPage.vue';
 import AddItem from '../components/AddItem.vue';
 import Login from '../components/login.vue';
 import Register from '../components/Register.vue';
+import AdminDashboard from '../components/AdminDashboard.vue';
 
 const routes = [
   {
@@ -44,6 +45,12 @@ const routes = [
         name: 'AddItem',
         component: AddItem,
         meta: { requiresAuth: true } // Requires authentication
+      },
+      {
+        path: 'admin',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+        meta: { requiresAuth: true } // Admin route requires authentication
       }
     ]
   },
@@ -83,6 +90,5 @@ router.beforeEach(async (to, from, next) => {
     next();
   }
 });
-
 
 export default router;

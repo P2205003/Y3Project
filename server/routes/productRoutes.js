@@ -1,12 +1,23 @@
 import express from 'express';
 import Product from '../models/Product.js';
+import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all products
+// Get all enabled products (public)
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find({ enabled: true });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all products including disabled ones (admin only)
+router.get('/admin', isAuthenticated, async (req, res) => {
+  try {
+    const products = await Product.find();
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -74,6 +85,7 @@ router.post('/', validateProduct, async (req, res) => {
   }
 });
 
+// Get a product by ID
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -83,6 +95,61 @@ router.get('/:id', async (req, res) => {
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Update a product
+router.put('/:id', isAuthenticated, validateProduct, async (req, res) => {
+  try {
+    // Check if updating name, then update slug too
+    let updateData = { ...req.body };
+    if (req.body.name) {
+      updateData.slug = slugify(req.body.name);
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json(product);
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      res.status(400).json({ message: `${field} must be unique` });
+    } else {
+      res.status(400).json({ message: error.message });
+    }
+  }
+});
+
+// Update product status (enable/disable)
+router.patch('/:id/status', isAuthenticated, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: 'Enabled status must be a boolean' });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { enabled },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
