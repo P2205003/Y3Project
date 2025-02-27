@@ -1,9 +1,6 @@
 <template>
   <div class="ribbon">
     <button @click="toggleMenu">≡ All</button>
-    <router-link to="/add-item">
-      <button>Add Item</button>
-    </router-link>
     <router-link to="/admin">
       <button>Admin Dashboard</button>
     </router-link>

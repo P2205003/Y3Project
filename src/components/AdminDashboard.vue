@@ -1,4 +1,3 @@
-<!-- src/components/AdminDashboard.vue -->
 <template>
   <div class="admin-dashboard">
     <h1>Admin Dashboard</h1>
@@ -78,6 +77,7 @@
                       :class="product.enabled ? 'disable-btn' : 'enable-btn'">
                 {{ product.enabled ? 'Disable' : 'Enable' }}
               </button>
+              <button @click="confirmDeleteProduct(product)" class="delete-btn">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -245,158 +245,246 @@
         </form>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay">
+      <div class="modal-content delete-modal">
+        <span class="close-modal" @click="cancelDelete">&times;</span>
+        <h2>Confirm Delete</h2>
+        <p>Are you sure you want to delete the product "{{ productToDelete?.name }}"?</p>
+        <p class="delete-warning">This action cannot be undone.</p>
+
+        <div v-if="deleteError" class="delete-error-message">
+          <p>{{ deleteError }}</p>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" @click="cancelDelete" class="cancel-btn" :disabled="deleteLoading">Cancel</button>
+          <button type="button" @click="deleteProduct" class="delete-confirm-btn" :disabled="deleteLoading">
+            <span v-if="deleteLoading">Deleting...</span>
+            <span v-else>Delete Product</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-export default {
-  name: 'AdminDashboard',
-  data() {
-    return {
-      activeTab: 'products',
-      // Products tab
-      productsLoading: true,
-      productsError: null,
-      allProducts: [],
-      productSearchQuery: '',
-      placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E',
-      // Edit product modal
-      showEditModal: false,
-      editingProduct: null,
-      originalProduct: null,
-      // Orders tab
-      orderStatusFilter: 'all'
-    };
-  },
-  computed: {
-    filteredProducts() {
-      if (!this.productSearchQuery) {
-        return this.allProducts;
-      }
+  export default {
+    name: 'AdminDashboard',
+    data() {
+      return {
+        activeTab: 'products',
+        // Products tab
+        productsLoading: true,
+        productsError: null,
+        allProducts: [],
+        productSearchQuery: '',
+        placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+        // Edit product modal
+        showEditModal: false,
+        editingProduct: null,
+        originalProduct: null,
+        // Delete product modal
+        showDeleteModal: false,
+        productToDelete: null,
+        deleteLoading: false,
+        deleteError: null,
+        // Orders tab
+        orderStatusFilter: 'all'
+      };
+    },
+    computed: {
+      filteredProducts() {
+        if (!this.productSearchQuery) {
+          return this.allProducts;
+        }
 
-      const query = this.productSearchQuery.toLowerCase();
-      return this.allProducts.filter(product => {
-        return (
-          product.name.toLowerCase().includes(query) ||
-          product._id.toLowerCase().includes(query) ||
-          (product.category && product.category.toLowerCase().includes(query))
-        );
-      });
-    }
-  },
-  methods: {
-    async fetchProducts() {
-      this.productsLoading = true;
-      this.productsError = null;
-
-      try {
-        // Fetch all products, including disabled ones (admin should see all)
-        const response = await fetch('/api/products/admin', {
-          credentials: 'include'
+        const query = this.productSearchQuery.toLowerCase();
+        return this.allProducts.filter(product => {
+          return (
+            product.name.toLowerCase().includes(query) ||
+            product._id.toLowerCase().includes(query) ||
+            (product.category && product.category.toLowerCase().includes(query))
+          );
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        this.allProducts = await response.json();
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        this.productsError = 'Failed to load products. ' + error.message;
-      } finally {
-        this.productsLoading = false;
       }
     },
-    searchProducts() {
-      // The computed property handles the filtering
-    },
-    viewProduct(productId) {
-      this.$router.push({ name: 'ProductPage', params: { id: productId } });
-    },
-    editProduct(product) {
-      // Clone the product to avoid modifying the original directly
-      this.originalProduct = product;
-      this.editingProduct = JSON.parse(JSON.stringify(product));
+    methods: {
+      async fetchProducts() {
+        this.productsLoading = true;
+        this.productsError = null;
 
-      // Ensure images array exists
-      if (!this.editingProduct.images) {
-        this.editingProduct.images = [''];
-      }
+        try {
+          // Fetch all products, including disabled ones (admin should see all)
+          const response = await fetch('/api/products/admin', {
+            credentials: 'include'
+          });
 
-      this.showEditModal = true;
-    },
-    cancelEdit() {
-      this.showEditModal = false;
-      this.editingProduct = null;
-    },
-    addImage() {
-      this.editingProduct.images.push('');
-    },
-    removeImage(index) {
-      if (this.editingProduct.images.length > 1) {
-        this.editingProduct.images.splice(index, 1);
-      }
-    },
-    async saveProduct() {
-      try {
-        const response = await fetch(`/api/products/${this.editingProduct._id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(this.editingProduct)
-        });
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+          this.allProducts = await response.json();
+        } catch (error) {
+          console.error('Error fetching products:', error);
+          this.productsError = 'Failed to load products. ' + error.message;
+        } finally {
+          this.productsLoading = false;
+        }
+      },
+      searchProducts() {
+        // The computed property handles the filtering
+      },
+      viewProduct(productId) {
+        this.$router.push({ name: 'ProductPage', params: { id: productId } });
+      },
+      editProduct(product) {
+        // Clone the product to avoid modifying the original directly
+        this.originalProduct = product;
+        this.editingProduct = JSON.parse(JSON.stringify(product));
+
+        // Ensure images array exists
+        if (!this.editingProduct.images) {
+          this.editingProduct.images = [''];
         }
 
-        // Update the product in the local list
-        const updatedProduct = await response.json();
-        const index = this.allProducts.findIndex(p => p._id === updatedProduct._id);
-        if (index !== -1) {
-          this.allProducts.splice(index, 1, updatedProduct);
-        }
-
+        this.showEditModal = true;
+      },
+      cancelEdit() {
         this.showEditModal = false;
-        this.$message.success('Product updated successfully!');
-      } catch (error) {
-        console.error('Error updating product:', error);
-        this.$message.error('Failed to update product: ' + error.message);
+        this.editingProduct = null;
+      },
+      addImage() {
+        this.editingProduct.images.push('');
+      },
+      removeImage(index) {
+        if (this.editingProduct.images.length > 1) {
+          this.editingProduct.images.splice(index, 1);
+        }
+      },
+      async saveProduct() {
+        try {
+          const response = await fetch(`/api/products/${this.editingProduct._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(this.editingProduct)
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+          }
+
+          // Update the product in the local list
+          const updatedProduct = await response.json();
+          const index = this.allProducts.findIndex(p => p._id === updatedProduct._id);
+          if (index !== -1) {
+            this.allProducts.splice(index, 1, updatedProduct);
+          }
+
+          this.showEditModal = false;
+          this.$message.success('Product updated successfully!');
+        } catch (error) {
+          console.error('Error updating product:', error);
+          this.$message.error('Failed to update product: ' + error.message);
+        }
+      },
+      async toggleProductStatus(product) {
+        try {
+          const newStatus = !product.enabled;
+          const response = await fetch(`/api/products/${product._id}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ enabled: newStatus })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+          }
+
+          // Update the product status in the local list
+          product.enabled = newStatus;
+          this.$message.success(`Product ${newStatus ? 'enabled' : 'disabled'} successfully!`);
+        } catch (error) {
+          console.error('Error toggling product status:', error);
+          this.$message.error('Failed to update product status: ' + error.message);
+        }
+      },
+      confirmDeleteProduct(product) {
+        this.productToDelete = product;
+        this.showDeleteModal = true;
+        this.deleteError = null;
+      },
+      cancelDelete() {
+        this.showDeleteModal = false;
+        this.productToDelete = null;
+        this.deleteLoading = false;
+        this.deleteError = null;
+      },
+      async deleteProduct() {
+        if (!this.productToDelete) return;
+
+        this.deleteLoading = true;
+        this.deleteError = null;
+
+        try {
+          const response = await fetch(`/api/products/${this.productToDelete._id}`, {
+            method: 'DELETE',
+            headers: {
+              'Accept': 'application/json'
+            },
+            credentials: 'include'
+          });
+
+          let responseData;
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+          } else {
+            // If response is not JSON, get the text and create an error message
+            const textResponse = await response.text();
+            if (!response.ok) {
+              throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 100)}...`);
+            }
+            // If response is OK but not JSON, create a success message
+            responseData = { message: 'Product deleted successfully' };
+          }
+
+          if (!response.ok) {
+            throw new Error(responseData.message || `HTTP error! Status: ${response.status}`);
+          }
+
+          // Remove the product from the local list
+          const index = this.allProducts.findIndex(p => p._id === this.productToDelete._id);
+          if (index !== -1) {
+            this.allProducts.splice(index, 1);
+          }
+
+          this.$message.success(responseData.message || 'Product deleted successfully!');
+          this.showDeleteModal = false;
+          this.productToDelete = null;
+        } catch (error) {
+          console.error('Error deleting product:', error);
+          this.deleteError = 'Failed to delete product: ' + error.message;
+          this.$message.error(this.deleteError);
+        } finally {
+          this.deleteLoading = false;
+        }
       }
     },
-    async toggleProductStatus(product) {
-      try {
-        const newStatus = !product.enabled;
-        const response = await fetch(`/api/products/${product._id}/status`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ enabled: newStatus })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-        }
-
-        // Update the product status in the local list
-        product.enabled = newStatus;
-        this.$message.success(`Product ${newStatus ? 'enabled' : 'disabled'} successfully!`);
-      } catch (error) {
-        console.error('Error toggling product status:', error);
-        this.$message.error('Failed to update product status: ' + error.message);
-      }
+    created() {
+      this.fetchProducts();
     }
-  },
-  created() {
-    this.fetchProducts();
-  }
-};
+  };
 </script>
 
 <style scoped>
@@ -565,7 +653,7 @@ export default {
   }
 
   /* Action Buttons */
-  .view-btn, .edit-btn, .enable-btn, .disable-btn {
+  .view-btn, .edit-btn, .enable-btn, .disable-btn, .delete-btn {
     padding: 0.35rem 0.5rem;
     border: none;
     border-radius: 4px;
@@ -609,6 +697,53 @@ export default {
     .disable-btn:hover {
       background-color: #d32f2f;
     }
+
+  .delete-btn {
+    background-color: #f44336;
+    color: white;
+  }
+
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+
+  .delete-confirm-btn {
+    background-color: #f44336;
+    color: white;
+    padding: 0.6rem 1.25rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+    .delete-confirm-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    .delete-confirm-btn:disabled {
+      background-color: #f4433680;
+      cursor: not-allowed;
+    }
+
+  .delete-warning {
+    color: #f44336;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .delete-error-message {
+    background-color: #ffebee;
+    color: #f44336;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #f44336;
+  }
+
+  .delete-modal {
+    max-width: 500px;
+  }
 
   /* Loading, Error and Empty states */
   .loading-indicator, .error-message, .no-results, .placeholder-message {
@@ -771,6 +906,11 @@ export default {
       background-color: #d0d0d0;
     }
 
+    .cancel-btn:disabled {
+      background-color: #e0e0e080;
+      cursor: not-allowed;
+    }
+
   .save-btn {
     background-color: #5D5CDE;
     color: white;
@@ -795,7 +935,7 @@ export default {
       flex-direction: column;
     }
 
-    .view-btn, .edit-btn, .enable-btn, .disable-btn {
+    .view-btn, .edit-btn, .enable-btn, .disable-btn, .delete-btn {
       width: 100%;
       margin-bottom: 0.25rem;
     }
@@ -874,5 +1014,19 @@ export default {
       .cancel-btn:hover {
         background-color: #555;
       }
+
+      .cancel-btn:disabled {
+        background-color: #44444480;
+      }
+
+    .delete-warning {
+      color: #f77066;
+    }
+
+    .delete-error-message {
+      background-color: #321c1c;
+      border-left: 4px solid #f44336;
+      color: #f77066;
+    }
   }
 </style>
