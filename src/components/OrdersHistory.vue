@@ -59,7 +59,7 @@
         <div class="order-summary">
           <div class="order-summary-item">
             <span class="label">Items:</span>
-            <span class="value">{{ order.items.length }}</span>
+            <span class="value">{{ getTotalQuantity(order) }} ({{ order.items.length }} product{{ order.items.length !== 1 ? 's' : '' }})</span>
           </div>
           <div class="order-summary-item">
             <span class="label">Total:</span>
@@ -100,82 +100,87 @@
 </template>
 
 <script>
-import orderService from '@/services/orderService';
+  import orderService from '@/services/orderService';
 
-export default {
-  name: 'OrdersHistory',
-  data() {
-    return {
-      orders: [],
-      loading: true,
-      error: null,
-      statusFilter: '',
-      statusOptions: orderService.getStatusOptions(),
-      pagination: {
-        page: 1,
-        limit: 5,
-        total: 0,
-        pages: 1
-      }
-    };
-  },
-  created() {
-    // Check for status filter in query params
-    if (this.$route.query.status) {
-      this.statusFilter = this.$route.query.status;
-    }
-
-    this.fetchOrders();
-  },
-  methods: {
-    async fetchOrders(page = 1) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // Update URL with current filter (without page reload)
-        if (this.statusFilter) {
-          this.$router.replace({
-            query: { ...this.$route.query, status: this.statusFilter }
-          });
-        } else {
-          // Remove status param if filter cleared
-          const query = { ...this.$route.query };
-          delete query.status;
-          this.$router.replace({ query });
+  export default {
+    name: 'OrdersHistory',
+    data() {
+      return {
+        orders: [],
+        loading: true,
+        error: null,
+        statusFilter: '',
+        statusOptions: orderService.getStatusOptions(),
+        pagination: {
+          page: 1,
+          limit: 5,
+          total: 0,
+          pages: 1
         }
-
-        const result = await orderService.getOrders(
-          this.statusFilter,
-          page,
-          this.pagination.limit
-        );
-
-        this.orders = result.orders;
-        this.pagination = result.pagination;
-      } catch (error) {
-        this.error = 'Failed to load your orders. Please try again.';
-        console.error('Error fetching orders:', error);
-      } finally {
-        this.loading = false;
+      };
+    },
+    created() {
+      // Check for status filter in query params
+      if (this.$route.query.status) {
+        this.statusFilter = this.$route.query.status;
       }
+
+      this.fetchOrders();
     },
-    formatDate(dateString) {
-      return orderService.formatDate(dateString);
-    },
-    getStatusLabel(statusValue) {
-      const status = this.statusOptions.find(s => s.value === statusValue);
-      return status ? status.label : statusValue;
-    },
-    getStatusDate(order) {
-      // Find the most recent status date
-      if (order.status && order.statusDates && order.statusDates[order.status]) {
-        return this.formatDate(order.statusDates[order.status]);
+    methods: {
+      async fetchOrders(page = 1) {
+        this.loading = true;
+        this.error = null;
+
+        try {
+          // Update URL with current filter (without page reload)
+          if (this.statusFilter) {
+            this.$router.replace({
+              query: { ...this.$route.query, status: this.statusFilter }
+            });
+          } else {
+            // Remove status param if filter cleared
+            const query = { ...this.$route.query };
+            delete query.status;
+            this.$router.replace({ query });
+          }
+
+          const result = await orderService.getOrders(
+            this.statusFilter,
+            page,
+            this.pagination.limit
+          );
+
+          this.orders = result.orders;
+          this.pagination = result.pagination;
+        } catch (error) {
+          this.error = 'Failed to load your orders. Please try again.';
+          console.error('Error fetching orders:', error);
+        } finally {
+          this.loading = false;
+        }
+      },
+      formatDate(dateString) {
+        return orderService.formatDate(dateString);
+      },
+      getStatusLabel(statusValue) {
+        const status = this.statusOptions.find(s => s.value === statusValue);
+        return status ? status.label : statusValue;
+      },
+      getStatusDate(order) {
+        // Find the most recent status date
+        if (order.status && order.statusDates && order.statusDates[order.status]) {
+          return this.formatDate(order.statusDates[order.status]);
+        }
+        return this.formatDate(order.updatedAt || order.purchaseDate);
+      },
+      // Calculate total quantity of items in an order
+      getTotalQuantity(order) {
+        if (!order.items || !order.items.length) return 0;
+        return order.items.reduce((total, item) => total + item.quantity, 0);
       }
-      return this.formatDate(order.updatedAt || order.purchaseDate);
     }
-  }
-};
+  };
 </script>
 
 <style scoped>

@@ -1,14 +1,15 @@
 // src/services/orderService.js
 class OrderService {
   // Create new order from cart
-  async createOrder() {
+  async createOrder(shippingAddress) {
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({ shippingAddress })
       });
 
       if (!response.ok) {

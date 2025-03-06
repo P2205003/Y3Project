@@ -189,7 +189,7 @@ export default {
       this.checkoutError = null;
 
       try {
-        const order = await orderService.createOrder();
+        const order = await orderService.createOrder(this.shippingAddress);
         this.orderComplete = true;
         this.orderNumber = order.orderNumber;
 

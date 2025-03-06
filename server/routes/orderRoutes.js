@@ -47,7 +47,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       orderNumber,
       userId,
       items: orderItems,
-      shippingAddress: user.shippingAddress,
+      shippingAddress: req.body.shippingAddress || user.shippingAddress,
       totalAmount,
       status: 'pending',
       statusHistory: [{
