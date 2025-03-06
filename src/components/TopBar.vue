@@ -41,7 +41,8 @@
     data() {
       return {
         searchQuery: '',
-        cartItemCount: 0
+        cartItemCount: 0,
+        unsubscribeCartUpdate: null
       };
     },
     methods: {
@@ -65,6 +66,17 @@
       this.$router.afterEach(() => {
         this.updateCartCount();
       });
+
+      // Subscribe to cart update events from cartService
+      this.unsubscribeCartUpdate = cartService.onCartUpdate(() => {
+        this.updateCartCount();
+      });
+    },
+    beforeUnmount() {
+      // Clean up subscription when component is destroyed
+      if (this.unsubscribeCartUpdate) {
+        this.unsubscribeCartUpdate();
+      }
     },
     watch: {
       // Update cart count when login status changes

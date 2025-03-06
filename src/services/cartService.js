@@ -7,6 +7,29 @@ class CartService {
   // Key for localStorage
   STORAGE_KEY = 'shopping-cart';
 
+  // Event listeners for cart updates
+  eventListeners = [];
+
+  // Register a callback for cart updates
+  onCartUpdate(callback) {
+    this.eventListeners.push(callback);
+    return () => {
+      // Return unsubscribe function
+      this.eventListeners = this.eventListeners.filter(cb => cb !== callback);
+    };
+  }
+
+  // Notify all listeners of cart update
+  notifyCartUpdated() {
+    this.eventListeners.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Error in cart update listener:', error);
+      }
+    });
+  }
+
   // Get cart from localStorage
   getLocalCart() {
     const cartJson = localStorage.getItem(this.STORAGE_KEY);
@@ -16,11 +39,15 @@ class CartService {
   // Save cart to localStorage
   saveLocalCart(cart) {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+    // Notify listeners when cart is updated
+    this.notifyCartUpdated();
   }
 
   // Clear localStorage cart
   clearLocalCart() {
     localStorage.removeItem(this.STORAGE_KEY);
+    // Notify listeners when cart is cleared
+    this.notifyCartUpdated();
   }
 
   // Get cart (from API if authenticated, localStorage if guest)
@@ -60,7 +87,10 @@ class CartService {
         });
 
         if (!response.ok) throw new Error('Failed to add item to cart');
-        return await response.json();
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
+        return updatedCart;
       } catch (error) {
         console.error('Error adding item to cart:', error);
 
@@ -114,7 +144,10 @@ class CartService {
         });
 
         if (!response.ok) throw new Error('Failed to update item quantity');
-        return await response.json();
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
+        return updatedCart;
       } catch (error) {
         console.error('Error updating item quantity:', error);
 
@@ -160,7 +193,10 @@ class CartService {
         });
 
         if (!response.ok) throw new Error('Failed to remove item from cart');
-        return await response.json();
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
+        return updatedCart;
       } catch (error) {
         console.error('Error removing item from cart:', error);
 
@@ -201,6 +237,8 @@ class CartService {
 
         // Also clear local cart
         this.clearLocalCart();
+        // Notify listeners when cart is cleared via API
+        this.notifyCartUpdated();
         return { items: [] };
       } catch (error) {
         console.error('Error clearing cart:', error);
@@ -248,7 +286,10 @@ class CartService {
       // Clear local cart after successful merge
       console.log('Cart merge successful, clearing local cart');
       this.clearLocalCart();
-      return await response.json();
+      const mergedCart = await response.json();
+      // Notify listeners when cart is updated via merging
+      this.notifyCartUpdated();
+      return mergedCart;
     } catch (error) {
       console.error('Error merging carts:', error);
       return null;
