@@ -4,7 +4,8 @@ import cors from 'cors';
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
-import { isAuthenticated } from './middleware/auth.js'; // Import authentication middleware
+import orderRoutes from './routes/orderRoutes.js';
+import { isAuthenticated } from './middleware/auth.js';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import MongoStore from 'connect-mongo';
@@ -55,6 +56,7 @@ app.use((req, res, next) => {
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 // --- Example Protected Route (Requires Authentication) ---
 app.get('/api/protected', isAuthenticated, (req, res) => {

@@ -91,77 +91,7 @@
 
     <!-- Orders Tab Content -->
     <div v-if="activeTab === 'orders'" class="tab-content">
-      <div class="actions-bar">
-        <h2>Orders</h2>
-        <div class="filter-container">
-          <label for="statusFilter">Filter by Status:</label>
-          <select id="statusFilter" v-model="orderStatusFilter" class="status-filter">
-            <option value="all">All Orders</option>
-            <option value="pending">Pending</option>
-            <option value="shipped">Shipped</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="hold">Hold</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Orders placeholder message (since the backend doesn't have orders yet) -->
-      <div class="placeholder-message">
-        <p>Order management functionality is under development.</p>
-        <p>This will display customer orders with filtering by status when implemented.</p>
-      </div>
-
-      <!-- Sample static order data (for demonstration) -->
-      <table class="orders-table">
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>ORD-001</td>
-            <td>2023-05-15</td>
-            <td>John Smith</td>
-            <td>$125.99</td>
-            <td>
-              <span class="status-pending">Pending</span>
-            </td>
-            <td>
-              <button class="view-btn">View Details</button>
-            </td>
-          </tr>
-          <tr>
-            <td>ORD-002</td>
-            <td>2023-05-14</td>
-            <td>Jane Doe</td>
-            <td>$85.50</td>
-            <td>
-              <span class="status-shipped">Shipped</span>
-            </td>
-            <td>
-              <button class="view-btn">View Details</button>
-            </td>
-          </tr>
-          <tr>
-            <td>ORD-003</td>
-            <td>2023-05-13</td>
-            <td>Robert Johnson</td>
-            <td>$210.25</td>
-            <td>
-              <span class="status-cancelled">Cancelled</span>
-            </td>
-            <td>
-              <button class="view-btn">View Details</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <AdminOrderManagement />
     </div>
 
     <!-- Edit Product Modal -->
@@ -271,6 +201,8 @@
 </template>
 
 <script>
+  import AdminOrderManagement from '@/components/AdminOrderManagement.vue';
+
   export default {
     name: 'AdminDashboard',
     data() {
@@ -294,6 +226,9 @@
         // Orders tab
         orderStatusFilter: 'all'
       };
+    },
+    components: {
+      AdminOrderManagement
     },
     computed: {
       filteredProducts() {

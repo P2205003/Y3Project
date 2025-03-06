@@ -29,6 +29,11 @@
           <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
         </button>
       </router-link>
+      <template v-if="appContext.isLoggedIn">
+        <router-link to="/orders">
+          <button>My Orders</button>
+        </router-link>
+      </template>
     </div>
   </div>
 </template>
@@ -112,7 +117,6 @@
       padding: 8px;
       border: none;
       border-radius: 4px;
-      ;
     }
 
     .search-bar button {

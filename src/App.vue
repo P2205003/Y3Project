@@ -1,11 +1,11 @@
 <!-- src/App.vue -->
 <script>
-  import SideMenu from './components/SideMenu.vue';
-  import SiteNav from './components/SiteNav.vue';
-  import TopBar from './components/TopBar.vue';
-  import Ribbon from './components/Ribbon.vue';
+  import SideMenu from '@/components/SideMenu.vue';
+  import SiteNav from '@/components/SiteNav.vue';
+  import TopBar from '@/components/TopBar.vue';
+  import Ribbon from '@/components/Ribbon.vue';
   import { ElMessage } from 'element-plus';
-  import cartService from './services/cartService';
+  import cartService from '@/services/cartService';
 
   export default {
     name: 'App',

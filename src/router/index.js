@@ -9,6 +9,9 @@ import AddItem from '../components/AddItem.vue';
 import Login from '../components/login.vue';
 import Register from '../components/Register.vue';
 import AdminDashboard from '../components/AdminDashboard.vue';
+import Checkout from '../components/Checkout.vue';
+import OrdersHistory from '../components/OrdersHistory.vue';
+import OrderDetails from '../components/OrderDetails.vue';
 
 const routes = [
   {
@@ -29,6 +32,24 @@ const routes = [
         path: 'shopping-cart',
         name: 'ShoppingCart',
         component: ShoppingCart,
+      },
+      {
+        path: '/checkout',
+        name: 'Checkout',
+        component: Checkout,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/orders',
+        name: 'OrdersHistory',
+        component: OrdersHistory,
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/orders/:id',
+        name: 'OrderDetails',
+        component: OrderDetails,
+        meta: { requiresAuth: true }
       },
       {
         path: 'search',
@@ -63,7 +84,7 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register
-  }
+  },
 ];
 
 const router = createRouter({

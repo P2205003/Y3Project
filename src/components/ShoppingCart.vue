@@ -242,9 +242,18 @@
         this.itemToRemove = null;
       },
       checkout() {
-        // For now, just show an alert
-        // In a real app, this would redirect to a checkout page
-        ElMessage.info('Checkout functionality is not yet implemented');
+        if (!this.appContext.isLoggedIn) {
+          ElMessage.warning('Please login to checkout');
+          this.$router.push('/login');
+          return;
+        }
+
+        if (this.cart.items.length === 0) {
+          ElMessage.warning('Your cart is empty');
+          return;
+        }
+
+        this.$router.push('/checkout');
       }
     },
     created() {
