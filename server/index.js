@@ -2,7 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import productRoutes from './routes/productRoutes.js';
-import userRoutes from './routes/userRoutes.js'; // Import user routes
+import userRoutes from './routes/userRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
 import { isAuthenticated } from './middleware/auth.js'; // Import authentication middleware
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
@@ -52,7 +53,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/products', productRoutes);
-app.use('/api/users', userRoutes); // Use user routes
+app.use('/api/users', userRoutes);
+app.use('/api/cart', cartRoutes);
 
 // --- Example Protected Route (Requires Authentication) ---
 app.get('/api/protected', isAuthenticated, (req, res) => {

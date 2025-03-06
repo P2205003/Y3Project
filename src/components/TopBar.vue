@@ -19,29 +19,59 @@
       </template>
       <template v-else>
         <span>Welcome, {{ appContext.user.username }}!</span>
-        <button @click="appContext.logout">Logout</button> <!-- Use appContext.logout -->
+        <button @click="appContext.logout">Logout</button>
       </template>
+
+      <!-- Shopping cart button with item count -->
       <router-link to="/shopping-cart">
-        <button>Shopping Cart</button>
+        <button class="cart-button">
+          Shopping Cart
+          <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
+        </button>
       </router-link>
     </div>
   </div>
 </template>
 
 <script>
+  import cartService from '@/services/cartService';
+
   export default {
     name: 'TopBar',
     data() {
       return {
-        searchQuery: ''
+        searchQuery: '',
+        cartItemCount: 0
       };
     },
     methods: {
       search() {
         this.$router.push({ path: '/search', query: { q: this.searchQuery } });
+      },
+      async updateCartCount() {
+        try {
+          this.cartItemCount = await cartService.getCartItemCount(this.appContext.isLoggedIn);
+        } catch (error) {
+          console.error('Error fetching cart count:', error);
+        }
       }
     },
-    inject: ['appContext'], // Inject the appContext
+    inject: ['appContext'],
+    created() {
+      // Get initial cart count
+      this.updateCartCount();
+
+      // Listen for route changes to update cart count
+      this.$router.afterEach(() => {
+        this.updateCartCount();
+      });
+    },
+    watch: {
+      // Update cart count when login status changes
+      'appContext.isLoggedIn'() {
+        this.updateCartCount();
+      }
+    }
   };
 </script>
 
@@ -96,4 +126,30 @@
       cursor: pointer;
       border-radius: 4px;
     }
+
+  .cart-button {
+    position: relative;
+    padding-right: 35px !important;
+  }
+
+  .cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #f44336;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  /* Dark mode styles */
+  @media (prefers-color-scheme: dark) {
+    /* (add dark mode styles if needed) */
+  }
 </style>

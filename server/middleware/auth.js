@@ -1,9 +1,16 @@
 export const isAuthenticated = (req, res, next) => {
+  console.log('Auth check - Session data:', {
+    sessionExists: !!req.session,
+    userId: req.session?.userId,
+    sessionID: req.sessionID,
+    cookies: req.headers.cookie
+  });
+
   if (req.session && req.session.userId) {
-    // User is authenticated, proceed to the next middleware/route handler
+    console.log(`User authenticated: ${req.session.userId}`);
     return next();
-  } else {
-    // User is not authenticated, return a 401 Unauthorized error
-    return res.status(401).json({ message: 'Unauthorized' });
   }
+
+  console.log('Authentication failed - no valid session');
+  return res.status(401).json({ message: 'Unauthorized - Please log in' });
 };

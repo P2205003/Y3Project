@@ -5,6 +5,7 @@
   import TopBar from './components/TopBar.vue';
   import Ribbon from './components/Ribbon.vue';
   import { ElMessage } from 'element-plus';
+  import cartService from './services/cartService';
 
   export default {
     name: 'App',
@@ -12,7 +13,7 @@
     data() {
       return {
         isMenuVisible: false,
-        appContext: { // Move all auth state into a single reactive object
+        appContext: {
           isLoggedIn: false,
           user: null,
           logout: () => this.logout()
@@ -20,7 +21,7 @@
       };
     },
     provide() {
-      return { appContext: this.appContext }; // Provide the reactive object directly
+      return { appContext: this.appContext };
     },
     methods: {
       toggleMenu() {
@@ -30,7 +31,7 @@
         try {
           const response = await fetch('/api/users/logout', { method: 'POST' });
           if (response.ok) {
-            this.appContext.isLoggedIn = false; // Update context directly
+            this.appContext.isLoggedIn = false;
             this.appContext.user = null;
             ElMessage.success('Logout successful!');
             this.$router.push('/');
@@ -42,19 +43,41 @@
       async checkLoginStatus() {
         try {
           const response = await fetch('/api/users/check-login', {
-            credentials: 'include' // Required for cookies
+            credentials: 'include'
           });
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
-
           }
           const data = await response.json();
+          
+          // Check if user just logged in (not logged in before, but logged in now)
+          const wasLoggedIn = this.appContext.isLoggedIn;
           this.appContext.isLoggedIn = data.isLoggedIn;
           this.appContext.user = data.user || null;
+          
+          // If user just logged in, merge carts
+          if (!wasLoggedIn && data.isLoggedIn) {
+            console.log('User just logged in, merging carts...');
+            await this.mergeCartsAfterLogin();
+          }
         } catch (error) {
           console.error('Session check failed:', error);
           this.appContext.isLoggedIn = false;
           this.appContext.user = null;
+        }
+      },
+      
+      async mergeCartsAfterLogin() {
+        try {
+          console.log('Merging carts after login...');
+          const result = await cartService.mergeCartsAfterLogin();
+          if (result && result.items) {
+            console.log(`Cart merged successfully. ${result.items.length} items in cart.`);
+            ElMessage.success('Your shopping cart has been updated with previously added items.');
+          }
+        } catch (error) {
+          console.error('Error merging carts:', error);
+          ElMessage.error('Failed to synchronize your shopping cart. Please try refreshing the page.');
         }
       }
     },

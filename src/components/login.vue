@@ -56,6 +56,7 @@
   import TopBar from "@/components/TopBar.vue";
   import Ribbon from "@/components/Ribbon.vue";
   import SideMenu from "@/components/SideMenu.vue";
+  import cartService from '@/services/cartService';
 
   export default {
     name: "Login",
@@ -98,7 +99,7 @@
         if (!this.validateForm()) {
           return;
         }
-
+      
         this.isSubmitting = true;
         try {
           const response = await fetch('/api/users/login', {
@@ -109,24 +110,30 @@
             credentials: 'include',
             body: JSON.stringify(this.loginForm),
           });
-
+      
           if (response.ok) {
-            const data = await response.json(); // Get user data from the response
+            const data = await response.json();
             // Check for the "already logged in" message
             if (data.message === 'Already logged in') {
               this.$message.info('You are already logged in!');
               this.appContext.isLoggedIn = true;
               this.appContext.user = data.user;
               this.$router.push('/');
-              return; // Stop further processing
+              return;
             }
-
+      
             this.$message.success('Login successful!');
-            // Update the global login state in App.vue
+            // Update the global login state
             this.appContext.isLoggedIn = true;
-            this.appContext.user = data.user; // Store the user object
-
-            this.$router.push('/'); // Redirect to home page
+            this.appContext.user = data.user;
+            
+            // Manually trigger cart merge here as a fallback
+            const cartResult = await cartService.mergeCartsAfterLogin();
+            if (cartResult && cartResult.items && cartResult.items.length > 0) {
+              this.$message.success(`Your cart has been updated with ${cartResult.items.length} items.`);
+            }
+      
+            this.$router.push('/');
           } else {
             const errorData = await response.json();
             this.$message.error(errorData.message || 'Login failed');
@@ -139,7 +146,7 @@
         }
       },
     },
-    inject: ['appContext'], // Inject the appContext from App.vue
+    inject: ['appContext'],
   };
 </script>
 
