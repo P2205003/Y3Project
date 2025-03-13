@@ -1,7 +1,8 @@
 <template>
   <div class="ribbon">
     <button @click="toggleMenu">≡ All</button>
-    <router-link to="/admin">
+    <!-- Only show admin link if user is an admin -->
+    <router-link v-if="isAdmin" to="/admin">
       <button>Admin Dashboard</button>
     </router-link>
   </div>
@@ -18,13 +19,51 @@
     },
     data() {
       return {
-        isMenuVisible: false
+        isMenuVisible: false,
+        isAdmin: false
       };
     },
     methods: {
       toggleMenu() {
         this.isMenuVisible = !this.isMenuVisible;
+      },
+      async checkAdminStatus() {
+        if (this.appContext.isLoggedIn) {
+          try {
+            const response = await fetch('/api/users/check-admin', {
+              credentials: 'include'
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              this.isAdmin = data.isAdmin;
+            }
+          } catch (error) {
+            console.error('Error checking admin status:', error);
+          }
+        } else {
+          this.isAdmin = false;
+        }
       }
+    },
+    inject: {
+      appContext: {
+        default: () => ({
+          isLoggedIn: false,
+          user: null
+        })
+      }
+    },
+    watch: {
+      'appContext.isLoggedIn': {
+        immediate: true,
+        handler() {
+          this.checkAdminStatus();
+        }
+      }
+    },
+    created() {
+      this.checkAdminStatus();
     }
   };
 </script>

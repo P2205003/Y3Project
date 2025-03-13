@@ -26,7 +26,13 @@
         </router-link>
       </template>
       <template v-else>
-        <span>Welcome, {{ appContext.user.username }}!</span>
+        <span class="welcome-text">Welcome, {{ appContext.user.username }}!</span>
+
+        <!-- Admin button (only visible for admin users) -->
+        <router-link v-if="isAdmin" to="/admin" class="admin-link">
+          <button class="admin-button">Admin Panel</button>
+        </router-link>
+
         <button @click="appContext.logout">Logout</button>
       </template>
 
@@ -55,7 +61,8 @@
       return {
         searchQuery: '',
         cartItemCount: 0,
-        unsubscribeCartUpdate: null
+        unsubscribeCartUpdate: null,
+        isAdmin: false
       };
     },
     methods: {
@@ -79,9 +86,35 @@
         } catch (error) {
           console.error('Error fetching cart count:', error);
         }
+      },
+      async checkAdminStatus() {
+        if (this.appContext.isLoggedIn) {
+          try {
+            const response = await fetch('/api/users/check-admin', {
+              credentials: 'include'
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              this.isAdmin = data.isAdmin;
+            }
+          } catch (error) {
+            console.error('Error checking admin status:', error);
+          }
+        } else {
+          this.isAdmin = false;
+        }
       }
     },
-    inject: ['appContext'],
+    inject: {
+      appContext: {
+        default: () => ({
+          isLoggedIn: false,
+          user: null,
+          logout: () => console.error('appContext not properly injected')
+        })
+      }
+    },
     created() {
       // Initialize search query from route if user is already on search page
       if (this.$route.path === '/search' && this.$route.query.q) {
@@ -90,6 +123,9 @@
 
       // Get initial cart count
       this.updateCartCount();
+
+      // Check if user is admin
+      this.checkAdminStatus();
 
       // Listen for route changes to update cart count and search query
       this.$router.afterEach((to) => {
@@ -116,6 +152,7 @@
       // Update cart count when login status changes
       'appContext.isLoggedIn'() {
         this.updateCartCount();
+        this.checkAdminStatus();
       }
     }
   };
@@ -197,6 +234,19 @@
         background-color: #444;
       }
 
+  .welcome-text {
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+
+  .admin-button {
+    background-color: #ff9800 !important;
+  }
+
+    .admin-button:hover {
+      background-color: #f57c00 !important;
+    }
+
   .cart-button {
     position: relative;
     padding-right: 35px !important;
@@ -249,6 +299,10 @@
         padding: 8px;
         font-size: 14px;
       }
+
+    .welcome-text {
+      display: none;
+    }
   }
 
   /* Dark mode styles */
@@ -264,6 +318,14 @@
 
       .top .buttons button:hover {
         background-color: #555;
+      }
+
+    .admin-button {
+      background-color: #e65100 !important;
+    }
+
+      .admin-button:hover {
+        background-color: #bf360c !important;
       }
   }
 </style>

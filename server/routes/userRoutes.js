@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User.js'; // Import the User model
 import bcrypt from 'bcrypt';
+import { isAuthenticated, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -137,6 +138,27 @@ router.get('/check-login', (req, res) => {
     // User is not logged in
     res.json({ isLoggedIn: false });
   }
+});
+
+// --- Check Admin Status Route ---
+router.get('/check-admin', isAuthenticated, async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+
+    if (!user) {
+      return res.status(404).json({ isAdmin: false, message: 'User not found' });
+    }
+
+    res.json({ isAdmin: user.isAdmin });
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ isAdmin: false, message: 'Server error checking admin status' });
+  }
+});
+
+// --- Admin-Only Route Example ---
+router.get('/admin-data', isAuthenticated, isAdmin, (req, res) => {
+  res.json({ message: 'Admin data access granted', adminData: { /* data here */ } });
 });
 
 export default router;

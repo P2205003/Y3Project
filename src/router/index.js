@@ -1,19 +1,46 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '../components/MainLayout.vue';
+import AdminLayout from '../components/AdminLayout.vue';
 import Page1 from '../views/Page1.vue';
 import Page2 from '../views/Page2.vue';
 import ShoppingCart from '../components/ShoppingCart.vue';
 import SearchPage from '../components/SearchPage.vue';
 import ProductPage from '../components/ProductPage.vue';
-import AddItem from '../components/AddItem.vue';
+import AddItem from '../components/admin/AddItem.vue';
 import Login from '../components/login.vue';
 import Register from '../components/Register.vue';
-import AdminDashboard from '../components/AdminDashboard.vue';
+import AdminDashboard from '../components/admin/AdminDashboard.vue';
+import AdminProducts from '../components/admin/AdminProducts.vue';
+import AdminOrders from '../components/admin/AdminOrders.vue';
+import AdminUsers from '../components/admin/AdminUsers.vue';
+import AdminSettings from '../components/admin/AdminSettings.vue';
 import Checkout from '../components/Checkout.vue';
 import OrdersHistory from '../components/OrdersHistory.vue';
 import OrderDetails from '../components/OrderDetails.vue';
+import NotFound from '../components/NotFound.vue';
+import AdminOrderDetails from '../components/admin/AdminOrderDetails.vue';
+
+// Define a function to check if user is admin
+const isAdmin = async () => {
+  try {
+    const response = await fetch('/api/users/check-admin', {
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.isAdmin;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+};
 
 const routes = [
+  // User facing routes
   {
     path: '/',
     component: MainLayout,
@@ -60,21 +87,10 @@ const routes = [
         path: 'product/:id',
         name: 'ProductPage',
         component: ProductPage
-      },
-      {
-        path: 'add-item',
-        name: 'AddItem',
-        component: AddItem,
-        meta: { requiresAuth: true } // Requires authentication
-      },
-      {
-        path: 'admin',
-        name: 'AdminDashboard',
-        component: AdminDashboard,
-        meta: { requiresAuth: true } // Admin route requires authentication
       }
     ]
   },
+  // Authentication routes
   {
     path: '/login',
     name: 'Login',
@@ -85,6 +101,57 @@ const routes = [
     name: 'Register',
     component: Register
   },
+
+  // Admin routes with AdminLayout
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: AdminDashboard
+      },
+      {
+        path: 'products',
+        name: 'AdminProducts',
+        component: AdminProducts
+      },
+      {
+        path: 'orders',
+        name: 'AdminOrders',
+        component: AdminOrders
+      },
+      {
+        path: 'orders/:id',
+        name: 'AdminOrderDetails',
+        component: AdminOrderDetails
+      },
+      {
+        path: 'products/add',
+        name: 'AddItem',
+        component: AddItem
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: AdminUsers
+      },
+      {
+        path: 'settings',
+        name: 'AdminSettings',
+        component: AdminSettings
+      }
+    ]
+  },
+
+  // 404 route
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound
+  }
 ];
 
 const router = createRouter({
@@ -94,20 +161,42 @@ const router = createRouter({
 
 // Navigation Guard
 router.beforeEach(async (to, from, next) => {
-  if (to.meta.requiresAuth) {
+  // Check if route requires authentication
+  if (to.matched.some(record => record.meta.requiresAuth)) {
     try {
-      const response = await fetch('/api/users/check-login');
+      const response = await fetch('/api/users/check-login', {
+        credentials: 'include'
+      });
+
       const data = await response.json();
-      if (data.isLoggedIn) {
-        next(); // User is authenticated
-      } else {
-        next('/login'); // Redirect to login
+
+      if (!data.isLoggedIn) {
+        // User is not logged in, redirect to login
+        return next({
+          path: '/login',
+          query: { redirect: to.fullPath }
+        });
       }
+
+      // If route requires admin privileges
+      if (to.matched.some(record => record.meta.requiresAdmin)) {
+        const hasAdminAccess = await isAdmin();
+
+        if (!hasAdminAccess) {
+          // User is not an admin, redirect to home
+          console.warn('Unauthorized access attempt to admin route:', to.path);
+          return next({ path: '/' });
+        }
+      }
+
+      // User has necessary permissions
+      next();
     } catch (error) {
-      console.error('Error checking login status:', error);
+      console.error('Auth check error:', error);
       next('/login');
     }
   } else {
+    // Route doesn't require authentication
     next();
   }
 });

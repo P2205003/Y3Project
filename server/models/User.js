@@ -2,13 +2,6 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema({
-  route: {
-    type: String,
-    required: [true, 'Username is required'],
-    unique: true,
-    trim: true, // Remove whitespace from both ends of the string
-    lowercase: true, // Store usernames in lowercase for consistency
-  },
   username: {
     type: String,
     required: [true, 'Username is required'],
@@ -38,6 +31,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Shipping address is required'],
     trim: true,
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,
