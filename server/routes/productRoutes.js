@@ -14,6 +14,45 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Search products (public)
+router.get('/search', async (req, res) => {
+  try {
+    const { q, category, minPrice, maxPrice } = req.query;
+
+    // Build search query
+    const query = { enabled: true };
+
+    // Text search (case-insensitive)
+    if (q) {
+      query.$or = [
+        { name: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    // Category filter
+    if (category) {
+      query.category = category;
+    }
+
+    // Price range filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) {
+        query.price.$gte = Number(minPrice);
+      }
+      if (maxPrice !== undefined) {
+        query.price.$lte = Number(maxPrice);
+      }
+    }
+
+    const products = await Product.find(query);
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get all products including disabled ones (admin only)
 router.get('/admin', isAuthenticated, async (req, res) => {
   try {

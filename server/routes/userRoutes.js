@@ -116,18 +116,23 @@ router.get('/check-login', (req, res) => {
     User.findById(req.session.userId)
       .then(user => {
         if (user) {
-          res.json({ isLoggedIn: true, user: { username: user.username, fullName: user.fullName } });
+          res.json({
+            isLoggedIn: true,
+            user: {
+              username: user.username,
+              fullName: user.fullName,
+              shippingAddress: user.shippingAddress  // Add this line
+            }
+          });
         } else {
           // Session exists, but user not found (shouldn't happen normally)
           res.status(401).json({ isLoggedIn: false });
         }
-
       })
       .catch(err => {
         console.error("Error finding user:", err);
         res.status(500).json({ message: 'server error' })
       });
-
   } else {
     // User is not logged in
     res.json({ isLoggedIn: false });

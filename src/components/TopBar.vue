@@ -4,8 +4,16 @@
       <img src="./icon_result.ico" alt="Website Icon" />
     </router-link>
     <div class="search-bar">
-      <input type="text" placeholder="Search..." v-model="searchQuery" />
-      <button @click="search">Search</button>
+      <form @submit.prevent="search">
+        <input type="text"
+               placeholder="Search products..."
+               v-model.trim="searchQuery"
+               aria-label="Search products" />
+        <button type="submit" aria-label="Search">
+          <span class="search-icon">🔍</span>
+          <span class="search-text">Search</span>
+        </button>
+      </form>
     </div>
     <div class="buttons">
       <!-- Conditionally render buttons based on login status -->
@@ -52,7 +60,18 @@
     },
     methods: {
       search() {
-        this.$router.push({ path: '/search', query: { q: this.searchQuery } });
+        const query = {};
+
+        // Only add q parameter if search query is not empty
+        if (this.searchQuery.trim()) {
+          query.q = this.searchQuery.trim();
+        }
+
+        // Always navigate to search page, with or without query
+        this.$router.push({
+          path: '/search',
+          query
+        });
       },
       async updateCartCount() {
         try {
@@ -64,12 +83,22 @@
     },
     inject: ['appContext'],
     created() {
+      // Initialize search query from route if user is already on search page
+      if (this.$route.path === '/search' && this.$route.query.q) {
+        this.searchQuery = this.$route.query.q;
+      }
+
       // Get initial cart count
       this.updateCartCount();
 
-      // Listen for route changes to update cart count
-      this.$router.afterEach(() => {
+      // Listen for route changes to update cart count and search query
+      this.$router.afterEach((to) => {
         this.updateCartCount();
+
+        // Update search box when navigating to search page
+        if (to.path === '/search' && to.query.q) {
+          this.searchQuery = to.query.q;
+        }
       });
 
       // Subscribe to cart update events from cartService
@@ -93,7 +122,6 @@
 </script>
 
 <style scoped>
-  /* (Keep existing styles) */
   .top {
     display: flex;
     justify-content: space-between;
@@ -110,38 +138,64 @@
   .search-bar {
     display: flex;
     align-items: center;
+    flex-grow: 1;
+    max-width: 600px;
+    margin: 0 20px;
   }
 
+    .search-bar form {
+      display: flex;
+      width: 100%;
+    }
+
     .search-bar input[type='text'] {
-      width: 400px;
-      padding: 8px;
+      flex-grow: 1;
+      min-width: 150px;
+      padding: 10px 16px;
       border: none;
-      border-radius: 4px;
+      border-radius: 4px 0 0 4px;
+      font-size: 16px;
     }
 
     .search-bar button {
-      padding: 8px 12px;
-      margin-left: 8px;
-      background-color: #555;
+      padding: 10px 16px;
+      background-color: #5D5CDE;
       border: none;
       color: white;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 0 4px 4px 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
     }
+
+      .search-bar button:hover {
+        background-color: #4a49b8;
+      }
+
+  .search-icon {
+    margin-right: 5px;
+  }
 
   .top .buttons {
     display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
     .top .buttons button {
-      margin-left: 10px;
       padding: 10px;
       background-color: #555;
       border: none;
       color: white;
       cursor: pointer;
       border-radius: 4px;
+      font-size: 16px;
     }
+
+      .top .buttons button:hover {
+        background-color: #444;
+      }
 
   .cart-button {
     position: relative;
@@ -164,8 +218,52 @@
     font-weight: bold;
   }
 
+  /* Responsive design for mobile */
+  @media (max-width: 768px) {
+    .top {
+      flex-wrap: wrap;
+      padding: 10px;
+    }
+
+    .search-bar {
+      order: 3;
+      width: 100%;
+      max-width: none;
+      margin: 10px 0 0;
+    }
+
+    .search-text {
+      display: none;
+    }
+
+    .search-icon {
+      margin-right: 0;
+    }
+
+    .top .buttons {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+      .top .buttons button {
+        padding: 8px;
+        font-size: 14px;
+      }
+  }
+
   /* Dark mode styles */
   @media (prefers-color-scheme: dark) {
-    /* (add dark mode styles if needed) */
+    .search-bar input[type='text'] {
+      background-color: #333;
+      color: #fff;
+    }
+
+    .top .buttons button {
+      background-color: #444;
+    }
+
+      .top .buttons button:hover {
+        background-color: #555;
+      }
   }
 </style>
