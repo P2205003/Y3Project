@@ -11,7 +11,6 @@
                aria-label="Search products" />
         <button type="submit" aria-label="Search">
           <span class="search-icon">🔍</span>
-          <span class="search-text">Search</span>
         </button>
       </form>
     </div>
@@ -195,7 +194,7 @@
     }
 
     .search-bar button {
-      padding: 10px 16px;
+      padding: 10px 12px;
       background-color: #5D5CDE;
       border: none;
       color: white;

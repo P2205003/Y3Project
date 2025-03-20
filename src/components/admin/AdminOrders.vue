@@ -223,7 +223,7 @@ export default {
     .admin-page-header h1 {
       margin: 0;
       font-size: 1.8rem;
-      color: #333;
+      color: #20c264;
     }
 
   .admin-panel {

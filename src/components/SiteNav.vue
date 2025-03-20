@@ -20,7 +20,7 @@
   
 <style scoped>
   .site-nav-bd {
-    background-color: #E6E6FA;
+    background-color: #1b82f7;
     padding: 10px;
     display: flex;
     justify-content: space-between;

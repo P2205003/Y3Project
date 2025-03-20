@@ -218,14 +218,14 @@
 <style scoped>
   .search-page {
     display: flex;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+    padding: 10px;
     gap: 30px;
+    width: 100vw;
+    max-width: 100%;
   }
 
   .filter {
-    width: 25%;
+    width: 400px;
     min-width: 200px;
     padding: 20px;
     border-right: 1px solid #ddd;
@@ -238,7 +238,7 @@
 
   .results {
     flex: 1;
-    padding: 20px 0;
+    padding: 20px;
   }
 
     .filter h3, .results h3 {
@@ -252,23 +252,23 @@
     margin-bottom: 25px;
   }
 
-    .filter-section h4 {
-      margin-bottom: 10px;
-    }
+  .filter-section h4 {
+    margin-bottom: 10px;
+  }
 
   .filter-item {
     margin-bottom: 8px;
   }
 
-    .filter-item label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-    }
+  .filter-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
 
-    .filter-item input[type="checkbox"] {
-      margin-right: 8px;
-    }
+  .filter-item input[type="checkbox"] {
+    margin-right: 8px;
+  }
 
   .price-range {
     display: flex;
@@ -421,8 +421,9 @@
   /* Dark mode styles */
   @media (prefers-color-scheme: dark) {
     .search-page {
-      background-color: #181818;
-      color: #fff;
+      background-color: #ffffff;
+      color: #000000;
+      border-style: solid;
     }
 
     .filter {
@@ -434,18 +435,19 @@
       }
 
     .search-query, .clear-filters-btn {
-      background-color: #333;
-      color: #fff;
+      background-color: #d4d4d2;
+      border-bottom: 2px solid #000000;
+      color: #000000;
     }
 
       .clear-filters-btn:hover {
-        background-color: #444;
+        background-color: #bd1c1c;
       }
 
     .price-input input {
-      background-color: #333;
+      background-color: #ffffff;
       border-color: #444;
-      color: #fff;
+      color: #000000;
     }
 
     .product-card {

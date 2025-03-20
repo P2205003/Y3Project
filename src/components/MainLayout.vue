@@ -29,7 +29,7 @@ export default {
 
 <style scoped>
 .content {
-  padding: 40px; /* Add space below the top components */
+  padding: 20px; 
 
 }
 </style>
