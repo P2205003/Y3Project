@@ -1,4 +1,3 @@
-// src/services/orderService.js
 class OrderService {
   // Create new order from cart
   async createOrder(shippingAddress) {
@@ -91,6 +90,30 @@ class OrderService {
     }
   }
 
+  // NEW METHOD: Cancel order (for customers)
+  async cancelOrder(orderId, reason = '') {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ reason })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error cancelling order ${orderId}:`, error);
+      throw error;
+    }
+  }
+
   // Get all orders (admin)
   async getAllOrders(filters = {}, page = 1, limit = 10) {
     try {
@@ -141,6 +164,11 @@ class OrderService {
     };
 
     return transitions[currentStatus] || [];
+  }
+
+  // Check if order status can be cancelled by customer
+  canBeCancelled(status) {
+    return ['pending', 'hold'].includes(status);
   }
 
   // Format date in a user-friendly way

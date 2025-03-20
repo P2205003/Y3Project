@@ -64,10 +64,18 @@
             <td>{{ product.name }}</td>
             <td>${{ product.price.toFixed(2) }}</td>
             <td>{{ product.category || 'N/A' }}</td>
-            <td>
-              <span :class="['status-badge', product.enabled ? 'status-active' : 'status-inactive']">
-                {{ product.enabled ? 'Enabled' : 'Disabled' }}
-              </span>
+            <td class="status-cell">
+              <div class="toggle-container">
+                <label class="toggle-switch">
+                  <input type="checkbox"
+                         :checked="product.enabled"
+                         @change="toggleProductStatus(product)">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label" :class="product.enabled ? 'status-active' : 'status-inactive'">
+                  {{ product.enabled ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
             </td>
             <td class="actions-cell">
               <button class="action-btn view-btn" @click="viewProduct(product)">
@@ -75,11 +83,6 @@
               </button>
               <button class="action-btn edit-btn" @click="editProduct(product)">
                 Edit
-              </button>
-              <button class="action-btn"
-                      :class="product.enabled ? 'disable-btn' : 'enable-btn'"
-                      @click="toggleProductStatus(product)">
-                {{ product.enabled ? 'Disable' : 'Enable' }}
               </button>
               <button class="action-btn delete-btn" @click="deleteProduct(product)">
                 Delete
@@ -166,210 +169,208 @@
 </template>
 
 <script>
-export default {
-  name: 'AdminProducts',
-  data() {
-    return {
-      products: [],
-      filteredProducts: [],
-      loading: true,
-      error: null,
-      searchQuery: '',
-      categoryFilter: '',
-      statusFilter: '',
-      categories: [],
-      currentPage: 1,
-      itemsPerPage: 10,
-      totalItems: 0,
-      totalPages: 0,
-      searchTimeout: null,
-      showEditModal: false,
-      isNewProduct: false,
-      editingProduct: {
-        name: '',
-        price: 0,
-        category: '',
-        description: '',
-        enabled: true
-      },
-      originalProduct: null,
-      placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
-    };
-  },
-  created() {
-    this.fetchProducts();
-  },
-  methods: {
-    async fetchProducts() {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        const response = await fetch('/api/products/admin', {
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        this.products = await response.json();
-
-        // Extract unique categories
-        const categorySet = new Set();
-        this.products.forEach(product => {
-          if (product.category) {
-            categorySet.add(product.category);
-          }
-        });
-        this.categories = Array.from(categorySet).sort();
-
-        this.filterProducts();
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        this.error = 'Failed to load products. Please try again.';
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    filterProducts() {
-      // Apply filters
-      let filtered = [...this.products];
-
-      // Apply search query
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase();
-        filtered = filtered.filter(product =>
-          product.name.toLowerCase().includes(query) ||
-          (product.description && product.description.toLowerCase().includes(query))
-        );
-      }
-
-      // Apply category filter
-      if (this.categoryFilter) {
-        filtered = filtered.filter(product =>
-          product.category === this.categoryFilter
-        );
-      }
-
-      // Apply status filter
-      if (this.statusFilter !== '') {
-        const enabled = this.statusFilter === 'true';
-        filtered = filtered.filter(product => product.enabled === enabled);
-      }
-
-      // Update pagination
-      this.totalItems = filtered.length;
-      this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
-      this.currentPage = 1; // Reset to first page when filters change
-
-      // Apply pagination
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      this.filteredProducts = filtered.slice(start, end);
-    },
-
-    debounceSearch() {
-      // Debounce search to avoid too many filter operations
-      clearTimeout(this.searchTimeout);
-      this.searchTimeout = setTimeout(() => {
-        this.filterProducts();
-      }, 300);
-    },
-
-    changePage(page) {
-      this.currentPage = page;
-      // Apply pagination
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      this.filteredProducts = this.products.slice(start, end);
-    },
-
-    viewProduct(product) {
-      // Navigate to product detail page in the main shop (for viewing)
-      window.open(`/product/${product._id}`, '_blank');
-    },
-
-    editProduct(product) {
-      this.isNewProduct = false;
-      this.originalProduct = product;
-      this.editingProduct = { ...product };
-      this.showEditModal = true;
-    },
-
-    closeModal() {
-      this.showEditModal = false;
-      this.editingProduct = {
-        name: '',
-        price: 0,
-        category: '',
-        description: '',
-        enabled: true
+  export default {
+    name: 'AdminProducts',
+    data() {
+      return {
+        products: [],
+        filteredProducts: [],
+        loading: true,
+        error: null,
+        searchQuery: '',
+        categoryFilter: '',
+        statusFilter: '',
+        categories: [],
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalItems: 0,
+        totalPages: 0,
+        searchTimeout: null,
+        showEditModal: false,
+        isNewProduct: false,
+        editingProduct: {
+          name: '',
+          price: 0,
+          category: '',
+          description: '',
+          enabled: true
+        },
+        originalProduct: null,
+        placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
       };
     },
-
-    async saveProduct() {
-      // Save product logic would go here
-      // This is just a placeholder
-      console.log('Saving product:', this.editingProduct);
-      this.closeModal();
+    created() {
+      this.fetchProducts();
     },
+    methods: {
+      async fetchProducts() {
+        this.loading = true;
+        this.error = null;
 
-    async toggleProductStatus(product) {
-      try {
-        const response = await fetch(`/api/products/${product._id}/status`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ enabled: !product.enabled })
-        });
+        try {
+          const response = await fetch('/api/products/admin', {
+            credentials: 'include'
+          });
 
-        if (!response.ok) {
-          throw new Error('Failed to update product status');
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          this.products = await response.json();
+
+          // Extract unique categories
+          const categorySet = new Set();
+          this.products.forEach(product => {
+            if (product.category) {
+              categorySet.add(product.category);
+            }
+          });
+          this.categories = Array.from(categorySet).sort();
+
+          this.filterProducts();
+        } catch (error) {
+          console.error('Error fetching products:', error);
+          this.error = 'Failed to load products. Please try again.';
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      filterProducts() {
+        // Apply filters
+        let filtered = [...this.products];
+
+        // Apply search query
+        if (this.searchQuery) {
+          const query = this.searchQuery.toLowerCase();
+          filtered = filtered.filter(product =>
+            product.name.toLowerCase().includes(query) ||
+            (product.description && product.description.toLowerCase().includes(query))
+          );
         }
 
-        // Update product in local array
-        product.enabled = !product.enabled;
-
-        // Show success message
-        alert(`Product ${product.enabled ? 'enabled' : 'disabled'} successfully`);
-      } catch (error) {
-        console.error('Error toggling product status:', error);
-        alert('Error updating product status');
-      }
-    },
-
-    async deleteProduct(product) {
-      if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/products/${product._id}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete product');
+        // Apply category filter
+        if (this.categoryFilter) {
+          filtered = filtered.filter(product =>
+            product.category === this.categoryFilter
+          );
         }
 
-        // Remove product from arrays
-        this.products = this.products.filter(p => p._id !== product._id);
-        this.filterProducts(); // Re-apply filters
+        // Apply status filter
+        if (this.statusFilter !== '') {
+          const enabled = this.statusFilter === 'true';
+          filtered = filtered.filter(product => product.enabled === enabled);
+        }
 
-        // Show success message
-        alert('Product deleted successfully');
-      } catch (error) {
-        console.error('Error deleting product:', error);
-        alert('Error deleting product');
+        // Update pagination
+        this.totalItems = filtered.length;
+        this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+        this.currentPage = 1; // Reset to first page when filters change
+
+        // Apply pagination
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        this.filteredProducts = filtered.slice(start, end);
+      },
+
+      debounceSearch() {
+        // Debounce search to avoid too many filter operations
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+          this.filterProducts();
+        }, 300);
+      },
+
+      changePage(page) {
+        this.currentPage = page;
+        // Apply pagination
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        this.filteredProducts = this.products.slice(start, end);
+      },
+
+      viewProduct(product) {
+        // Navigate to product detail page in the main shop (for viewing)
+        window.open(`/product/${product._id}`, '_blank');
+      },
+
+      editProduct(product) {
+        this.isNewProduct = false;
+        this.originalProduct = product;
+        this.editingProduct = { ...product };
+        this.showEditModal = true;
+      },
+
+      closeModal() {
+        this.showEditModal = false;
+        this.editingProduct = {
+          name: '',
+          price: 0,
+          category: '',
+          description: '',
+          enabled: true
+        };
+      },
+
+      async saveProduct() {
+        // Save product logic would go here
+        // This is just a placeholder
+        console.log('Saving product:', this.editingProduct);
+        this.closeModal();
+      },
+
+      async toggleProductStatus(product) {
+        try {
+          const response = await fetch(`/api/products/${product._id}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ enabled: !product.enabled })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update product status');
+          }
+
+          // Update product in local array
+          product.enabled = !product.enabled;
+
+        } catch (error) {
+          console.error('Error toggling product status:', error);
+          alert('Error updating product status');
+        }
+      },
+
+      async deleteProduct(product) {
+        if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/products/${product._id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to delete product');
+          }
+
+          // Remove product from arrays
+          this.products = this.products.filter(p => p._id !== product._id);
+          this.filterProducts(); // Re-apply filters
+
+          // Show success message
+          alert('Product deleted successfully');
+        } catch (error) {
+          console.error('Error deleting product:', error);
+          alert('Error deleting product');
+        }
       }
     }
-  }
-};
+  };
 </script>
 
 <style scoped>
@@ -472,22 +473,77 @@ export default {
       border-radius: 4px;
     }
 
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
+  .status-cell {
+    min-width: 150px;
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toggle-label {
     font-size: 0.8rem;
     font-weight: 500;
   }
 
   .status-active {
-    background-color: #e8f5e9;
     color: #388e3c;
   }
 
   .status-inactive {
-    background-color: #ffebee;
     color: #d32f2f;
+  }
+
+  /* Toggle Switch Styles */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+  }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+  }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+  input:checked + .toggle-slider {
+    background-color: #5D5CDE;
+  }
+
+  input:focus + .toggle-slider {
+    box-shadow: 0 0 1px #5D5CDE;
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(20px);
   }
 
   .actions-cell {
@@ -512,16 +568,6 @@ export default {
   .edit-btn {
     background-color: #e8f5e9;
     color: #388e3c;
-  }
-
-  .enable-btn {
-    background-color: #e8f5e9;
-    color: #388e3c;
-  }
-
-  .disable-btn {
-    background-color: #fff8e1;
-    color: #f57c00;
   }
 
   .delete-btn {
@@ -732,6 +778,18 @@ export default {
       border-bottom-color: #4a5568;
     }
 
+    .toggle-slider {
+      background-color: #4a5568;
+    }
+
+      .toggle-slider:before {
+        background-color: #a0aec0;
+      }
+
+    input:checked + .toggle-slider:before {
+      background-color: white;
+    }
+
     .page-btn {
       background-color: #2d3748;
       border-color: #4a5568;
@@ -772,29 +830,13 @@ export default {
       color: #e2e8f0;
     }
 
-    /* Adjust status badges for dark mode */
-    .status-active {
-      background-color: rgba(56, 142, 60, 0.2);
-    }
-
-    .status-inactive {
-      background-color: rgba(211, 47, 47, 0.2);
-    }
-
+    /* Adjust action buttons for dark mode */
     .view-btn {
       background-color: rgba(25, 118, 210, 0.2);
     }
 
     .edit-btn {
       background-color: rgba(56, 142, 60, 0.2);
-    }
-
-    .enable-btn {
-      background-color: rgba(56, 142, 60, 0.2);
-    }
-
-    .disable-btn {
-      background-color: rgba(245, 124, 0, 0.2);
     }
 
     .delete-btn {

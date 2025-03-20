@@ -47,9 +47,37 @@
               <span class="meta-value">${{ order.totalAmount.toFixed(2) }}</span>
             </div>
           </div>
+
+          <!-- Cancel Order Button for Users -->
+          <div v-if="canCancelOrder" class="user-actions">
+            <button @click="showCancelConfirmation = true" class="cancel-order-btn" :disabled="isCancelling">
+              {{ isCancelling ? 'Cancelling...' : 'Cancel Order' }}
+            </button>
+            <div v-if="cancelError" class="cancel-error">{{ cancelError }}</div>
+          </div>
+
+          <!-- Cancel Confirmation Modal -->
+          <div v-if="showCancelConfirmation" class="cancel-confirmation-modal">
+            <div class="modal-content">
+              <h3>Confirm Cancellation</h3>
+              <p>Are you sure you want to cancel this order?</p>
+              <div class="form-group">
+                <label for="cancelReason">Reason for cancellation (optional):</label>
+                <textarea id="cancelReason" v-model="cancelReason" placeholder="Please provide a reason for cancellation..." rows="3"></textarea>
+              </div>
+              <div class="modal-actions">
+                <button @click="cancelOrder" class="confirm-cancel-btn" :disabled="isCancelling">
+                  {{ isCancelling ? 'Cancelling...' : 'Yes, Cancel Order' }}
+                </button>
+                <button @click="showCancelConfirmation = false" class="cancel-btn" :disabled="isCancelling">
+                  No, Keep Order
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Status update section -->
+        <!-- Status update section for Admin -->
         <div class="status-update-section">
           <h3>Update Status</h3>
 
@@ -160,100 +188,136 @@
 </template>
 
 <script>
-import orderService from '@/services/orderService';
-import { ElMessage } from 'element-plus';
+  import orderService from '@/services/orderService';
+  import { ElMessage } from 'element-plus';
 
-export default {
-  name: 'OrderDetails',
-  data() {
-    return {
-      order: null,
-      loading: true,
-      error: null,
-      newStatus: '',
-      statusNotes: '',
-      isUpdating: false,
-      updateError: null,
-      placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
-    };
-  },
-  computed: {
-    // Get the ID from route params
-    orderId() {
-      return this.$route.params.id;
+  export default {
+    name: 'OrderDetails',
+    data() {
+      return {
+        order: null,
+        loading: true,
+        error: null,
+        newStatus: '',
+        statusNotes: '',
+        isUpdating: false,
+        updateError: null,
+        placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+        // New properties for order cancellation
+        showCancelConfirmation: false,
+        cancelReason: '',
+        isCancelling: false,
+        cancelError: null
+      };
     },
-    // Get status options with labels
-    statusOptions() {
-      return orderService.getStatusOptions();
+    computed: {
+      // Get the ID from route params
+      orderId() {
+        return this.$route.params.id;
+      },
+      // Get status options with labels
+      statusOptions() {
+        return orderService.getStatusOptions();
+      },
+      // Get allowed transitions for current status
+      allowedStatusTransitions() {
+        if (!this.order) return [];
+        return orderService.getAllowedTransitions(this.order.status);
+      },
+      // Sort status history by date (newest first)
+      sortedStatusHistory() {
+        if (!this.order || !this.order.statusHistory) return [];
+        return [...this.order.statusHistory].sort((a, b) => {
+          return new Date(b.date) - new Date(a.date);
+        });
+      },
+      // Check if order can be cancelled by customer
+      canCancelOrder() {
+        if (!this.order) return false;
+
+        // Check if current status allows cancellation by customer
+        return orderService.canBeCancelled(this.order.status);
+      }
     },
-    // Get allowed transitions for current status
-    allowedStatusTransitions() {
-      if (!this.order) return [];
-      return orderService.getAllowedTransitions(this.order.status);
+    created() {
+      this.fetchOrderDetails();
     },
-    // Sort status history by date (newest first)
-    sortedStatusHistory() {
-      if (!this.order || !this.order.statusHistory) return [];
-      return [...this.order.statusHistory].sort((a, b) => {
-        return new Date(b.date) - new Date(a.date);
-      });
+    methods: {
+      async fetchOrderDetails() {
+        this.loading = true;
+        this.error = null;
+
+        try {
+          this.order = await orderService.getOrderById(this.orderId);
+          this.newStatus = ''; // Reset status dropdown
+        } catch (error) {
+          this.error = 'Failed to load order details. Please try again.';
+          console.error('Error fetching order details:', error);
+        } finally {
+          this.loading = false;
+        }
+      },
+      formatDate(dateString) {
+        return orderService.formatDate(dateString);
+      },
+      getStatusLabel(statusValue) {
+        const status = this.statusOptions.find(s => s.value === statusValue);
+        return status ? status.label : statusValue;
+      },
+      async updateOrderStatus() {
+        if (!this.newStatus) {
+          this.updateError = 'Please select a new status';
+          return;
+        }
+
+        this.isUpdating = true;
+        this.updateError = null;
+
+        try {
+          this.order = await orderService.updateOrderStatus(
+            this.orderId,
+            this.newStatus,
+            this.statusNotes
+          );
+
+          // Reset form
+          this.newStatus = '';
+          this.statusNotes = '';
+
+          ElMessage.success(`Order status updated to ${this.getStatusLabel(this.order.status)}`);
+        } catch (error) {
+          this.updateError = error.message || 'Failed to update order status';
+          console.error('Error updating order status:', error);
+        } finally {
+          this.isUpdating = false;
+        }
+      },
+      // New method for cancelling order - now uses the dedicated cancelOrder method
+      async cancelOrder() {
+        this.isCancelling = true;
+        this.cancelError = null;
+
+        try {
+          // Call the new cancelOrder method
+          this.order = await orderService.cancelOrder(
+            this.orderId,
+            this.cancelReason
+          );
+
+          // Hide confirmation modal and reset form
+          this.showCancelConfirmation = false;
+          this.cancelReason = '';
+
+          ElMessage.success('Your order has been cancelled successfully');
+        } catch (error) {
+          this.cancelError = error.message || 'Failed to cancel order';
+          console.error('Error cancelling order:', error);
+        } finally {
+          this.isCancelling = false;
+        }
+      }
     }
-  },
-  created() {
-    this.fetchOrderDetails();
-  },
-  methods: {
-    async fetchOrderDetails() {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        this.order = await orderService.getOrderById(this.orderId);
-        this.newStatus = ''; // Reset status dropdown
-      } catch (error) {
-        this.error = 'Failed to load order details. Please try again.';
-        console.error('Error fetching order details:', error);
-      } finally {
-        this.loading = false;
-      }
-    },
-    formatDate(dateString) {
-      return orderService.formatDate(dateString);
-    },
-    getStatusLabel(statusValue) {
-      const status = this.statusOptions.find(s => s.value === statusValue);
-      return status ? status.label : statusValue;
-    },
-    async updateOrderStatus() {
-      if (!this.newStatus) {
-        this.updateError = 'Please select a new status';
-        return;
-      }
-
-      this.isUpdating = true;
-      this.updateError = null;
-
-      try {
-        this.order = await orderService.updateOrderStatus(
-          this.orderId,
-          this.newStatus,
-          this.statusNotes
-        );
-
-        // Reset form
-        this.newStatus = '';
-        this.statusNotes = '';
-
-        ElMessage.success(`Order status updated to ${this.getStatusLabel(this.order.status)}`);
-      } catch (error) {
-        this.updateError = error.message || 'Failed to update order status';
-        console.error('Error updating order status:', error);
-      } finally {
-        this.isUpdating = false;
-      }
-    }
-  }
-};
+  };
 </script>
 
 <style scoped>
@@ -350,6 +414,7 @@ export default {
 
   .order-header-content {
     padding: 1.5rem;
+    position: relative; /* For modal positioning */
   }
 
   .order-title-section {
@@ -402,6 +467,7 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    margin-bottom: 1.5rem;
   }
 
   .meta-group {
@@ -418,6 +484,103 @@ export default {
   .meta-value {
     color: #333;
   }
+
+  /* New styles for cancel order button */
+  .user-actions {
+    margin-top: 1.5rem;
+  }
+
+  .cancel-order-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+    .cancel-order-btn:hover:not(:disabled) {
+      background-color: #d32f2f;
+    }
+
+    .cancel-order-btn:disabled {
+      background-color: #e57373;
+      cursor: not-allowed;
+    }
+
+  .cancel-error {
+    background-color: #fff5f5;
+    border: 1px solid #f5c6cb;
+    color: #d32f2f;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+  }
+
+  /* Cancel confirmation modal */
+  .cancel-confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+    .modal-content h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .confirm-cancel-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+    .confirm-cancel-btn:hover:not(:disabled) {
+      background-color: #d32f2f;
+    }
+
+  .cancel-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+    .cancel-btn:hover:not(:disabled) {
+      background-color: #bdbdbd;
+    }
 
   /* Status update section */
   .status-update-section {
@@ -712,6 +875,14 @@ export default {
       text-align: right;
       margin-top: 0.5rem;
     }
+
+    .modal-actions {
+      flex-direction: column;
+    }
+
+    .confirm-cancel-btn, .cancel-btn {
+      width: 100%;
+    }
   }
 
   /* Dark mode support */
@@ -806,10 +977,25 @@ export default {
       background-color: #2c1515;
     }
 
-    .update-error {
+    .update-error, .cancel-error {
       background-color: #2c1515;
       border-color: #5c3131;
     }
+
+    /* Modal dark mode */
+    .modal-content {
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+    }
+
+    .cancel-btn {
+      background-color: #424242;
+      color: #e0e0e0;
+    }
+
+      .cancel-btn:hover:not(:disabled) {
+        background-color: #616161;
+      }
 
     /* Adjust status badge colors for dark mode */
     .status-pending {

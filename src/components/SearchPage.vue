@@ -57,7 +57,7 @@
     </div>
 
     <div class="results">
-      <h3>Search Results <span v-if="!loading">({{ products.length }})</span></h3>
+      <h3>Search Results <span v-if="!loading">({{ filteredProducts.length }})</span></h3>
 
       <!-- Loading state -->
       <div v-if="loading" class="loading-results">
@@ -72,14 +72,14 @@
       </div>
 
       <!-- No results -->
-      <div v-else-if="products.length === 0" class="no-results">
+      <div v-else-if="filteredProducts.length === 0" class="no-results">
         <p>No products found for your search criteria.</p>
         <p v-if="hasActiveFilters">Try removing some filters or changing your search term.</p>
       </div>
 
-      <!-- Results grid -->
+      <!-- Results grid - Now shows products based on device type -->
       <div v-else class="product-grid">
-        <div v-for="product in products" :key="product._id" class="product-card">
+        <div v-for="product in displayedProducts" :key="product._id" class="product-card">
           <router-link :to="{ name: 'ProductPage', params: { id: product._id } }">
             <div class="product-image">
               <img :src="product.images && product.images.length ? product.images[0] : '/placeholder.jpg'"
@@ -91,6 +91,87 @@
               <p v-if="product.category" class="product-category">{{ product.category }}</p>
             </div>
           </router-link>
+        </div>
+      </div>
+
+      <!-- Mobile: Load More button -->
+      <div v-if="isMobile && !loading && filteredProducts.length > 0" class="load-more-container">
+        <button v-if="loadedCount < filteredProducts.length"
+                @click="loadMore"
+                class="load-more-btn">
+          Load More Products
+        </button>
+        <p v-else class="all-loaded">All products loaded</p>
+      </div>
+
+      <!-- Desktop: Pagination controls -->
+      <div v-if="!isMobile && !loading && filteredProducts.length > 0" class="pagination">
+        <div class="pagination-btn-group">
+          <button class="pagination-btn"
+                  @click="goToPage(1)"
+                  :disabled="currentPage === 1"
+                  :class="{ disabled: currentPage === 1 }"
+                  title="First page">
+            &laquo; First
+          </button>
+
+          <button class="pagination-btn"
+                  @click="prevPage"
+                  :disabled="currentPage === 1"
+                  :class="{ disabled: currentPage === 1 }"
+                  title="Previous page">
+            &laquo;
+          </button>
+        </div>
+
+        <div class="page-numbers">
+          <button v-for="page in paginationButtons"
+                  :key="page"
+                  @click="goToPage(page)"
+                  class="page-btn"
+                  :class="{ active: currentPage === page }">
+            {{ page }}
+          </button>
+        </div>
+
+        <div class="pagination-btn-group">
+          <button class="pagination-btn"
+                  @click="nextPage"
+                  :disabled="currentPage === totalPages"
+                  :class="{ disabled: currentPage === totalPages }"
+                  title="Next page">
+            &raquo;
+          </button>
+
+          <button class="pagination-btn"
+                  @click="goToPage(totalPages)"
+                  :disabled="currentPage === totalPages"
+                  :class="{ disabled: currentPage === totalPages }"
+                  title="Last page">
+            Last &raquo;
+          </button>
+        </div>
+      </div>
+
+      <!-- Desktop: Page jump control -->
+      <div v-if="!isMobile && !loading && filteredProducts.length > 0" class="page-jump">
+        <div class="page-info">
+          Page {{ currentPage }} of {{ totalPages }} ({{ filteredProducts.length }} products)
+        </div>
+
+        <div class="jump-form">
+          <label for="page-input">Go to page:</label>
+          <input id="page-input"
+                 v-model.number="pageInput"
+                 type="number"
+                 min="1"
+                 :max="totalPages"
+                 @keyup.enter="jumpToPage" />
+          <button class="jump-btn"
+                  @click="jumpToPage"
+                  :disabled="!isValidPageInput">
+            Go
+          </button>
         </div>
       </div>
     </div>
@@ -105,7 +186,7 @@
     data() {
       return {
         query: '',
-        products: [],
+        products: [], // All products from API
         loading: true,
         error: null,
         categories: [],
@@ -114,16 +195,97 @@
           min: null,
           max: null
         },
-        hasFiltersChanged: false
+        hasFiltersChanged: false,
+        // Pagination data
+        currentPage: 1,
+        itemsPerPage: 12,
+        pageInput: 1,
+        // Responsive UI
+        windowWidth: window.innerWidth,
+        mobileBreakpoint: 768,
+        // Load more data (for mobile)
+        loadedCount: 12,
+        loadMoreIncrement: 12
       };
     },
     computed: {
+      // Check if we're on mobile
+      isMobile() {
+        return this.windowWidth <= this.mobileBreakpoint;
+      },
+
       hasActiveFilters() {
         return (
           this.selectedCategories.length > 0 ||
           this.priceRange.min !== null ||
           this.priceRange.max !== null
         );
+      },
+
+      // Apply client-side filtering for multiple categories
+      filteredProducts() {
+        if (!this.hasActiveFilters) {
+          return this.products;
+        }
+
+        return this.products.filter(product => {
+          // Category filter
+          if (this.selectedCategories.length > 0 && product.category) {
+            if (!this.selectedCategories.includes(product.category)) {
+              return false;
+            }
+          }
+
+          // Price range filter - min
+          if (this.priceRange.min !== null && product.price < this.priceRange.min) {
+            return false;
+          }
+
+          // Price range filter - max
+          if (this.priceRange.max !== null && product.price > this.priceRange.max) {
+            return false;
+          }
+
+          return true;
+        });
+      },
+
+      // Get products to display based on device type
+      displayedProducts() {
+        if (this.isMobile) {
+          // For mobile: show products up to loadedCount
+          return this.filteredProducts.slice(0, this.loadedCount);
+        } else {
+          // For desktop: show paginated products
+          const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+          const endIndex = startIndex + this.itemsPerPage;
+          return this.filteredProducts.slice(startIndex, endIndex);
+        }
+      },
+
+      // Pagination computed properties
+      totalPages() {
+        return Math.ceil(this.filteredProducts.length / this.itemsPerPage);
+      },
+
+      paginationButtons() {
+        const buttons = [];
+        const maxButtons = 5;
+        let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+        const endPage = Math.min(this.totalPages, startPage + maxButtons - 1);
+
+        // Adjust start page if we're near the end
+        startPage = Math.max(1, endPage - maxButtons + 1);
+
+        for (let i = startPage; i <= endPage; i++) {
+          buttons.push(i);
+        }
+
+        return buttons;
+      },
+
+      isValidPageInput() {
+        return this.pageInput && this.pageInput >= 1 && this.pageInput <= this.totalPages;
       }
     },
     methods: {
@@ -139,6 +301,8 @@
             params.q = this.query;
           }
 
+          // For API calls, we'll still use single category param
+          // but client-side filtering will handle multiple categories
           if (this.selectedCategories.length === 1) {
             params.category = this.selectedCategories[0];
           }
@@ -154,10 +318,11 @@
           const response = await axios.get('/api/products/search', { params });
           this.products = response.data;
 
-          // Extract unique categories from results if we don't have them yet
-          if (this.categories.length === 0) {
-            this.extractCategories();
-          }
+          // Always extract categories from the full result set
+          this.extractCategories();
+
+          // Reset pagination and load more count when results change
+          this.resetControls();
         } catch (error) {
           console.error('Error fetching search results:', error);
           this.error = 'Failed to fetch search results. Please try again.';
@@ -167,7 +332,7 @@
       },
 
       extractCategories() {
-        // Extract unique categories from products
+        // Extract unique categories from ALL products
         const categorySet = new Set();
 
         this.products.forEach(product => {
@@ -181,14 +346,15 @@
 
       applyFilters() {
         this.hasFiltersChanged = true;
-        this.fetchProducts();
+        // Reset controls when filters change
+        this.resetControls();
       },
 
       clearFilters() {
         this.selectedCategories = [];
         this.priceRange.min = null;
         this.priceRange.max = null;
-        this.fetchProducts();
+        this.resetControls();
       },
 
       handleRouteChange() {
@@ -198,12 +364,89 @@
         if (this.query !== queryParam) {
           this.query = queryParam;
           this.clearFilters();
+          this.fetchProducts(); // Need to fetch new data for new search query
+        }
+      },
+
+      // Load more products (for mobile)
+      loadMore() {
+        const newCount = this.loadedCount + this.loadMoreIncrement;
+        this.loadedCount = Math.min(newCount, this.filteredProducts.length);
+      },
+
+      // Pagination methods
+      nextPage() {
+        if (this.currentPage < this.totalPages) {
+          this.currentPage++;
+          this.pageInput = this.currentPage;
+          this.scrollToTop();
+        }
+      },
+
+      prevPage() {
+        if (this.currentPage > 1) {
+          this.currentPage--;
+          this.pageInput = this.currentPage;
+          this.scrollToTop();
+        }
+      },
+
+      goToPage(page) {
+        if (page >= 1 && page <= this.totalPages) {
+          this.currentPage = page;
+          this.pageInput = page;
+          this.scrollToTop();
+        }
+      },
+
+      jumpToPage() {
+        if (this.isValidPageInput) {
+          this.goToPage(this.pageInput);
+        } else {
+          // Reset to current page if invalid
+          this.pageInput = this.currentPage;
+        }
+      },
+
+      resetControls() {
+        // Reset pagination
+        this.currentPage = 1;
+        this.pageInput = 1;
+
+        // Reset load more count based on device
+        this.loadedCount = this.isMobile ? this.loadMoreIncrement : this.itemsPerPage;
+      },
+
+      scrollToTop() {
+        // Scroll to the top of the results section
+        const resultsElement = this.$el.querySelector('.results');
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      },
+
+      // Handle window resize
+      handleResize() {
+        const wasMobile = this.isMobile;
+        this.windowWidth = window.innerWidth;
+
+        // If viewport crossed the mobile breakpoint, reset controls
+        if (wasMobile !== this.isMobile) {
+          this.resetControls();
         }
       }
     },
     created() {
       this.query = this.$route.query.q || '';
       this.fetchProducts();
+    },
+    mounted() {
+      // Add resize event listener
+      window.addEventListener('resize', this.handleResize);
+    },
+    beforeDestroy() {
+      // Remove resize event listener
+      window.removeEventListener('resize', this.handleResize);
     },
     watch: {
       '$route'(to, from) {
@@ -252,23 +495,23 @@
     margin-bottom: 25px;
   }
 
-  .filter-section h4 {
-    margin-bottom: 10px;
-  }
+    .filter-section h4 {
+      margin-bottom: 10px;
+    }
 
   .filter-item {
     margin-bottom: 8px;
   }
 
-  .filter-item label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-  }
+    .filter-item label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
 
-  .filter-item input[type="checkbox"] {
-    margin-right: 8px;
-  }
+    .filter-item input[type="checkbox"] {
+      margin-right: 8px;
+    }
 
   .price-range {
     display: flex;
@@ -418,6 +661,150 @@
     margin: 5px 0 0;
   }
 
+  /* Load More button (mobile) */
+  .load-more-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2rem 0;
+  }
+
+  .load-more-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #5D5CDE;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 80%;
+    max-width: 300px;
+  }
+
+    .load-more-btn:hover {
+      background-color: #4a49b0;
+    }
+
+  .all-loaded {
+    color: #666;
+    margin: 1rem 0;
+  }
+
+  /* Pagination styles (desktop) */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0 1rem;
+    gap: 0.5rem;
+  }
+
+  .pagination-btn {
+    padding: 0.5rem 1rem;
+    background-color: #5D5CDE;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+    .pagination-btn:hover:not(.disabled) {
+      background-color: #4a49b0;
+    }
+
+    .pagination-btn.disabled {
+      background-color: #b8b8e0;
+      cursor: not-allowed;
+    }
+
+  .page-numbers {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .page-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+    .page-btn.active {
+      background-color: #5D5CDE;
+      color: white;
+      border-color: #5D5CDE;
+    }
+
+    .page-btn:hover:not(.active) {
+      background-color: #f5f5f5;
+    }
+
+  .page-jump {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    padding: 0 1rem;
+  }
+
+  .page-info {
+    color: #666;
+  }
+
+  .jump-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+    .jump-form label {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .jump-form input {
+      width: 3.5rem;
+      height: 2.5rem;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+  .jump-btn {
+    padding: 0.5rem 1rem;
+    background-color: #5D5CDE;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+    .jump-btn:hover:not(:disabled) {
+      background-color: #4a49b0;
+    }
+
+    .jump-btn:disabled {
+      background-color: #b8b8e0;
+      cursor: not-allowed;
+    }
+
+  .pagination-btn-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+
   /* Dark mode styles */
   @media (prefers-color-scheme: dark) {
     .search-page {
@@ -466,6 +853,26 @@
     .loading-spinner {
       border-color: #333;
       border-top-color: #5D5CDE;
+    }
+
+    .page-btn {
+      background-color: #333;
+      border-color: #444;
+      color: #ddd;
+    }
+
+      .page-btn:hover:not(.active) {
+        background-color: #444;
+      }
+
+    .jump-form input {
+      background-color: #333;
+      border-color: #444;
+      color: #fff;
+    }
+
+    .all-loaded {
+      color: #aaa;
     }
   }
 

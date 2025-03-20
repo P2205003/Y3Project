@@ -1,4 +1,3 @@
-// server/routes/orderRoutes.js
 import express from 'express';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
@@ -161,6 +160,56 @@ router.patch('/:id/status', isAuthenticated, isAdmin, async (req, res) => {
     try {
       // Update status with validation
       order.updateStatus(status, userId, user.username, notes);
+      await order.save();
+
+      res.json(order);
+    } catch (validationError) {
+      return res.status(400).json({ message: validationError.message });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// NEW ROUTE: Cancel order - Users can cancel their own orders
+router.patch('/:id/cancel', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { reason } = req.body;
+
+    // Get user info for history tracking
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get order
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if user owns the order
+    if (order.userId.toString() !== userId && !user.isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Check if order can be cancelled
+    const allowedTransitions = ['pending', 'hold']; // Orders in these statuses can be cancelled
+    if (!allowedTransitions.includes(order.status)) {
+      return res.status(400).json({
+        message: `Orders in '${order.status}' status cannot be cancelled`
+      });
+    }
+
+    // Prepare notes
+    const notes = reason
+      ? `Cancelled by customer. Reason: ${reason}`
+      : 'Cancelled by customer';
+
+    try {
+      // Update status with validation
+      order.updateStatus('cancelled', userId, user.username, notes);
       await order.save();
 
       res.json(order);
