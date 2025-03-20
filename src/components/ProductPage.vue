@@ -51,8 +51,9 @@
                   <input type="number"
                          v-model.number="quantity"
                          min="1"
-                         max="9999">
-                  <button @click="incrementQuantity" class="quantity-btn">+</button>
+                         max="99"
+                         @input="validateQuantity">
+                  <button @click="incrementQuantity" :disabled="quantity >= maxQuantity" class="quantity-btn">+</button>
                 </div>
               </label>
             </div>
@@ -97,9 +98,9 @@
 </template>
 
 <script>
-import cartService from '@/services/cartService';
-import placeholderImage from '@/components/placeholder.jpg';
-import { ElMessage } from 'element-plus';
+  import cartService from '@/services/cartService';
+  import placeholderImage from '@/components/placeholder.jpg';
+  import { ElMessage } from 'element-plus';
 
   export default {
     name: 'ProductPage',
@@ -115,6 +116,7 @@ import { ElMessage } from 'element-plus';
         isAddingToCart: false,
         showAddedMessage: false,
         addedMessage: '', // Dynamic message for feedback
+        maxQuantity: 99, // Define maximum quantity
         // Add a default value for isLoggedIn in case inject fails
         isLoggedIn: false,
         recommendations: [
@@ -148,7 +150,7 @@ import { ElMessage } from 'element-plus';
       // Helper for building cart item
       cartItem() {
         if (!this.product) return null;
-        
+
         return {
           productId: this.product._id,
           name: this.product.name,
@@ -157,6 +159,17 @@ import { ElMessage } from 'element-plus';
           image: this.currentImage || (this.product.images && this.product.images.length > 0 ? this.product.images[0] : placeholderImage),
           attributes: this.selectedAttributes
         };
+      }
+    },
+    watch: {
+      // Watch for quantity changes to enforce max limit
+      quantity(newValue) {
+        if (newValue > this.maxQuantity) {
+          this.quantity = this.maxQuantity;
+          ElMessage.warning(`Maximum quantity is ${this.maxQuantity}`);
+        } else if (newValue < 1) {
+          this.quantity = 1;
+        }
       }
     },
     async created() {
@@ -194,50 +207,59 @@ import { ElMessage } from 'element-plus';
       }
     },
     methods: {
+      validateQuantity() {
+        // Ensure quantity remains within bounds when manually entered
+        if (this.quantity > this.maxQuantity) {
+          this.quantity = this.maxQuantity;
+          ElMessage.warning(`Maximum quantity is ${this.maxQuantity}`);
+        } else if (this.quantity < 1 || isNaN(this.quantity)) {
+          this.quantity = 1;
+        }
+      },
       getAttributeOptions(values) {
         return Array.isArray(values) ? values : [values];
       },
       async addToCart() {
         if (!this.product || !this.cartItem) return;
-        
+
         this.isAddingToCart = true;
-        
+
         try {
           // First check if item is already in cart
           const isLoggedIn = this.appContext?.isLoggedIn || false;
           const currentCart = await cartService.getCart(isLoggedIn);
-          
+
           // Find if identical item exists in cart
-          const existingItem = currentCart.items.find(item => 
-            item.productId === this.cartItem.productId && 
+          const existingItem = currentCart.items.find(item =>
+            item.productId === this.cartItem.productId &&
             JSON.stringify(item.attributes || {}) === JSON.stringify(this.cartItem.attributes || {})
           );
-          
+
           // Add item to cart
           const updatedCart = await cartService.addItem(this.cartItem, isLoggedIn);
-          
+
           // Customize message based on whether item was already in cart
           if (existingItem) {
             this.addedMessage = `Added ${this.quantity} more "${this.product.name}" to your cart (total: ${existingItem.quantity + this.quantity})`;
           } else {
             this.addedMessage = `Added ${this.quantity} "${this.product.name}" to your cart`;
           }
-          
+
           // Show success message
           ElMessage.success(this.addedMessage);
           this.showAddedMessage = true;
-          
+
           // Hide message after 3 seconds
           setTimeout(() => {
             this.showAddedMessage = false;
           }, 3000);
-          
+
           // Reset quantity
           this.quantity = 1;
-          
+
           // Emit event to update cart count in parent components
           this.$emit('cart-updated');
-          
+
         } catch (error) {
           console.error('Add to cart error:', error);
           ElMessage.error('Failed to add item to cart');
@@ -245,11 +267,15 @@ import { ElMessage } from 'element-plus';
           this.isAddingToCart = false;
         }
       },
-      
+
       incrementQuantity() {
-        this.quantity++;
+        if (this.quantity < this.maxQuantity) {
+          this.quantity++;
+        } else {
+          ElMessage.warning(`Maximum quantity is ${this.maxQuantity}`);
+        }
       },
-      
+
       decrementQuantity() {
         if (this.quantity > 1) {
           this.quantity--;

@@ -242,8 +242,9 @@ router.get('/admin/all', isAuthenticated, isAdmin, async (req, res) => {
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get orders
+    // Get orders with populated user information
     const orders = await Order.find(query)
+      .populate('userId', 'username fullName email')
       .sort({ purchaseDate: -1 })
       .skip(skip)
       .limit(parseInt(limit));

@@ -20,12 +20,18 @@
     <div v-else class="cart-content">
       <div class="cart-items">
         <div v-for="(item, index) in cart.items" :key="index" class="cart-item">
-          <div class="item-image">
-            <img :src="item.image || placeholderImage" :alt="item.name">
+          <div class="item-image-container">
+            <router-link :to="{ name: 'ProductPage', params: { id: item.productId } }" class="product-link">
+              <div class="item-image">
+                <img :src="item.image || placeholderImage" :alt="item.name">
+              </div>
+            </router-link>
           </div>
 
           <div class="item-details">
-            <div class="item-name">{{ item.name }}</div>
+            <router-link :to="{ name: 'ProductPage', params: { id: item.productId } }" class="product-link">
+              <div class="item-name">{{ item.name }}</div>
+            </router-link>
 
             <div v-if="Object.keys(item.attributes || {}).length" class="item-attributes">
               <div v-for="(value, key) in item.attributes" :key="key" class="attribute">
@@ -45,6 +51,7 @@
             </button>
             <span class="quantity-value">{{ item.quantity }}</span>
             <button @click="incrementQuantity(item)"
+                    :disabled="item.quantity >= maxQuantity"
                     class="quantity-btn">
               +
             </button>
@@ -133,7 +140,9 @@
         showConfirmation: false,
         confirmationMessage: '',
         confirmationCallback: null,
-        itemToRemove: null
+        itemToRemove: null,
+        // Maximum quantity constant
+        maxQuantity: 999
       };
     },
     computed: {
@@ -163,8 +172,13 @@
         }
       },
       async incrementQuantity(item) {
+        if (item.quantity >= this.maxQuantity) {
+          ElMessage.warning(`Maximum quantity is ${this.maxQuantity}`);
+          return;
+        }
+        
         try {
-          const newQuantity = item.quantity + 1;
+          const newQuantity = Math.min(item.quantity + 1, this.maxQuantity);
           this.cart = await cartService.updateItemQuantity(
             item.productId,
             newQuantity,
@@ -263,6 +277,27 @@
       // Reload cart when login status changes
       'appContext.isLoggedIn'() {
         this.loadCart();
+      },
+      // Watch for cart updates to enforce maximum quantity
+      'cart.items': {
+        handler(items) {
+          // Check each item to ensure it doesn't exceed the maximum quantity
+          if (items && items.length) {
+            items.forEach(item => {
+              if (item.quantity > this.maxQuantity) {
+                // This will trigger a cart update automatically through the service
+                this.updateItemQuantity(
+                  item.productId,
+                  this.maxQuantity,
+                  item.attributes || {},
+                  this.appContext.isLoggedIn
+                );
+                ElMessage.warning(`Maximum quantity (${this.maxQuantity}) applied for "${item.name}"`);
+              }
+            });
+          }
+        },
+        deep: true
       }
     }
   };
@@ -378,12 +413,37 @@
       border-bottom: none;
     }
 
-  .item-image {
+  /* Product link styling */
+  .product-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .product-link:hover .item-name {
+    color: #5D5CDE;
+    text-decoration: underline;
+  }
+
+  .product-link:hover .item-image {
+    opacity: 0.9;
+  }
+
+  .item-image-container {
     width: 100px;
     height: 100px;
+  }
+
+  .item-image {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: opacity 0.2s;
+    border-radius: 4px;
+    overflow: hidden;
   }
 
     .item-image img {
@@ -402,6 +462,7 @@
     font-weight: 600;
     font-size: 1.1rem;
     color: #333;
+    transition: color 0.2s;
   }
 
   .item-attributes {
@@ -660,7 +721,7 @@
       gap: 0.75rem;
     }
 
-    .item-image {
+    .item-image-container {
       grid-area: image;
       width: 80px;
       height: 80px;
@@ -694,7 +755,7 @@
     }
 
     h1 {
-      color: #000000;
+      color: #e0e0e0;
     }
 
     .empty-cart {
@@ -782,5 +843,9 @@
       .cancel-btn:hover {
         background-color: #333;
       }
+      
+    .product-link:hover .item-name {
+      color: #7e7dff;
+    }
   }
 </style>

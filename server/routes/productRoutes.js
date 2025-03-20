@@ -93,27 +93,36 @@ const slugify = (text) => {
 // Update the POST route handler (admin only)
 router.post('/', isAuthenticated, isAdmin, validateProduct, async (req, res) => {
   try {
-    const slug = slugify(req.body.name);
-    const existingProduct = await Product.findOne({ slug });
+    let slug = slugify(req.body.name);
+    let counter = 1;
+    const baseSlug = slug;
 
-    if (existingProduct) {
-      return res.status(400).json({ message: 'Product name already exists' });
+    // Check for existing slugs and find available variation
+    while (true) {
+      const existingProduct = await Product.findOne({ slug });
+      if (!existingProduct) break;
+      slug = `${baseSlug}-${++counter}`;
     }
 
-    // Create product with all necessary fields
+    // Generate product number
+    const productNumber = await Product.generateProductNumber();
+
+    // Create product with guaranteed unique slug
     const product = new Product({
+      productNumber,
       name: req.body.name,
       price: req.body.price,
       description: req.body.description,
       category: req.body.category,
       images: req.body.images || [],
-      slug, // Include the generated slug
+      slug,  // Now guaranteed unique
       attributes: req.body.attributes || {},
       enabled: true
     });
 
     const newProduct = await product.save();
     res.status(201).json(newProduct);
+
   } catch (error) {
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];

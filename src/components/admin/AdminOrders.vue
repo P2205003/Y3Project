@@ -65,7 +65,7 @@
           <tr v-for="order in orders" :key="order._id">
             <td>{{ order.orderNumber }}</td>
             <td>{{ formatDate(order.purchaseDate) }}</td>
-            <td>{{ order.userId }}</td>
+            <td>{{ getUserName(order) }}</td>
             <td>{{ order.items.length }}</td>
             <td>${{ order.totalAmount.toFixed(2) }}</td>
             <td>
@@ -108,107 +108,124 @@
 </template>
 
 <script>
-export default {
-  name: 'AdminOrders',
-  data() {
-    return {
-      orders: [],
-      loading: true,
-      error: null,
-      filters: {
-        status: '',
-        startDate: '',
-        endDate: ''
-      },
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 1
-      },
-      statusOptions: [
-        { value: 'pending', label: 'Pending' },
-        { value: 'shipped', label: 'Shipped' },
-        { value: 'delivered', label: 'Delivered' },
-        { value: 'cancelled', label: 'Cancelled' },
-        { value: 'hold', label: 'On Hold' }
-      ]
-    };
-  },
-  computed: {
-    hasActiveFilters() {
-      return this.filters.status || this.filters.startDate || this.filters.endDate;
-    }
-  },
-  methods: {
-    async fetchOrders(page = 1) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // Build query string
-        let queryParams = `page=${page}&limit=${this.pagination.limit}`;
-
-        if (this.filters.status) {
-          queryParams += `&status=${this.filters.status}`;
-        }
-
-        if (this.filters.startDate && this.filters.endDate) {
-          queryParams += `&startDate=${this.filters.startDate}&endDate=${this.filters.endDate}`;
-        }
-
-        const response = await fetch(`/api/orders/admin/all?${queryParams}`, {
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        this.orders = data.orders;
-        this.pagination = data.pagination;
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-        this.error = 'Failed to load orders. Please try again.';
-      } finally {
-        this.loading = false;
+  export default {
+    name: 'AdminOrders',
+    data() {
+      return {
+        orders: [],
+        loading: true,
+        error: null,
+        filters: {
+          status: '',
+          startDate: '',
+          endDate: ''
+        },
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 1
+        },
+        statusOptions: [
+          { value: 'pending', label: 'Pending' },
+          { value: 'shipped', label: 'Shipped' },
+          { value: 'delivered', label: 'Delivered' },
+          { value: 'cancelled', label: 'Cancelled' },
+          { value: 'hold', label: 'On Hold' }
+        ]
+      };
+    },
+    computed: {
+      hasActiveFilters() {
+        return this.filters.status || this.filters.startDate || this.filters.endDate;
       }
     },
+    methods: {
+      async fetchOrders(page = 1) {
+        this.loading = true;
+        this.error = null;
 
-    formatDate(dateString) {
-      if (!dateString) return 'N/A';
-      const date = new Date(dateString);
-      return date.toLocaleString();
+        try {
+          // Build query string
+          let queryParams = `page=${page}&limit=${this.pagination.limit}`;
+
+          if (this.filters.status) {
+            queryParams += `&status=${this.filters.status}`;
+          }
+
+          if (this.filters.startDate && this.filters.endDate) {
+            queryParams += `&startDate=${this.filters.startDate}&endDate=${this.filters.endDate}`;
+          }
+
+          const response = await fetch(`/api/orders/admin/all?${queryParams}`, {
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          this.orders = data.orders;
+          this.pagination = data.pagination;
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          this.error = 'Failed to load orders. Please try again.';
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+      },
+
+      getStatusLabel(status) {
+        const statusOption = this.statusOptions.find(option => option.value === status);
+        return statusOption ? statusOption.label : status;
+      },
+
+      getUserName(order) {
+        // Check if userId is populated with user object
+        if (order.userId && typeof order.userId === 'object') {
+          // If fully populated, return full name
+          if (order.userId.fullName) {
+            return order.userId.fullName;
+          }
+          // Fallback to username if available
+          if (order.userId.username) {
+            return order.userId.username;
+          }
+        }
+
+        // If userId is still a string (not populated), display it as 'Customer #ID'
+        return `Customer #${typeof order.userId === 'string' ? order.userId.substring(0, 8) : 'Unknown'}`;
+      },
+
+      applyFilters() {
+        this.pagination.page = 1; // Reset to first page when filters change
+        this.fetchOrders(1);
+      },
+
+      resetFilters() {
+        this.filters = {
+          status: '',
+          startDate: '',
+          endDate: ''
+        };
+        this.applyFilters();
+      },
+
+      changePage(page) {
+        this.fetchOrders(page);
+      }
     },
-
-    getStatusLabel(status) {
-      const statusOption = this.statusOptions.find(option => option.value === status);
-      return statusOption ? statusOption.label : status;
-    },
-
-    applyFilters() {
-      this.pagination.page = 1; // Reset to first page when filters change
-      this.fetchOrders(1);
-    },
-
-    resetFilters() {
-      this.filters = {
-        status: '',
-        startDate: '',
-        endDate: ''
-      };
-      this.applyFilters();
-    },
-
-    changePage(page) {
-      this.fetchOrders(page);
+    created() {
+      this.fetchOrders();
     }
-  },
-  created() {
-    this.fetchOrders();
-  }
-};
+  };
 </script>
 
 <style scoped>

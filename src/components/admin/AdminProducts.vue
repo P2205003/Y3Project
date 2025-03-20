@@ -47,6 +47,7 @@
       <table v-else-if="filteredProducts.length > 0" class="data-table">
         <thead>
           <tr>
+            <th>Product #</th>
             <th>Image</th>
             <th>Name</th>
             <th>Price</th>
@@ -57,6 +58,7 @@
         </thead>
         <tbody>
           <tr v-for="product in filteredProducts" :key="product._id">
+            <td>{{ product.productNumber || 'N/A' }}</td>
             <td class="image-cell">
               <img :src="product.images && product.images.length ? product.images[0] : placeholderImage"
                    :alt="product.name" />
@@ -124,7 +126,15 @@
         </div>
         <div class="modal-body">
           <form @submit.prevent="saveProduct">
-            <!-- Form fields would go here -->
+            <!-- Product Number (read-only for existing products) -->
+            <div class="form-group" v-if="!isNewProduct">
+              <label for="productNumber">Product Number</label>
+              <input type="text"
+                     id="productNumber"
+                     v-model="editingProduct.productNumber"
+                     readonly />
+            </div>
+
             <div class="form-group">
               <label for="productName">Product Name</label>
               <input type="text"
@@ -193,7 +203,9 @@
           price: 0,
           category: '',
           description: '',
-          enabled: true
+          enabled: true,
+          productNumber: '',
+          images: []
         },
         originalProduct: null,
         placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
@@ -217,6 +229,14 @@
           }
 
           this.products = await response.json();
+
+          // For any products without a productNumber, add a temporary one
+          this.products.forEach((product, index) => {
+            if (!product.productNumber) {
+              // This is for display only, until backend implementation is complete
+              product.productNumber = `PRD-TEMP-${('0000' + (index + 1)).slice(-4)}`;
+            }
+          });
 
           // Extract unique categories
           const categorySet = new Set();
@@ -245,7 +265,8 @@
           const query = this.searchQuery.toLowerCase();
           filtered = filtered.filter(product =>
             product.name.toLowerCase().includes(query) ||
-            (product.description && product.description.toLowerCase().includes(query))
+            (product.description && product.description.toLowerCase().includes(query)) ||
+            (product.productNumber && product.productNumber.toLowerCase().includes(query))
           );
         }
 
@@ -286,7 +307,32 @@
         // Apply pagination
         const start = (this.currentPage - 1) * this.itemsPerPage;
         const end = start + this.itemsPerPage;
-        this.filteredProducts = this.products.slice(start, end);
+
+        // Apply pagination to filtered products
+        let filtered = [...this.products];
+
+        // Reapply all filters
+        if (this.searchQuery) {
+          const query = this.searchQuery.toLowerCase();
+          filtered = filtered.filter(product =>
+            product.name.toLowerCase().includes(query) ||
+            (product.description && product.description.toLowerCase().includes(query)) ||
+            (product.productNumber && product.productNumber.toLowerCase().includes(query))
+          );
+        }
+
+        if (this.categoryFilter) {
+          filtered = filtered.filter(product =>
+            product.category === this.categoryFilter
+          );
+        }
+
+        if (this.statusFilter !== '') {
+          const enabled = this.statusFilter === 'true';
+          filtered = filtered.filter(product => product.enabled === enabled);
+        }
+
+        this.filteredProducts = filtered.slice(start, end);
       },
 
       viewProduct(product) {
@@ -296,8 +342,12 @@
 
       editProduct(product) {
         this.isNewProduct = false;
-        this.originalProduct = product;
-        this.editingProduct = { ...product };
+        this.originalProduct = { ...product };
+        this.editingProduct = {
+          ...product,
+          // Ensure productNumber is displayed correctly or marked as auto-generated if missing
+          productNumber: product.productNumber || 'Auto-generated'
+        };
         this.showEditModal = true;
       },
 
@@ -308,15 +358,71 @@
           price: 0,
           category: '',
           description: '',
-          enabled: true
+          enabled: true,
+          productNumber: '',
+          images: []
         };
       },
 
       async saveProduct() {
-        // Save product logic would go here
-        // This is just a placeholder
-        console.log('Saving product:', this.editingProduct);
-        this.closeModal();
+        try {
+          const url = this.isNewProduct
+            ? '/api/products'
+            : `/api/products/${this.editingProduct._id}`;
+
+          const method = this.isNewProduct ? 'POST' : 'PUT';
+
+          // If creating a new product, don't send productNumber (will be auto-generated)
+          const productData = { ...this.editingProduct };
+          if (this.isNewProduct || productData.productNumber === 'Auto-generated') {
+            delete productData.productNumber;
+          }
+
+          // Show loading state
+          this.loading = true;
+
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(productData)
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to save product');
+          }
+
+          const savedProduct = await response.json();
+
+          // Update local data
+          if (this.isNewProduct) {
+            this.products.push(savedProduct);
+          } else {
+            // Find and update the product in the array
+            const index = this.products.findIndex(p => p._id === savedProduct._id);
+            if (index !== -1) {
+              this.products[index] = savedProduct;
+            }
+          }
+
+          // Re-apply filters to update the view
+          this.filterProducts();
+
+          // Show success message
+          alert(this.isNewProduct ? 'Product created successfully' : 'Product updated successfully');
+
+          // Close the modal
+          this.closeModal();
+
+        } catch (error) {
+          console.error('Error saving product:', error);
+          alert(error.message || 'Error saving product');
+        } finally {
+          this.loading = false;
+        }
       },
 
       async toggleProductStatus(product) {
@@ -722,6 +828,11 @@
       font-size: 1rem;
     }
 
+      .form-group input[readonly] {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+      }
+
   .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -768,6 +879,10 @@
       border-color: #4a5568;
       color: #e2e8f0;
     }
+
+      .form-group input[readonly] {
+        background-color: #2d3748;
+      }
 
     .data-table th {
       color: #e2e8f0;

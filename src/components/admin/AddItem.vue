@@ -1,7 +1,21 @@
 <template>
   <div class="add-item-page">
     <h1>Add New Product</h1>
-    <form @submit.prevent="handleSubmit">
+
+    <!-- Success message when product is created -->
+    <div v-if="successMessage" class="success-message">
+      <div class="success-content">
+        <h3>Product Added Successfully!</h3>
+        <p v-if="createdProductNumber">Product Number: <strong>{{ createdProductNumber }}</strong></p>
+        <p v-else>Product ID: <strong>{{ createdProductId }}</strong></p>
+        <div class="success-actions">
+          <button @click="viewProduct" class="view-btn">View Product</button>
+          <button @click="addAnother" class="add-another-btn">Add Another Product</button>
+        </div>
+      </div>
+    </div>
+
+    <form @submit.prevent="handleSubmit" v-if="!successMessage">
       <div class="form-group">
         <label for="name">Product Name:</label>
         <input type="text" id="name" v-model="formData.name" required>
@@ -21,6 +35,15 @@
         <label for="category">Category:</label>
         <input type="text" id="category" v-model="formData.category" required>
       </div>
+
+      <!-- Manual product number input (uncomment if you want to allow manual input) -->
+      <!-- <div class="form-group">
+        <label for="productNumber">Product Number (Optional):</label>
+        <div class="product-number-field">
+          <input type="text" id="productNumber" v-model="formData.productNumber" placeholder="Auto-generated if left blank">
+          <span class="help-text">Leave blank for auto-generated number</span>
+        </div>
+      </div> -->
 
       <div class="form-group">
         <label>Attributes</label>
@@ -79,7 +102,7 @@
       </div>
     </form>
 
-    <div class="preview">
+    <div class="preview" v-if="!successMessage">
       <h3>Preview</h3>
       <div class="image-preview-container">
         <div v-for="(imageUrl, index) in formData.images" :key="index" class="image-preview">
@@ -104,13 +127,17 @@
       return {
         isSubmitting: false,
         errorMessage: '',
+        successMessage: '',
+        createdProductId: null,
+        createdProductNumber: '',
         formData: {
           name: '',
           price: 0,
           description: '',
           category: '',
           attributes: [],
-          images: ['']
+          images: [''],
+          // productNumber: '', // Uncomment if you want to allow manual input
         }
       };
     },
@@ -130,6 +157,25 @@
         if (this.formData.images.length > 1) {
           this.formData.images.splice(index, 1);
         }
+      },
+      // Navigation after successful creation
+      viewProduct() {
+        this.$router.push({ name: 'ProductPage', params: { id: this.createdProductId } });
+      },
+      addAnother() {
+        // Reset form to add another product
+        this.successMessage = '';
+        this.createdProductId = null;
+        this.createdProductNumber = '';
+        this.formData = {
+          name: '',
+          price: 0,
+          description: '',
+          category: '',
+          attributes: [],
+          images: [''],
+          // productNumber: '',  // Uncomment if you want to allow manual input
+        };
       },
       async handleSubmit() {
         // Add validation for attribute keys
@@ -164,7 +210,7 @@
           images: validImages, // Use the filtered images array
           attributes,
           price: parseFloat(this.formData.price),
-          enabled: true
+          enabled: true,
         };
 
         this.isSubmitting = true;
@@ -176,6 +222,7 @@
             headers: {
               'Content-Type': 'application/json',
             },
+            credentials: 'include', // Add this to ensure auth cookies are sent
             body: JSON.stringify(payload)
           });
 
@@ -185,7 +232,13 @@
           }
 
           const newProduct = await response.json();
-          this.$router.push({ name: 'ProductPage', params: { id: newProduct._id } });
+
+          // Store the created product info for success message
+          this.createdProductId = newProduct._id;
+          this.createdProductNumber = newProduct.productNumber || '';
+          this.successMessage = `Product "${newProduct.name}" added successfully!`;
+
+          console.log("Created product:", newProduct);
 
         } catch (error) {
           console.error('Add product error:', error);
@@ -354,5 +407,85 @@
     padding: 0.5rem;
     border: 1px solid #ff4444;
     border-radius: 4px;
+  }
+
+  /* Success message styles */
+  .success-message {
+    background-color: #e8f5e9;
+    border: 1px solid #66bb6a;
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .success-content {
+    text-align: center;
+  }
+
+    .success-content h3 {
+      color: #2e7d32;
+      margin-top: 0;
+    }
+
+  .success-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .view-btn {
+    background-color: #1976d2;
+  }
+
+  .add-another-btn {
+    background-color: #5D5CDE;
+  }
+
+  .product-number-field {
+    position: relative;
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .add-item-page {
+      color: #e2e8f0;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="url"],
+    textarea {
+      background-color: #1a202c;
+      border-color: #4a5568;
+      color: #e2e8f0;
+    }
+
+    .preview {
+      border-color: #4a5568;
+    }
+
+    .preview-placeholder {
+      background-color: #2d3748;
+      color: #a0aec0;
+    }
+
+    .help-text,
+    .image-number {
+      color: #a0aec0;
+    }
+
+    .success-message {
+      background-color: rgba(46, 125, 50, 0.2);
+      border-color: #2e7d32;
+    }
+
+    .success-content h3 {
+      color: #66bb6a;
+    }
+
+    .image-preview {
+      border-color: #4a5568;
+    }
   }
 </style>
