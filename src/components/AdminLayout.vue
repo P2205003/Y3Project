@@ -35,12 +35,6 @@
           <router-link to="/admin/orders" class="nav-item" active-class="active">
             <span class="icon">🚚</span>Orders
           </router-link>
-          <router-link to="/admin/users" class="nav-item" active-class="active">
-            <span class="icon">👥</span>Users
-          </router-link>
-          <router-link to="/admin/settings" class="nav-item" active-class="active">
-            <span class="icon">⚙️</span>Settings
-          </router-link>
         </div>
       </div>
 

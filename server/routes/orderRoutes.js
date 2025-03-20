@@ -3,7 +3,7 @@ import express from 'express';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import User from '../models/User.js';
-import { isAuthenticated } from '../middleware/auth.js';
+import { isAuthenticated, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -124,9 +124,9 @@ router.get('/:id', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check if user owns the order or is admin (for now anyone can view)
-    // In a real implementation, you'd add admin role checks here
-    if (order.userId.toString() !== userId) {
+    // Check if user owns the order or is admin
+    const user = await User.findById(userId);
+    if (order.userId.toString() !== userId && !user.isAdmin) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
@@ -136,8 +136,8 @@ router.get('/:id', isAuthenticated, async (req, res) => {
   }
 });
 
-// Update order status
-router.patch('/:id/status', isAuthenticated, async (req, res) => {
+// Update order status - Only admins can update status
+router.patch('/:id/status', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const userId = req.session.userId;
     const { status, notes } = req.body;
@@ -158,9 +158,6 @@ router.patch('/:id/status', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // For now, any authenticated user can update status
-    // In a production app, you'd add role-based checks here
-
     try {
       // Update status with validation
       order.updateStatus(status, userId, user.username, notes);
@@ -176,7 +173,7 @@ router.patch('/:id/status', isAuthenticated, async (req, res) => {
 });
 
 // Admin: Get all orders
-router.get('/admin/all', isAuthenticated, async (req, res) => {
+router.get('/admin/all', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { status, startDate, endDate, page = 1, limit = 10 } = req.query;
 

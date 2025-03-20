@@ -2,101 +2,6 @@
   <div class="admin-dashboard">
     <h1>Admin Dashboard</h1>
 
-    <!-- Overview cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon orders-icon">📦</div>
-        <div class="stat-content">
-          <div class="stat-title">Total Orders</div>
-          <div class="stat-value">{{ loading ? '...' : stats.totalOrders }}</div>
-          <div class="stat-change" :class="stats.orderChange >= 0 ? 'positive' : 'negative'">
-            {{ loading ? '' : (stats.orderChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(stats.orderChange) + '% from last month' }}
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon revenue-icon">💰</div>
-        <div class="stat-content">
-          <div class="stat-title">Total Revenue</div>
-          <div class="stat-value">{{ loading ? '...' : '$' + stats.totalRevenue.toFixed(2) }}</div>
-          <div class="stat-change" :class="stats.revenueChange >= 0 ? 'positive' : 'negative'">
-            {{ loading ? '' : (stats.revenueChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(stats.revenueChange) + '% from last month' }}
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon products-icon">🏷️</div>
-        <div class="stat-content">
-          <div class="stat-title">Active Products</div>
-          <div class="stat-value">{{ loading ? '...' : stats.activeProducts }}</div>
-          <div class="stat-link">
-            <router-link to="/admin/products">Manage Products</router-link>
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon users-icon">👥</div>
-        <div class="stat-content">
-          <div class="stat-title">Registered Users</div>
-          <div class="stat-value">{{ loading ? '...' : stats.totalUsers }}</div>
-          <div class="stat-change" :class="stats.userChange >= 0 ? 'positive' : 'negative'">
-            {{ loading ? '' : (stats.userChange >= 0 ? '↑' : '↓') + ' ' + Math.abs(stats.userChange) + ' new users this week' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent orders -->
-    <div class="dashboard-section">
-      <div class="section-header">
-        <h2>Recent Orders</h2>
-        <router-link to="/admin/orders" class="view-all-link">View All Orders</router-link>
-      </div>
-
-      <div class="admin-panel">
-        <div v-if="loading" class="loading-indicator">
-          <div class="loading-spinner"></div>
-          <p>Loading recent orders...</p>
-        </div>
-        <div v-else-if="!recentOrders.length" class="empty-state">
-          <p>No recent orders found.</p>
-        </div>
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th>Order #</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="order in recentOrders" :key="order._id">
-              <td>{{ order.orderNumber }}</td>
-              <td>{{ formatDate(order.purchaseDate) }}</td>
-              <td>{{ order.userId }}</td>
-              <td>${{ order.totalAmount.toFixed(2) }}</td>
-              <td>
-                <span :class="['status-badge', `status-${order.status}`]">
-                  {{ getStatusLabel(order.status) }}
-                </span>
-              </td>
-              <td>
-                <router-link :to="`/admin/orders/${order._id}`" class="view-link">
-                  View
-                </router-link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- Quick actions -->
     <div class="dashboard-section">
       <h2>Quick Actions</h2>
@@ -116,10 +21,6 @@
           <div class="action-title">Manage Products</div>
         </router-link>
 
-        <router-link to="/admin/users" class="action-card">
-          <div class="action-icon">👥</div>
-          <div class="action-title">Manage Users</div>
-        </router-link>
       </div>
     </div>
   </div>
