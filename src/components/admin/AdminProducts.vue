@@ -167,6 +167,64 @@
                         rows="4"></textarea>
             </div>
 
+            <!-- Attributes Section -->
+            <div class="form-group">
+              <label>Attributes</label>
+              <div v-for="(attr, index) in editingProduct.attributes" :key="index" class="attribute-row">
+                <input type="text"
+                       v-model="attr.key"
+                       placeholder="Attribute name"
+                       class="attribute-input">
+                <input type="text"
+                       v-model="attr.value"
+                       placeholder="Attribute value"
+                       class="attribute-input">
+                <button type="button"
+                        @click="removeAttribute(index)"
+                        class="remove-attribute">
+                  ×
+                </button>
+              </div>
+              <button type="button"
+                      @click="addAttribute"
+                      class="add-attribute">
+                Add Attribute
+              </button>
+            </div>
+
+            <!-- Images Section -->
+            <div class="form-group">
+              <label>Product Images:</label>
+              <div v-for="(imageUrl, index) in editingProduct.images" :key="index" class="image-row">
+                <input type="url"
+                       v-model="editingProduct.images[index]"
+                       placeholder="Image URL"
+                       class="image-input"
+                       required>
+                <button type="button"
+                        @click="removeImage(index)"
+                        class="remove-image"
+                        :disabled="editingProduct.images.length === 1">
+                  ×
+                </button>
+              </div>
+              <button type="button"
+                      @click="addImage"
+                      class="add-image">
+                Add Another Image
+              </button>
+              <p class="help-text">First image will be used as the main product image.</p>
+            </div>
+
+            <!-- Image Preview -->
+            <div class="image-preview-container" v-if="editingProduct.images.length > 0">
+              <div v-for="(imageUrl, index) in editingProduct.images" :key="index" class="image-preview">
+                <img v-if="imageUrl" :src="imageUrl" :alt="`Product preview ${index + 1}`" class="preview-image">
+                <div v-else class="preview-placeholder">No image</div>
+                <div class="image-number">{{ index === 0 ? 'Main Image' : `Image ${index + 1}` }}</div>
+              </div>
+            </div>
+
             <div class="form-actions">
               <button type="button" class="cancel-btn" @click="closeModal">Cancel</button>
               <button type="submit" class="save-btn">Save Product</button>
@@ -205,7 +263,8 @@
           description: '',
           enabled: true,
           productNumber: '',
-          images: []
+          images: [''],
+          attributes: []
         },
         originalProduct: null,
         placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
@@ -343,11 +402,28 @@
       editProduct(product) {
         this.isNewProduct = false;
         this.originalProduct = { ...product };
+
+        // Convert attributes object to array format for editing
+        const attributesArray = [];
+        if (product.attributes) {
+          for (const [key, value] of Object.entries(product.attributes)) {
+            attributesArray.push({
+              key,
+              value: Array.isArray(value) ? value.join(', ') : value
+            });
+          }
+        }
+
         this.editingProduct = {
           ...product,
           // Ensure productNumber is displayed correctly or marked as auto-generated if missing
-          productNumber: product.productNumber || 'Auto-generated'
+          productNumber: product.productNumber || 'Auto-generated',
+          // Ensure images is always an array
+          images: product.images && product.images.length ? [...product.images] : [''],
+          // Convert attributes object to array format for editing
+          attributes: attributesArray.length > 0 ? attributesArray : []
         };
+
         this.showEditModal = true;
       },
 
@@ -360,12 +436,61 @@
           description: '',
           enabled: true,
           productNumber: '',
-          images: []
+          images: [''],
+          attributes: []
         };
+      },
+
+      // Attribute management methods
+      addAttribute() {
+        this.editingProduct.attributes.push({ key: '', value: '' });
+      },
+
+      removeAttribute(index) {
+        this.editingProduct.attributes.splice(index, 1);
+      },
+
+      // Image management methods
+      addImage() {
+        this.editingProduct.images.push('');
+      },
+
+      removeImage(index) {
+        // Keep at least one image
+        if (this.editingProduct.images.length > 1) {
+          this.editingProduct.images.splice(index, 1);
+        }
       },
 
       async saveProduct() {
         try {
+          // Add validation for attribute keys
+          const uniqueKeys = new Set();
+          for (const attr of this.editingProduct.attributes) {
+            if (attr.key && attr.value) {
+              if (uniqueKeys.has(attr.key)) {
+                alert(`Duplicate attribute key: ${attr.key}`);
+                return;
+              }
+              uniqueKeys.add(attr.key);
+            }
+          }
+
+          // Filter out empty image URLs
+          const validImages = this.editingProduct.images.filter(url => url.trim() !== '');
+          if (validImages.length === 0) {
+            alert('Please provide at least one image URL');
+            return;
+          }
+
+          // Convert attributes array to object before sending
+          const attributes = this.editingProduct.attributes.reduce((acc, attr) => {
+            if (attr.key && attr.value) {
+              acc[attr.key] = attr.value.split(',').map(v => v.trim());
+            }
+            return acc;
+          }, {});
+
           const url = this.isNewProduct
             ? '/api/products'
             : `/api/products/${this.editingProduct._id}`;
@@ -373,7 +498,13 @@
           const method = this.isNewProduct ? 'POST' : 'PUT';
 
           // If creating a new product, don't send productNumber (will be auto-generated)
-          const productData = { ...this.editingProduct };
+          const productData = {
+            ...this.editingProduct,
+            images: validImages,
+            attributes,
+            price: parseFloat(this.editingProduct.price)
+          };
+
           if (this.isNewProduct || productData.productNumber === 'Auto-generated') {
             delete productData.productNumber;
           }
@@ -833,6 +964,89 @@
         cursor: not-allowed;
       }
 
+  /* Attribute and image management styles */
+  .attribute-row, .image-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+  }
+
+  .attribute-input, .image-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  .remove-attribute, .remove-image, .add-attribute, .add-image {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .remove-attribute, .remove-image {
+    color: #d32f2f;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .add-attribute, .add-image {
+    color: #5D5CDE;
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+
+  .help-text {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+
+  .image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .image-preview {
+    width: 100px;
+    text-align: center;
+  }
+
+  .preview-image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+
+  .preview-placeholder {
+    width: 100px;
+    height: 100px;
+    background-color: #f0f0f0;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  .image-number {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    color: #666;
+  }
+
   .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -874,7 +1088,9 @@
     .filters select,
     .form-group input,
     .form-group textarea,
-    .form-group select {
+    .form-group select,
+    .attribute-input,
+    .image-input {
       background-color: #1a202c;
       border-color: #4a5568;
       color: #e2e8f0;
@@ -945,6 +1161,25 @@
       color: #e2e8f0;
     }
 
+    .help-text,
+    .image-number {
+      color: #a0aec0;
+    }
+
+    .preview-placeholder {
+      background-color: #2d3748;
+      border-color: #4a5568;
+      color: #a0aec0;
+    }
+
+    .add-attribute,
+    .add-image,
+    .remove-attribute,
+    .remove-image {
+      background-color: #2d3748;
+      border-color: #4a5568;
+    }
+
     /* Adjust action buttons for dark mode */
     .view-btn {
       background-color: rgba(25, 118, 210, 0.2);
@@ -977,6 +1212,10 @@
     .data-table {
       display: block;
       overflow-x: auto;
+    }
+
+    .image-preview-container {
+      justify-content: center;
     }
   }
 </style>

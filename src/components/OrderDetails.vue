@@ -426,7 +426,7 @@
 
     .order-title-section h2 {
       margin: 0;
-      color: #333;
+      color: #e0e0e0;
     }
 
   .status-badge {
@@ -544,7 +544,7 @@
 
     .modal-content h3 {
       margin-top: 0;
-      color: #333;
+      color: #e0e0e0;
     }
 
   .modal-actions {
@@ -592,7 +592,7 @@
     .status-update-section h3 {
       margin-top: 0;
       margin-bottom: 1rem;
-      color: #333;
+      color: #e0e0e0;
     }
 
   .form-group {
@@ -603,7 +603,7 @@
       display: block;
       margin-bottom: 0.5rem;
       font-weight: 600;
-      color: #333;
+      color: #e0e0e0;
     }
 
   select, textarea {
@@ -672,7 +672,7 @@
     .info-card h3 {
       margin-top: 0;
       margin-bottom: 1rem;
-      color: #333;
+      color: #e0e0e0;
       border-bottom: 1px solid #eee;
       padding-bottom: 0.5rem;
     }
@@ -770,7 +770,7 @@
     .order-items-section h3 {
       margin-top: 0;
       margin-bottom: 1.5rem;
-      color: #333;
+      color: #e0e0e0;
       border-bottom: 1px solid #eee;
       padding-bottom: 0.5rem;
     }
@@ -892,7 +892,7 @@
     }
 
     h1, h2, h3 {
-      color: #e0e0e0;
+      color: #262626;
     }
 
     .back-link {
@@ -913,7 +913,7 @@
 
     .info-card h3,
     .order-items-section h3 {
-      border-bottom-color: #333;
+      border-bottom-color: #e0e0e0;
     }
 
     .meta-label {
