@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
+  import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
   import { useRouter } from 'vue-router'; // Import useRouter
 
   // Layout Components
@@ -87,6 +87,30 @@
     }
   };
 
+  // --- Global Body Class Management ---
+  // Watch the relevant states and update body classes accordingly
+  watch([isMobileMenuActive, isAccountPopupActive, isCartPopupActive],
+    ([mobileActive, accountActive, cartActive]) => {
+      const body = document.body;
+  
+      // Handle mobile menu class
+      if (mobileActive) {
+        body.classList.add('mobile-menu-active');
+      } else {
+        body.classList.remove('mobile-menu-active');
+      }
+  
+      // Handle general popup open class (for overflow: hidden)
+      if (mobileActive || accountActive || cartActive) {
+        body.classList.add('popup-open');
+      } else {
+        body.classList.remove('popup-open');
+      }
+      console.log('Body classes updated:', body.className); // For debugging
+    },
+    { immediate: true } // Run once on mount to set initial state
+  );
+
   // --- Methods ---
   const handleScroll = () => {
     const scrollY = window.scrollY;
@@ -97,60 +121,52 @@
   };
 
   const toggleMobileMenu = (forceState = null) => {
-    isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
-    // Close other overlays when opening menu
-    if (isMobileMenuActive.value) {
-      isAccountDropdownActive.value = false;
-      isSearchActive.value = false; // Optionally close search
-    }
-    updateBodyClass();
+  isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
+  if (isMobileMenuActive.value) {
+    isAccountDropdownActive.value = false;
+    isSearchActive.value = false;
+  }
   };
   const closeMobileMenu = () => toggleMobileMenu(false);
-
+  
   const toggleSearch = (forceState = null) => {
     isSearchActive.value = typeof forceState === 'boolean' ? forceState : !isSearchActive.value;
     if (isSearchActive.value) {
       isAccountDropdownActive.value = false;
-      isMobileMenuActive.value = false; // Close menu if search opens
+      isMobileMenuActive.value = false;
     }
-    updateBodyClass(); // Update in case menu was closed
   };
   const closeSearch = () => toggleSearch(false);
-
-
+  
+  
   const toggleAccountDropdown = (forceState = null) => {
     isAccountDropdownActive.value = typeof forceState === 'boolean' ? forceState : !isAccountDropdownActive.value;
     if (isAccountDropdownActive.value) {
-      isSearchActive.value = false; // Close search if dropdown opens
-      isMobileMenuActive.value = false; // Close menu
+      isSearchActive.value = false;
+      isMobileMenuActive.value = false;
     }
-    updateBodyClass(); // Update in case menu was closed
   };
   const closeAccountDropdown = () => toggleAccountDropdown(false);
-
+  
   const openAccountPopup = (tab = 'login') => {
     accountPopupTab.value = tab;
     isAccountPopupActive.value = true;
-    isAccountDropdownActive.value = false; // Close dropdown when popup opens
-    isMobileMenuActive.value = false; // Close menu
-    updateBodyClass();
+    isAccountDropdownActive.value = false;
+    isMobileMenuActive.value = false;
   };
   const closeAccountPopup = () => {
     isAccountPopupActive.value = false;
-    updateBodyClass();
   };
-
+  
   const toggleCartPopup = (forceState = null) => {
     isCartPopupActive.value = typeof forceState === 'boolean' ? forceState : !isCartPopupActive.value;
     if (isCartPopupActive.value) {
       isAccountDropdownActive.value = false;
-      isMobileMenuActive.value = false; // Close menu
+      isMobileMenuActive.value = false;
     }
-    updateBodyClass();
   };
   const closeCartPopup = () => toggleCartPopup(false);
-
-
+  
   // --- Cart Methods ---
   const handleAddToCart = (itemToAdd) => {
     console.log('Adding to cart (App.vue):', itemToAdd);
@@ -158,11 +174,9 @@
     if (existingItemIndex > -1) {
       cartData.value[existingItemIndex].quantity += itemToAdd.quantity;
     } else {
-      // Ensure quantity is part of the object being pushed
       cartData.value.push({ ...itemToAdd, quantity: itemToAdd.quantity || 1 });
     }
     isCartPopupActive.value = true; // Open cart on add
-    updateBodyClass();
   };
 
   const updateCartItemQuantity = ({ productId, change }) => {

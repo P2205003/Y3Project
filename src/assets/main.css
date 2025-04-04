@@ -29,10 +29,18 @@
     --border-radius: 12px;
     --border-radius-small: 8px;
     --header-height: 80px;
-    --popup-z-index: 1060; /* Z-index for popups */
-    --overlay-z-index: 1055; /* Z-index for overlays */
-    --mobile-nav-z-index: 1050; /* Z-index for mobile nav */
-    --mobile-overlay-z-index: 1040; /* Z-index for mobile nav overlay */
+    /* --- Z-Index Hierarchy --- */ /* <<< Z-INDEX */
+    --header-z-index: 1000; /* Base header */
+    --scroll-progress-z-index: 1001; /* Scroll bar just above header base */
+    /* Mobile Menu Layering */ /* <<< Z-INDEX */
+    --mobile-overlay-z-index: 1010; /* Above header base, below nav */
+    --mobile-nav-z-index: 1020; /* Above overlay */
+    --mobile-toggle-z-index: 1030; /* Above nav, always visible */
+    /* Popups (Account/Cart) - Ensure they are above mobile menu stuff */ /* <<< Z-INDEX */
+    --popup-overlay-z-index: 1040; /* Overlay for Account/Cart */
+    --popup-z-index: 1050; /* Account/Cart popups themselves */
+    /* Preloader - Highest */ /* <<< Z-INDEX */
+    --preloader-z-index: 10000;
 }
 
 /* --- Reset and Base Styles --- */
@@ -70,11 +78,10 @@ body {
 a, button, .hotspot, input[type="submit"], input[type="button"], [role="button"], summary, label, .popup-tab, .dropdown-item, .quantity-btn, .cart-item-remove, .page-link {
     cursor: pointer;
 }
-/* Added .page-link */
+
 input[type="text"], input[type="email"], input[type="password"], textarea, input[type="search"] {
     cursor: text;
 }
-/* Added input[type="search"] */
 
 /* --- Preloader Styles --- */
 #preloader {
@@ -84,7 +91,7 @@ input[type="text"], input[type="email"], input[type="password"], textarea, input
     width: 100%;
     height: 100%;
     background: var(--bg-light);
-    z-index: 10000;
+    z-index: var(--preloader-z-index); /* <<< Z-INDEX */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -121,7 +128,7 @@ input[type="text"], input[type="email"], input[type="password"], textarea, input
     height: 4px;
     background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
     width: 0%;
-    z-index: 1001;
+    z-index: var(--scroll-progress-z-index); /* <<< Z-INDEX */
     transition: width 0.1s linear;
     opacity: 0.8;
 }
@@ -134,7 +141,7 @@ input[type="text"], input[type="email"], input[type="password"], textarea, input
     width: 100%;
     height: 100%;
     overflow: hidden;
-    z-index: -1;
+    z-index: -1; /* Behind everything */
     pointer-events: none;
 }
 
@@ -195,8 +202,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 1000;
-    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med);
+    z-index: var(--header-z-index); /* <<< Z-INDEX (Base) */
+    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s 0.4s; /* Delay z-index change on exit */
     background-color: rgba(248, 249, 250, 0.8);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid transparent;
@@ -208,6 +215,16 @@ header {
         box-shadow: var(--shadow-soft);
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
+
+/* --- Mobile Menu Active State Header Adjustment --- */ /* <<< Z-INDEX */
+body.mobile-menu-active header {
+    /* Temporarily boost header z-index when mobile menu is active */
+    /* Needs to be higher than overlay, but lower than nav/toggle were they outside */
+    /* Setting it just below the mobile nav allows children to layer correctly */
+    z-index: 1019; /* Higher than overlay (1010), below nav (1020) */
+    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s; /* Immediate z-index change on enter */
+}
+
 
 .logo {
     font-family: var(--font-heading);
@@ -252,12 +269,12 @@ nav#main-nav { /* Use ID for more specificity if needed */
         will-change: transform, color, background-color;
     }
 
-        nav#main-nav a:hover,
-        nav#main-nav a:focus-visible {
-            color: var(--white);
-            background-color: var(--primary);
-            transform: translateY(-2px);
-        }
+nav#main-nav a:hover,
+nav#main-nav a:focus-visible {
+    color: var(--white);
+    background-color: var(--primary);
+    transform: translateY(-2px);
+}
 
 /* --- Header Actions Container --- */
 .header-actions {
@@ -284,14 +301,14 @@ nav#main-nav { /* Use ID for more specificity if needed */
     align-items: center;
     justify-content: center;
     transition: color var(--transition-fast);
-    z-index: 2;
+    z-index: 2; /* Above input */
     position: relative;
 }
 
-    .search-button:hover, .search-button:focus-visible {
-        color: var(--primary);
-        outline: none;
-    }
+.search-button:hover, .search-button:focus-visible {
+    color: var(--primary);
+    outline: none;
+}
 
 .search-input {
     width: 0;
@@ -310,7 +327,7 @@ nav#main-nav { /* Use ID for more specificity if needed */
     box-sizing: border-box;
     padding: 0.5rem 0;
     vertical-align: middle;
-    margin-left: -1px;
+    margin-left: -1px; /* Overlap button slightly */
 }
 
 .search-container.active .search-input {
@@ -333,18 +350,18 @@ nav#main-nav { /* Use ID for more specificity if needed */
 #cart-popup-trigger,
 #account-dropdown-trigger,
 #orders-trigger {
-    position: relative; /* Keep relative for potential future badges */
+    position: relative;
     background: none;
     border: none;
-    padding: 0.5rem; /* Consistent padding */
+    padding: 0.5rem;
     color: var(--text-dark);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: color var(--transition-fast);
-    font-size: 1.2rem; /* Consistent icon size */
-    cursor: pointer; /* Explicitly set cursor */
+    font-size: 1.2rem;
+    cursor: pointer;
 }
 
     #cart-popup-trigger:hover,
@@ -354,7 +371,7 @@ nav#main-nav { /* Use ID for more specificity if needed */
     #orders-trigger:hover,
     #orders-trigger:focus-visible {
         color: var(--primary);
-        outline: none; /* Ensure focus outline consistency */
+        outline: none;
     }
 
     #cart-popup-trigger svg {
@@ -389,7 +406,6 @@ nav#main-nav { /* Use ID for more specificity if needed */
 #orders-trigger i {
     vertical-align: middle;
 }
-/* Helps alignment if needed */
 
 /* --- Account Dropdown --- */
 .account-menu-container {
@@ -397,12 +413,12 @@ nav#main-nav { /* Use ID for more specificity if needed */
     display: inline-flex;
     align-items: center;
 }
-/* #account-dropdown-trigger styles moved to shared section */
+
 #account-dropdown-menu {
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
-    z-index: var(--popup-z-index);
+    z-index: var(--popup-z-index); /* <<< Z-INDEX (Dropdown is a type of popup) */
     background-color: var(--white);
     border-radius: var(--border-radius-small);
     box-shadow: var(--shadow-medium);
@@ -461,8 +477,9 @@ nav#main-nav { /* Use ID for more specificity if needed */
     background: none;
     border: none;
     padding: 0.5rem;
-    z-index: 1002; /* Above header content */
+    z-index: var(--mobile-toggle-z-index); /* <<< Z-INDEX (Highest in mobile menu context) */
     margin-left: 0.5rem;
+    position: relative; /* Ensure z-index works reliably */
 }
 
     .menu-toggle span {
@@ -475,6 +492,7 @@ nav#main-nav { /* Use ID for more specificity if needed */
         transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.3s ease;
     }
 
+/* Animations rely on body class */
 body.mobile-menu-active .menu-toggle span:nth-child(1) {
     transform: translateY(8px) rotate(45deg);
 }
@@ -495,7 +513,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.5);
-    z-index: var(--mobile-overlay-z-index); /* Below mobile nav, above content */
+    z-index: var(--mobile-overlay-z-index); /* <<< Z-INDEX (Above header base, below nav) */
     opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
@@ -507,14 +525,14 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     }
 
 /* --- General Popup Overlay Styling (Account/Cart) --- */
-.popup-overlay {
+.popup-overlay { /* Targets BOTH #account-popup-overlay AND #cart-popup-overlay */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
-    z-index: var(--overlay-z-index); /* Below popups */
+    z-index: var(--popup-overlay-z-index); /* <<< Z-INDEX (Overlay for Account/Cart) */
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-fast);
@@ -568,7 +586,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-strong);
-    z-index: var(--popup-z-index); /* Above overlay */
+    z-index: var(--popup-z-index); /* <<< Z-INDEX (Above its overlay) */
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-fast), transform var(--transition-fast);
@@ -689,7 +707,6 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
         outline: none;
     }
 
-/* Account Popup Specific Messages (Moved from scoped) */
 #account-popup .error-message {
     color: var(--secondary);
     font-size: 0.85rem;
@@ -714,7 +731,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     height: 100%;
     background-color: var(--white);
     box-shadow: var(--shadow-strong);
-    z-index: var(--popup-z-index); /* Above overlay */
+    z-index: var(--popup-z-index); /* <<< Z-INDEX (Above its overlay) */
     opacity: 0;
     transform: translateX(100%);
     pointer-events: none;
@@ -743,7 +760,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     gap: 1rem;
     padding: 1rem 0;
     border-bottom: 1px solid var(--border-color);
-    position: relative; /* For absolute positioning of remove btn on mobile */
+    position: relative;
 }
 
     .cart-item:last-child {
@@ -800,7 +817,6 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
         color: var(--primary);
     }
 
-/* Cart Popup Specific Styles (Moved from scoped) */
 #cart-popup .quantity-btn[disabled] {
     opacity: 0.5;
     cursor: not-allowed;
@@ -937,7 +953,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     .reveal-on-scroll.delay-5 {
         transition-delay: 0.5s;
     }
-/* Added delay 5 */
+
 section {
     padding: 8rem 10%;
     position: relative;
@@ -972,13 +988,13 @@ section {
     padding-bottom: 50px;
     background-color: var(--bg-light);
     position: relative;
-    z-index: 1;
+    /* z-index: 1; Removed to allow header effects */
 }
 
 .hero-content {
     flex: 1;
     padding-right: 5%;
-    z-index: 2;
+    z-index: 2; /* Keep content above potential background elements */
 }
 
 .hero h1 {
@@ -1069,7 +1085,7 @@ section {
     max-height: 700px;
     position: relative;
     perspective: 1500px;
-    z-index: 1;
+    /* z-index: 1; Removed */
 }
 
 .hero-image {
@@ -1081,7 +1097,7 @@ section {
     transform-style: preserve-3d;
     transform: rotateY(-5deg) rotateX(3deg);
     transition: transform var(--transition-slow) cubic-bezier(0.165, 0.84, 0.44, 1);
-    will-change: transform; /* Added for performance */
+    will-change: transform;
 }
 
 .hotspot {
@@ -1091,7 +1107,7 @@ section {
     background-color: rgba(255, 255, 255, 0.7);
     border: 2px solid var(--primary);
     border-radius: 50%;
-    z-index: 5;
+    z-index: 5; /* Above image */
     transition: all var(--transition-fast);
     backdrop-filter: blur(3px);
     animation: pulse-light 2.5s infinite ease-in-out;
@@ -1134,7 +1150,7 @@ section {
     pointer-events: none;
     transition: opacity var(--transition-fast), bottom var(--transition-fast);
     box-shadow: var(--shadow-medium);
-    z-index: 10;
+    z-index: 10; /* Above hotspot */
 }
 
 .hotspot:hover .hotspot-info, .hotspot:focus-visible .hotspot-info {
@@ -1177,7 +1193,7 @@ section {
 
 .products {
 }
-/* Placeholder for index.html specific styling if needed */
+
 .showcase {
     display: flex;
     align-items: center;
@@ -1245,7 +1261,7 @@ section {
 }
 
     .quote::before {
-        content: '¡§';
+        content: '“'; /* Correct quote character */
         font-family: var(--font-heading);
         font-size: 5rem;
         color: var(--primary);
@@ -1264,7 +1280,7 @@ section {
     gap: 1rem;
     margin-top: 1.5rem;
     position: relative;
-    z-index: 1;
+    z-index: 1; /* Above quote pseudo-element */
 }
 
 .author-img {
@@ -1315,7 +1331,7 @@ section {
     color: var(--text-dark);
     font-size: 1rem;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    padding-right: 150px;
+    padding-right: 150px; /* Space for button */
     appearance: none;
     min-width: 0;
 }
@@ -1337,10 +1353,9 @@ section {
     transform: translateY(-50%);
     padding: 0.6rem 1.8rem;
     font-size: 0.85rem;
-    z-index: 1;
+    z-index: 1; /* Above input */
 }
 
-/* Newsletter Specific Messages (Moved from scoped HomeView) */
 .newsletter .success-message {
     color: var(--primary);
     margin-top: 1rem;
@@ -1369,17 +1384,16 @@ section {
     box-shadow: var(--shadow-soft);
     transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
     position: relative;
-    transform-style: preserve-3d; /* Keep for potential tilt */
+    transform-style: preserve-3d;
     transform: perspective(1000px) rotateX(0) rotateY(0) scale(1);
     will-change: transform, box-shadow;
     display: flex;
-    flex-direction: column; /* Ensure button stays at bottom */
-    height: 100%; /* Make cards equal height in a row */
+    flex-direction: column;
+    height: 100%;
 }
 
-    /* Optional: Add subtle transition for non-tilt hover (Moved from scoped ProductCard) */
     .product-card:not(.has-tilt):hover .product-image {
-        transform: scale(1.03); /* Simple zoom if no tilt */
+        transform: scale(1.03);
         transition: transform 0.4s ease-out;
     }
 
@@ -1390,18 +1404,18 @@ section {
     transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     position: relative;
     z-index: 1;
-    border-radius: var(--border-radius) var(--border-radius) 0 0; /* Rounded top corners */
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
 .product-info {
     padding: 1.5rem;
     position: relative;
-    z-index: 3;
+    z-index: 3; /* Above shine overlay */
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
-    /* Allow info to grow */
+
     .product-info h3 {
         font-size: 1.2rem;
         margin-bottom: 0.5rem;
@@ -1413,15 +1427,15 @@ section {
         color: var(--text-muted);
         margin-bottom: 1rem;
         font-size: 0.9rem;
-        flex-grow: 1; /* Push price/button down */
+        flex-grow: 1;
     }
 
 .price-tag {
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--primary);
-    display: block; /* Ensure it takes its own line */
-    margin-bottom: 1rem; /* Space before button */
+    display: block;
+    margin-bottom: 1rem;
 }
 
 .add-to-cart-btn {
@@ -1443,9 +1457,9 @@ section {
     width: 100%;
     box-sizing: border-box;
     will-change: transform, background-color, color;
-    margin-top: auto; /* Pushes button to bottom */
+    margin-top: auto;
     z-index: 5; /* Ensure button is clickable over link */
-    position: relative; /* Needed for z-index */
+    position: relative;
 }
 
     .add-to-cart-btn i {
@@ -1460,16 +1474,18 @@ section {
         outline: none;
     }
 
-/* Tilt effect specific styles from index.html (can be kept if using tilt on index) */
-.product-card[data-tilt]:hover .product-image {
+/* Tilt effect specific styles */
+.product-card[data-tilt]:hover .product-image,
+.product-card.has-tilt:hover .product-image {
     transform: translateZ(10px) scale(1.03);
 }
 
-.product-card[data-tilt] .product-info {
+.product-card[data-tilt] .product-info,
+.product-card.has-tilt .product-info {
     transform: translateZ(20px);
 }
 
-/* Tilt Shine Overlay Styling (Moved from scoped ProductCard) */
+/* Tilt Shine Overlay Styling */
 .product-card .tilt-shine-overlay {
     position: absolute;
     top: 0;
@@ -1483,7 +1499,7 @@ section {
     transition: opacity 0.5s ease-out;
     z-index: 2; /* Below info/button, above image */
     pointer-events: none;
-    border-radius: var(--border-radius); /* Match card shape */
+    border-radius: var(--border-radius);
     mix-blend-mode: overlay;
     will-change: background-position, opacity;
 }
@@ -1495,34 +1511,33 @@ section {
 
 /* --- Category Links Above Featured Grid (Index Page) --- */
 .category-links-container {
-    text-align: center; /* Center the list */
-    margin-top: 0; /* Remove top margin as it's below header now */
-    margin-bottom: 3rem; /* Add space below the links before the grid */
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 3rem;
 }
 
 .category-links-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex; /* Arrange items horizontally */
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    justify-content: center; /* Center items in the flex container */
-    gap: 1.5rem; /* << INCREASED GAP >> */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
 }
 
 .category-link-item {
-    /* No specific styles needed if using flex gap */
 }
 
 .category-link-button {
     display: inline-block;
-    padding: 0.7rem 1.5rem; /* << INCREASED PADDING >> */
+    padding: 0.7rem 1.5rem;
     border: 1px solid var(--border-color);
-    border-radius: 50px; /* Pill shape */
+    border-radius: 50px;
     text-decoration: none;
     color: var(--text-muted);
     font-weight: 600;
-    font-size: 0.95rem; /* << INCREASED FONT SIZE >> */
+    font-size: 0.95rem;
     background-color: var(--white);
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-soft);
@@ -1551,10 +1566,10 @@ section {
 
 /* --- PRODUCT PAGE SPECIFIC STYLES --- */
 .page-header {
-    padding-top: calc(var(--header-height) + 4rem); /* Space below fixed header */
+    padding-top: calc(var(--header-height) + 4rem);
     padding-bottom: 3rem;
     text-align: center;
-    background-color: var(--bg-off-light); /* Optional distinct background */
+    background-color: var(--bg-off-light);
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -1574,12 +1589,12 @@ section {
     }
 
 .product-listing-section {
-    padding: 4rem 8%; /* Adjust padding as needed */
+    padding: 4rem 8%;
 }
 
 .filter-controls {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    flex-wrap: wrap;
     gap: 1.5rem;
     margin-bottom: 3rem;
     padding: 1.5rem;
@@ -1591,10 +1606,10 @@ section {
 
 .filter-group {
     display: flex;
-    flex-direction: column; /* Stack label and input/select */
+    flex-direction: column;
     gap: 0.5rem;
-    flex-grow: 1; /* Allow groups to grow */
-    min-width: 180px; /* Minimum width before wrapping */
+    flex-grow: 1;
+    min-width: 180px;
 }
 
     .filter-group label {
@@ -1611,7 +1626,7 @@ section {
         border-radius: var(--border-radius-small);
         font-size: 0.9rem;
         font-family: var(--font-body);
-        background-color: var(--bg-light); /* Slightly different background for filter inputs */
+        background-color: var(--bg-light);
         transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
@@ -1626,20 +1641,20 @@ section {
         }
 
     .filter-group select {
-        appearance: none; /* Basic custom arrow styling */
+        appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 0.7rem center;
         background-size: 16px 12px;
-        padding-right: 2.5rem; /* Space for arrow */
+        padding-right: 2.5rem;
     }
 
 .filter-actions {
     display: flex;
-    align-items: flex-end; /* Align button with bottom of inputs */
+    align-items: flex-end;
     gap: 0.8rem;
-    flex-basis: 100%; /* Force action buttons to new line on wrap */
-    margin-top: 1rem; /* Add space when wrapped */
+    flex-basis: 100%;
+    margin-top: 1rem;
     justify-content: flex-end;
 }
 
@@ -1680,13 +1695,13 @@ section {
 /* Link wrapper for product card on product page */
 .product-card-link {
     text-decoration: none;
-    color: inherit; /* Inherit text color */
-    display: block; /* Make the link take up card space */
-    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; /* Apply hover effect to link */
-    border-radius: var(--border-radius); /* Match card radius */
-    position: relative; /* Context for absolute elements if needed */
-    height: 100%; /* Ensure link takes full card height */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    color: inherit;
+    display: block;
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    border-radius: var(--border-radius);
+    position: relative;
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
 }
 
     .product-card-link:hover,
@@ -1694,37 +1709,35 @@ section {
         transform: translateY(-5px) scale(1.01);
         box-shadow: var(--shadow-medium);
         outline: none;
-        z-index: 10; /* Bring forward on hover */
+        z-index: 10; /* Bring card forward visually */
     }
 
     .product-card-link:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 4px;
-        box-shadow: none; /* Reset shadow on focus */
-        z-index: 10; /* Ensure outline is visible */
+        box-shadow: none;
+        z-index: 10;
     }
 
     .product-card-link .product-card {
-        height: 100%; /* Ensure inner card fills the link */
-        /* Reset transforms/transitions handled by the link wrapper */
+        height: 100%;
         transform: none;
-        transition: none;
+        transition: none; /* Effects are on the link wrapper */
     }
 
     .product-card-link:hover .product-image {
         transform: scale(1.03);
     }
-    /* Image zoom on link hover */
-    /* Prevent link hover effect when hovering directly over the button */
+
     .product-card-link:hover .add-to-cart-btn {
-        transform: scale(1); /* Reset scale if needed */
+        transform: scale(1);
     }
-    /* Ensure button hover remains distinct */
+
     .product-card-link .add-to-cart-btn:hover,
     .product-card-link .add-to-cart-btn:focus-visible {
         background-color: var(--primary);
         color: var(--white);
-        transform: scale(1.03); /* Apply button's own hover effect */
+        transform: scale(1.03); /* Apply button's own hover */
     }
 
 /* --- Pagination --- */
@@ -1745,11 +1758,11 @@ section {
 
 .page-item {
 }
-/* No specific style needed unless gaps change */
+
 .page-link {
     display: block;
     padding: 0.6rem 1rem;
-    min-width: 40px; /* Ensure consistent width */
+    min-width: 40px;
     text-align: center;
     color: var(--text-muted);
     background-color: var(--white);
@@ -1773,11 +1786,11 @@ section {
     background-color: var(--primary);
     color: var(--white);
     border-color: var(--primary);
-    z-index: 3; /* Ensure active page is visually on top */
+    z-index: 3; /* Above non-active links */
 }
 
 .page-item.disabled .page-link {
-    color: #adb5bd; /* More muted color */
+    color: #adb5bd;
     pointer-events: none;
     background-color: var(--bg-light);
     border-color: var(--border-color);
@@ -1802,7 +1815,7 @@ footer {
     background-color: var(--bg-dark);
     color: rgba(255, 255, 255, 0.75);
     position: relative;
-    margin-top: 5rem; /* Add space above footer */
+    margin-top: 5rem;
 }
 
     footer::before {
@@ -1898,7 +1911,6 @@ footer {
             transform: translateY(-3px);
         }
 
-/* Footer Specific SVG sizing (Moved from scoped) */
 footer .social-links svg {
     font-size: 1.1rem;
 }
@@ -1931,17 +1943,17 @@ footer .social-links svg {
         scroll-behavior: auto;
     }
 
-    .glow-shape, .hero h1 .char, .reveal-on-scroll, .hero-image, .product-card, .testimonial-card, .cta-button:hover, .logo:hover, .social-links a:hover, .product-card-link, .product-card-link:hover, .add-to-cart-btn:hover, .page-link, .category-link-button /* Added category link */ {
+    .glow-shape, .hero h1 .char, .reveal-on-scroll, .hero-image, .product-card, .testimonial-card, .cta-button:hover, .logo:hover, .social-links a:hover, .product-card-link, .product-card-link:hover, .add-to-cart-btn:hover, .page-link, .category-link-button {
         animation: none !important;
         transition-duration: 0.01s !important;
         transform: none !important;
     }
-    /* Specific Overrides for Reduced Motion */
+
     .hero-image {
         transform: rotateY(-5deg) rotateX(3deg) !important;
     }
 
-    .product-card[data-tilt] {
+    .product-card[data-tilt], .product-card.has-tilt {
         transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1) !important;
     }
 
@@ -1955,7 +1967,7 @@ footer .social-links svg {
 
     .product-card-link:hover, .product-card-link:focus-visible {
         transform: none !important;
-        box-shadow: var(--shadow-soft) !important; /* Reset shadow */
+        box-shadow: var(--shadow-soft) !important;
     }
 
     .add-to-cart-btn:hover, .add-to-cart-btn:focus-visible {
@@ -1974,13 +1986,12 @@ footer .social-links svg {
     .category-link-button:hover, .category-link-button:focus-visible {
         transform: none !important;
     }
-    /* Added category link */
-    /* Transitions */
-    nav a, #cart-popup-trigger, .account-menu-container button, .dropdown-item, .social-links a, .footer-column a, .search-input, header, .add-to-cart-btn, #account-popup, .popup-tab, .popup-close-btn, #account-popup-overlay, #cart-popup, #cart-popup-overlay, .cart-actions .button, .quantity-btn, .cart-item-remove, .filter-group input, .filter-group select, .filter-button, .page-link, .category-link-button /* Added category link */ {
+
+    nav a, #cart-popup-trigger, .account-menu-container button, .dropdown-item, .social-links a, .footer-column a, .search-input, header, .add-to-cart-btn, #account-popup, .popup-tab, .popup-close-btn, #account-popup-overlay, #cart-popup, #cart-popup-overlay, .cart-actions .button, .quantity-btn, .cart-item-remove, .filter-group input, .filter-group select, .filter-button, .page-link, .category-link-button {
         transition-duration: 0.01s !important;
         transition-property: color, background-color, fill, border-color, opacity, box-shadow;
     }
-    /* Visibility/Transform */
+
     .reveal-on-scroll {
         opacity: 1 !important;
         transform: translateY(0) !important;
@@ -2013,7 +2024,7 @@ footer .social-links svg {
     section {
         padding: 7rem 8%;
     }
-    /* Index sections */
+
     .hero {
         flex-direction: column;
         text-align: center;
@@ -2063,7 +2074,7 @@ footer .social-links svg {
     .philosophy {
         padding: 6rem 8%;
     }
-    /* Product Page Specific */
+
     .page-header {
         padding-top: calc(var(--header-height) + 3rem);
         padding-bottom: 2.5rem;
@@ -2072,16 +2083,17 @@ footer .social-links svg {
     .product-listing-section {
         padding: 3rem 5%;
     }
-    /* Mobile Nav */
-    .menu-toggle {
-        display: block; /* Show the toggle button */
-    }
 
-    /* Hide desktop nav, prepare mobile nav */
+    /* --- Mobile Nav Specific --- */
+    .menu-toggle {
+        display: block;
+    }
+    /* Show toggle */
+
     nav#main-nav {
         position: fixed;
         top: 0;
-        right: -100%; /* Initially hidden off-screen */
+        right: -100%; /* Hidden off-screen */
         width: 70%;
         max-width: 300px;
         height: 100vh;
@@ -2089,43 +2101,42 @@ footer .social-links svg {
         box-shadow: -5px 0 15px rgba(0,0,0,0.1);
         padding: calc(var(--header-height) + 2rem) 2rem 2rem;
         transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-        z-index: var(--mobile-nav-z-index); /* Above overlay */
+        z-index: var(--mobile-nav-z-index); /* <<< Z-INDEX (Above mobile overlay) */
         overflow-y: auto;
         visibility: hidden; /* Hide until active */
-        margin: 0; /* Reset desktop margins */
+        margin: 0;
     }
 
         nav#main-nav ul {
-            flex-direction: column; /* Stack links vertically */
+            flex-direction: column;
             align-items: flex-start;
-            gap: 0.5rem; /* Space between links */
+            gap: 0.5rem;
         }
 
         nav#main-nav li {
-            margin: 0; /* Reset desktop margins */
+            margin: 0;
             width: 100%;
         }
 
         nav#main-nav a {
             display: block;
-            padding: 0.8rem 0; /* Adjust padding for vertical layout */
+            padding: 0.8rem 0;
             font-size: 1.1rem;
             color: var(--text-dark);
-            background: none; /* Remove desktop hover background */
-            border-radius: 0; /* Reset desktop border-radius */
-            transform: none; /* Reset desktop transforms */
-            transition: color var(--transition-fast), transform var(--transition-fast); /* Keep transitions */
+            background: none;
+            border-radius: 0;
+            transform: none;
+            transition: color var(--transition-fast), transform var(--transition-fast);
         }
 
             nav#main-nav a:hover,
             nav#main-nav a:focus-visible {
                 color: var(--primary);
-                background: none; /* Ensure no background on hover */
-                transform: translateX(5px); /* Indent on hover/focus */
-                box-shadow: none; /* Remove desktop shadow */
+                background: none;
+                transform: translateX(5px);
+                box-shadow: none;
             }
 
-            /* Specific focus style for mobile nav links */
             nav#main-nav a:focus-visible {
                 outline: 2px solid var(--primary);
                 outline-offset: 2px;
@@ -2138,10 +2149,6 @@ footer .social-links svg {
         visibility: visible; /* Make visible */
     }
 
-    /* Mobile Menu Overlay Activation (already defined above, ensure it works with body class) */
-    /* body.mobile-menu-active #menu-overlay is implicitly handled by #menu-overlay.active */
-
-    /* Cart Popup adjustment */
     #cart-popup {
         max-width: 320px;
     }
@@ -2155,7 +2162,7 @@ footer .social-links svg {
     section {
         padding: 6rem 5%;
     }
-    /* Index sections */
+
     .product-grid {
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 1.5rem;
@@ -2187,6 +2194,11 @@ footer .social-links svg {
         justify-content: center;
     }
 
+    .newsletter-form {
+        flex-direction: column;
+        align-items: center;
+    }
+
     .newsletter-input {
         padding: 1rem 1.5rem;
         text-align: center;
@@ -2204,11 +2216,6 @@ footer .social-links svg {
         margin-right: auto;
     }
 
-    .newsletter-form {
-        flex-direction: column;
-        align-items: center;
-    }
-
     .hero-image-container {
         width: 90%;
         height: 45vh;
@@ -2222,7 +2229,7 @@ footer .social-links svg {
     .philosophy {
         padding: 5rem 5%;
     }
-    /* Product Page Specific */
+
     .page-header {
         padding-top: calc(var(--header-height) + 2rem);
     }
@@ -2260,7 +2267,7 @@ footer .social-links svg {
         min-width: 35px;
         font-size: 0.85rem;
     }
-    /* Popups / Dropdowns */
+
     #account-dropdown-menu {
         right: 0;
         left: auto;
@@ -2272,41 +2279,36 @@ footer .social-links svg {
 
     /* Cart Item Layout on Smaller Screens */
     .cart-item {
-        flex-wrap: wrap; /* Allow items to wrap */
+        flex-wrap: wrap;
     }
 
     .cart-item-image {
-        order: 0; /* Image first */
-        margin-bottom: 0.5rem; /* Space below image if name wraps*/
+        order: 0;
+        margin-bottom: 0.5rem;
     }
 
     .cart-item-details {
-        order: 1; /* Details next to image */
-        width: calc(100% - 80px - 1rem); /* Width minus image width and gap */
+        order: 1;
+        width: calc(100% - 70px - 1rem); /* Image width + gap */
     }
 
     .cart-item-quantity {
-        order: 2; /* Quantity below details */
-        /* Indent quantity to align under details roughly */
-        margin-left: calc(70px + 1rem); /* Image width + gap */
+        order: 2;
+        margin-left: calc(70px + 1rem);
         margin-top: 0.5rem;
-        /* Take remaining width? Optional */
-        /* width: calc(100% - 70px - 1rem); */
     }
 
     .cart-item-remove {
-        order: 3; /* Keep remove button consistent or move */
-        /* Example: Move to top right corner */
+        order: 3;
         position: absolute;
-        top: 0.8rem; /* Adjust as needed */
-        right: 0; /* Align to the right edge of cart-item */
-        margin-left: 0; /* Reset margin */
-        align-self: flex-start; /* Align to top */
+        top: 0.8rem;
+        right: 0;
+        margin-left: 0;
+        align-self: flex-start;
     }
 
-    /* Category Links */
     .category-links-list {
-        gap: 0.8rem; /* Reduce gap slightly on smaller screens */
+        gap: 0.8rem;
     }
 
     .category-link-button {
@@ -2314,8 +2316,7 @@ footer .social-links svg {
         font-size: 0.9rem;
     }
 
-    /* Search Bar on smaller screens */
     .search-container.active .search-input {
-        width: 180px; /* Reduce width */
+        width: 180px;
     }
 }

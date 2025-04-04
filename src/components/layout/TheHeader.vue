@@ -3,7 +3,7 @@
     <router-link to="/" class="logo">AURORA</router-link>
 
     <!-- Desktop Navigation -->
-    <nav id="main-nav" :class="{ active: isMobileMenuActive }">
+    <nav id="main-nav">
       <ul>
         <!-- Use router-link for internal pages, keep hash links as is for now -->
         <li><router-link to="/#hero">Home</router-link></li>
