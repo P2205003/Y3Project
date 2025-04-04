@@ -1,4 +1,4 @@
-/* style.css */
+ï»¿/* src/assets/main.css */
 
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Merriweather:wght@400;700&display=swap');
@@ -31,6 +31,8 @@
     --header-height: 80px;
     --popup-z-index: 1060; /* Z-index for popups */
     --overlay-z-index: 1055; /* Z-index for overlays */
+    --mobile-nav-z-index: 1050; /* Z-index for mobile nav */
+    --mobile-overlay-z-index: 1040; /* Z-index for mobile nav overlay */
 }
 
 /* --- Reset and Base Styles --- */
@@ -223,20 +225,21 @@ header {
     }
 
 /* --- Desktop Navigation --- */
-nav {
+nav#main-nav { /* Use ID for more specificity if needed */
     margin-left: auto;
+    margin-right: 0.5rem; /* Space before actions */
 }
 
-    nav ul {
+    nav#main-nav ul {
         display: flex;
         list-style: none;
     }
 
-    nav li {
+    nav#main-nav li {
         margin: 0 0.3rem;
     }
 
-    nav a {
+    nav#main-nav a {
         color: var(--text-dark);
         text-decoration: none;
         font-weight: 600;
@@ -249,7 +252,8 @@ nav {
         will-change: transform, color, background-color;
     }
 
-        nav a:hover, nav a:focus-visible {
+        nav#main-nav a:hover,
+        nav#main-nav a:focus-visible {
             color: var(--white);
             background-color: var(--primary);
             transform: translateY(-2px);
@@ -323,11 +327,6 @@ nav {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--glow-primary);
     background-color: var(--white);
-}
-
-nav {
-    margin-left: auto;
-    margin-right: 0.5rem;
 }
 
 /* --- Shared Header Action Button Styles --- */
@@ -458,11 +457,11 @@ nav {
 
 /* --- Mobile Menu Toggle --- */
 .menu-toggle {
-    display: none;
+    display: none; /* Hidden by default */
     background: none;
     border: none;
     padding: 0.5rem;
-    z-index: 1002;
+    z-index: 1002; /* Above header content */
     margin-left: 0.5rem;
 }
 
@@ -488,7 +487,26 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     transform: translateY(-8px) rotate(-45deg);
 }
 
-/* --- General Popup Overlay Styling --- */
+/* --- Mobile Menu Overlay --- */
+#menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: var(--mobile-overlay-z-index); /* Below mobile nav, above content */
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+    #menu-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+/* --- General Popup Overlay Styling (Account/Cart) --- */
 .popup-overlay {
     position: fixed;
     top: 0;
@@ -496,7 +514,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
-    z-index: var(--overlay-z-index);
+    z-index: var(--overlay-z-index); /* Below popups */
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-fast);
@@ -550,7 +568,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-strong);
-    z-index: var(--popup-z-index);
+    z-index: var(--popup-z-index); /* Above overlay */
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-fast), transform var(--transition-fast);
@@ -671,6 +689,21 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
         outline: none;
     }
 
+/* Account Popup Specific Messages (Moved from scoped) */
+#account-popup .error-message {
+    color: var(--secondary);
+    font-size: 0.85rem;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+#account-popup .success-message {
+    color: var(--primary);
+    font-size: 0.85rem;
+    margin-top: 1rem;
+    text-align: center;
+}
+
 /* --- Cart Popup --- */
 #cart-popup {
     position: fixed;
@@ -681,7 +714,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     height: 100%;
     background-color: var(--white);
     box-shadow: var(--shadow-strong);
-    z-index: var(--popup-z-index);
+    z-index: var(--popup-z-index); /* Above overlay */
     opacity: 0;
     transform: translateX(100%);
     pointer-events: none;
@@ -710,6 +743,7 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
     gap: 1rem;
     padding: 1rem 0;
     border-bottom: 1px solid var(--border-color);
+    position: relative; /* For absolute positioning of remove btn on mobile */
 }
 
     .cart-item:last-child {
@@ -765,6 +799,12 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
         background-color: var(--bg-off-light);
         color: var(--primary);
     }
+
+/* Cart Popup Specific Styles (Moved from scoped) */
+#cart-popup .quantity-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
 .quantity-display {
     padding: 0 0.5rem;
@@ -853,6 +893,17 @@ body.mobile-menu-active .menu-toggle span:nth-child(3) {
             background-color: var(--bg-off-light);
             transform: translateY(-1px);
         }
+
+/* --- Basic Page Transition --- */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
 
 /* --- Other Sections (INDEX.HTML SPECIFIC) --- */
 .reveal-on-scroll {
@@ -1030,7 +1081,7 @@ section {
     transform-style: preserve-3d;
     transform: rotateY(-5deg) rotateX(3deg);
     transition: transform var(--transition-slow) cubic-bezier(0.165, 0.84, 0.44, 1);
-    will-change: transform;
+    will-change: transform; /* Added for performance */
 }
 
 .hotspot {
@@ -1194,7 +1245,7 @@ section {
 }
 
     .quote::before {
-        content: '¡§';
+        content: 'Â¡Â§';
         font-family: var(--font-heading);
         font-size: 5rem;
         color: var(--primary);
@@ -1289,6 +1340,21 @@ section {
     z-index: 1;
 }
 
+/* Newsletter Specific Messages (Moved from scoped HomeView) */
+.newsletter .success-message {
+    color: var(--primary);
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.newsletter .error-message {
+    color: var(--secondary);
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 /* --- Product Card Styles (Used on Both Pages) --- */
 .product-grid {
     display: grid;
@@ -1310,6 +1376,12 @@ section {
     flex-direction: column; /* Ensure button stays at bottom */
     height: 100%; /* Make cards equal height in a row */
 }
+
+    /* Optional: Add subtle transition for non-tilt hover (Moved from scoped ProductCard) */
+    .product-card:not(.has-tilt):hover .product-image {
+        transform: scale(1.03); /* Simple zoom if no tilt */
+        transition: transform 0.4s ease-out;
+    }
 
 .product-image {
     height: 250px;
@@ -1387,6 +1459,7 @@ section {
         transform: scale(1.03);
         outline: none;
     }
+
 /* Tilt effect specific styles from index.html (can be kept if using tilt on index) */
 .product-card[data-tilt]:hover .product-image {
     transform: translateZ(10px) scale(1.03);
@@ -1396,6 +1469,7 @@ section {
     transform: translateZ(20px);
 }
 
+/* Tilt Shine Overlay Styling (Moved from scoped ProductCard) */
 .product-card .tilt-shine-overlay {
     position: absolute;
     top: 0;
@@ -1407,9 +1481,9 @@ section {
     background-position: 50% 50%;
     opacity: 0;
     transition: opacity 0.5s ease-out;
-    z-index: 2;
+    z-index: 2; /* Below info/button, above image */
     pointer-events: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius); /* Match card shape */
     mix-blend-mode: overlay;
     will-change: background-position, opacity;
 }
@@ -1612,6 +1686,7 @@ section {
     border-radius: var(--border-radius); /* Match card radius */
     position: relative; /* Context for absolute elements if needed */
     height: 100%; /* Ensure link takes full card height */
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
 
     .product-card-link:hover,
@@ -1625,6 +1700,15 @@ section {
     .product-card-link:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 4px;
+        box-shadow: none; /* Reset shadow on focus */
+        z-index: 10; /* Ensure outline is visible */
+    }
+
+    .product-card-link .product-card {
+        height: 100%; /* Ensure inner card fills the link */
+        /* Reset transforms/transitions handled by the link wrapper */
+        transform: none;
+        transition: none;
     }
 
     .product-card-link:hover .product-image {
@@ -1814,9 +1898,10 @@ footer {
             transform: translateY(-3px);
         }
 
-        .social-links a i {
-            font-size: 1.1rem;
-        }
+/* Footer Specific SVG sizing (Moved from scoped) */
+footer .social-links svg {
+    font-size: 1.1rem;
+}
 
 .footer-bottom {
     text-align: center;
@@ -1989,13 +2074,14 @@ footer {
     }
     /* Mobile Nav */
     .menu-toggle {
-        display: block;
+        display: block; /* Show the toggle button */
     }
 
-    nav {
+    /* Hide desktop nav, prepare mobile nav */
+    nav#main-nav {
         position: fixed;
         top: 0;
-        right: -100%;
+        right: -100%; /* Initially hidden off-screen */
         width: 70%;
         max-width: 300px;
         height: 100vh;
@@ -2003,65 +2089,59 @@ footer {
         box-shadow: -5px 0 15px rgba(0,0,0,0.1);
         padding: calc(var(--header-height) + 2rem) 2rem 2rem;
         transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-        z-index: 1050;
+        z-index: var(--mobile-nav-z-index); /* Above overlay */
         overflow-y: auto;
-        visibility: hidden;
+        visibility: hidden; /* Hide until active */
+        margin: 0; /* Reset desktop margins */
     }
 
-        nav ul {
-            flex-direction: column;
+        nav#main-nav ul {
+            flex-direction: column; /* Stack links vertically */
             align-items: flex-start;
+            gap: 0.5rem; /* Space between links */
         }
 
-        nav li {
-            margin: 0.8rem 0;
+        nav#main-nav li {
+            margin: 0; /* Reset desktop margins */
             width: 100%;
         }
 
-        nav a {
+        nav#main-nav a {
             display: block;
-            padding: 0.8rem 0;
+            padding: 0.8rem 0; /* Adjust padding for vertical layout */
             font-size: 1.1rem;
             color: var(--text-dark);
-            background: none;
+            background: none; /* Remove desktop hover background */
+            border-radius: 0; /* Reset desktop border-radius */
+            transform: none; /* Reset desktop transforms */
+            transition: color var(--transition-fast), transform var(--transition-fast); /* Keep transitions */
         }
 
-            nav a:hover, nav a:focus-visible {
+            nav#main-nav a:hover,
+            nav#main-nav a:focus-visible {
                 color: var(--primary);
-                background: none;
-                transform: translateX(5px);
-                box-shadow: none;
+                background: none; /* Ensure no background on hover */
+                transform: translateX(5px); /* Indent on hover/focus */
+                box-shadow: none; /* Remove desktop shadow */
             }
 
-            nav a:focus-visible {
+            /* Specific focus style for mobile nav links */
+            nav#main-nav a:focus-visible {
                 outline: 2px solid var(--primary);
                 outline-offset: 2px;
                 border-radius: 4px;
             }
 
-    body.mobile-menu-active nav {
-        right: 0;
-        visibility: visible;
+    /* Show mobile nav when body class is added */
+    body.mobile-menu-active nav#main-nav {
+        right: 0; /* Slide in */
+        visibility: visible; /* Make visible */
     }
 
-    #menu-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 1040;
-        opacity: 0;
-        transition: opacity 0.4s ease;
-        pointer-events: none;
-    }
+    /* Mobile Menu Overlay Activation (already defined above, ensure it works with body class) */
+    /* body.mobile-menu-active #menu-overlay is implicitly handled by #menu-overlay.active */
 
-    body.mobile-menu-active #menu-overlay {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
+    /* Cart Popup adjustment */
     #cart-popup {
         max-width: 320px;
     }
@@ -2190,33 +2270,40 @@ footer {
         max-width: 95%;
     }
 
+    /* Cart Item Layout on Smaller Screens */
     .cart-item {
-        flex-wrap: wrap;
-    }
-
-    .cart-item-details {
-        order: 1;
-        width: calc(100% - 80px);
+        flex-wrap: wrap; /* Allow items to wrap */
     }
 
     .cart-item-image {
-        order: 0;
+        order: 0; /* Image first */
+        margin-bottom: 0.5rem; /* Space below image if name wraps*/
+    }
+
+    .cart-item-details {
+        order: 1; /* Details next to image */
+        width: calc(100% - 80px - 1rem); /* Width minus image width and gap */
     }
 
     .cart-item-quantity {
-        order: 2;
-        margin-left: 80px;
+        order: 2; /* Quantity below details */
+        /* Indent quantity to align under details roughly */
+        margin-left: calc(70px + 1rem); /* Image width + gap */
         margin-top: 0.5rem;
+        /* Take remaining width? Optional */
+        /* width: calc(100% - 70px - 1rem); */
     }
 
     .cart-item-remove {
-        order: 3;
-        margin-left: auto;
-        align-self: flex-start;
+        order: 3; /* Keep remove button consistent or move */
+        /* Example: Move to top right corner */
         position: absolute;
-        right: 1.2rem;
-        top: 1rem;
+        top: 0.8rem; /* Adjust as needed */
+        right: 0; /* Align to the right edge of cart-item */
+        margin-left: 0; /* Reset margin */
+        align-self: flex-start; /* Align to top */
     }
+
     /* Category Links */
     .category-links-list {
         gap: 0.8rem; /* Reduce gap slightly on smaller screens */
@@ -2225,5 +2312,10 @@ footer {
     .category-link-button {
         padding: 0.6rem 1rem;
         font-size: 0.9rem;
+    }
+
+    /* Search Bar on smaller screens */
+    .search-container.active .search-input {
+        width: 180px; /* Reduce width */
     }
 }

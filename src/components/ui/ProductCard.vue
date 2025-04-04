@@ -134,59 +134,5 @@
 </script>
 
 <style scoped>
-  /* Styles for .product-card, .product-image, .product-info etc. are in main.css */
 
-  /* Ensure the button is clickable OVER the link wrapper */
-  .add-to-cart-btn {
-    position: relative; /* Needed for z-index */
-    z-index: 5; /* Ensure it's above the link */
-  }
-
-  /* Style the link wrapper */
-  .product-card-link {
-    display: block; /* Takes up grid space */
-    height: 100%; /* Fills the grid cell height */
-    text-decoration: none;
-    color: inherit; /* Inherit text color from parent */
-    border-radius: var(--border-radius); /* For focus outline */
-    position: relative; /* Positioning context */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
-  }
-
-    /* Link focus styles */
-    .product-card-link:focus-visible {
-      outline: 2px solid var(--primary);
-      outline-offset: 4px;
-      box-shadow: none; /* Remove potential inherited shadows */
-      /* Ensure focus outline is above card content if needed */
-      z-index: 10;
-    }
-
-    /* Ensure the inner card fills the link */
-    .product-card-link .product-card {
-      height: 100%;
-      /* The link itself will handle hover/focus transforms from main.css */
-      /* Reset transforms potentially applied directly to the card if needed */
-      transform: none;
-      transition: none; /* Handled by link wrapper */
-    }
-
-  /* Adjust shine overlay position if needed (should be fine with absolute positioning) */
-  .product-card .tilt-shine-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Styles in main.css or directive */
-    z-index: 2; /* Below info/button, above image */
-    pointer-events: none;
-    border-radius: var(--border-radius); /* Match card shape */
-  }
-
-  /* Optional: Add subtle transition for non-tilt hover on the card itself */
-  .product-card:not(.has-tilt):hover .product-image {
-    transform: scale(1.03); /* Simple zoom if no tilt */
-    transition: transform 0.4s ease-out;
-  }
 </style>

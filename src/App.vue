@@ -238,42 +238,5 @@
 </script>
 
 <style>
-  /* Basic Page Transition */
-  .fade-enter-active,
-  .fade-leave-active {
-    transition: opacity 0.3s ease;
-  }
 
-  .fade-enter-from,
-  .fade-leave-to {
-    opacity: 0;
-  }
-
-  /* Style for the mobile menu overlay */
-  #menu-overlay {
-    /* Copied from style.css and adapted */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1040; /* Below mobile nav, above content */
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    pointer-events: none;
-  }
-
-    #menu-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-  /* Ensure popups have correct z-index relative to overlay if needed */
-  /* Z-indexes are defined in main.css variables, should be okay */
-
-  /* Add body class style */
-  body.popup-open {
-    overflow: hidden;
-  }
 </style>

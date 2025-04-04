@@ -118,58 +118,5 @@ watch(() => props.isSearchActive, (newValue) => {
 </script>
 
 <style scoped>
-  /* Scoped styles if needed, most are global in main.css */
-  /* Mobile nav positioning logic moved to main.css under @media */
-  nav#main-nav {
-    /* Base styles for desktop */
-  }
 
-  @media (max-width: 1024px) {
-    nav#main-nav {
-      /* Copied/Adapted from main.css */
-      position: fixed;
-      top: 0;
-      right: -100%;
-      width: 70%;
-      max-width: 300px;
-      height: 100vh;
-      background-color: var(--bg-light);
-      box-shadow: -5px 0 15px rgba(0,0,0,0.1);
-      padding: calc(var(--header-height) + 2rem) 2rem 2rem;
-      transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-      z-index: 1050; /* Above overlay */
-      overflow-y: auto;
-      visibility: hidden;
-    }
-
-      nav#main-nav.active {
-        right: 0;
-        visibility: visible;
-      }
-
-      nav#main-nav ul {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      nav#main-nav li {
-        margin: 0.8rem 0;
-        width: 100%;
-      }
-
-      nav#main-nav a {
-        display: block;
-        padding: 0.8rem 0;
-        font-size: 1.1rem;
-        color: var(--text-dark);
-        background: none;
-      }
-
-        nav#main-nav a:hover, nav#main-nav a:focus-visible {
-          color: var(--primary);
-          background: none;
-          transform: translateX(5px);
-          box-shadow: none;
-        }
-  }
 </style>

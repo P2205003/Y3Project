@@ -283,23 +283,5 @@
 </script>
 
 <style scoped>
-  /* Add scoped styles if needed, most are global */
-  .newsletter .success-message { /* Target specific class */
-    color: var(--primary); /* Use theme color */
-    margin-top: 1rem;
-    font-size: 0.9rem;
-    text-align: center;
-  }
 
-  .newsletter .error-message {
-    color: var(--secondary); /* Use theme color */
-    margin-top: 1rem;
-    font-size: 0.9rem;
-    text-align: center;
-  }
-
-  /* Ensure hero image has will-change for performance if not already global */
-  .hero-image {
-    /* will-change: transform; */ /* Handled in JS now, or can be added here */
-  }
 </style>

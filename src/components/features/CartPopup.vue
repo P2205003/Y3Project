@@ -104,9 +104,5 @@ watch(() => props.isActive, (newValue) => {
 </script>
 
 <style scoped>
-  /* Styles are in main.css */
-  .quantity-btn[disabled] {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+
 </style>

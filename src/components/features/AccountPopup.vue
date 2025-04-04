@@ -205,19 +205,5 @@ watch(() => props.isActive, (newValue) => {
 </script>
 
 <style scoped>
-  /* Styles are in main.css */
-  /* Add specific error/success message styles if needed */
-  .error-message {
-    color: var(--secondary);
-    font-size: 0.85rem;
-    margin-top: 1rem;
-    text-align: center;
-  }
 
-  .success-message {
-    color: var(--primary);
-    font-size: 0.85rem;
-    margin-top: 1rem;
-    text-align: center;
-  }
 </style>

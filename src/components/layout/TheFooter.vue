@@ -51,9 +51,5 @@ const currentYear = computed(() => new Date().getFullYear());
 </script>
 
 <style scoped>
-  /* Footer styles are in main.css */
-  /* Add FontAwesome brand icon styles if needed */
-  .social-links svg { /* Target FontAwesome icons */
-    font-size: 1.1rem;
-  }
+
 </style>
