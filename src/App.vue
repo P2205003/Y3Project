@@ -1,199 +1,279 @@
-<!-- src/App.vue -->
-<script>
-  import SideMenu from '@/components/SideMenu.vue';
-  import SiteNav from '@/components/SiteNav.vue';
-  import TopBar from '@/components/TopBar.vue';
-  import Ribbon from '@/components/Ribbon.vue';
-  import { ElMessage } from 'element-plus';
-  import cartService from '@/services/cartService';
-
-  export default {
-    name: 'App',
-    components: { SideMenu, SiteNav, TopBar, Ribbon },
-    data() {
-      return {
-        isMenuVisible: false,
-        appContext: {
-          isLoggedIn: false,
-          user: null,
-          logout: () => this.logout()
-        }
-      };
-    },
-    provide() {
-      return { appContext: this.appContext };
-    },
-    methods: {
-      toggleMenu() {
-        this.isMenuVisible = !this.isMenuVisible;
-      },
-      async logout() {
-        try {
-          const response = await fetch('/api/users/logout', { method: 'POST' });
-          if (response.ok) {
-            this.appContext.isLoggedIn = false;
-            this.appContext.user = null;
-            ElMessage.success('Logout successful!');
-            this.$router.push('/');
-          }
-        } catch (error) {
-          ElMessage.error('Logout failed');
-        }
-      },
-      async checkLoginStatus() {
-        try {
-          const response = await fetch('/api/users/check-login', {
-            credentials: 'include'
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          
-          // Check if user just logged in (not logged in before, but logged in now)
-          const wasLoggedIn = this.appContext.isLoggedIn;
-          this.appContext.isLoggedIn = data.isLoggedIn;
-          this.appContext.user = data.user || null;
-          
-          // If user just logged in, merge carts
-          if (!wasLoggedIn && data.isLoggedIn) {
-            console.log('User just logged in, merging carts...');
-            await this.mergeCartsAfterLogin();
-          }
-        } catch (error) {
-          console.error('Session check failed:', error);
-          this.appContext.isLoggedIn = false;
-          this.appContext.user = null;
-        }
-      },
-      
-      async mergeCartsAfterLogin() {
-        try {
-          console.log('Merging carts after login...');
-          const result = await cartService.mergeCartsAfterLogin();
-          if (result && result.items) {
-            console.log(`Cart merged successfully. ${result.items.length} items in cart.`);
-            ElMessage.success('Your shopping cart has been updated with previously added items.');
-          }
-        } catch (error) {
-          console.error('Error merging carts:', error);
-          ElMessage.error('Failed to synchronize your shopping cart. Please try refreshing the page.');
-        }
-      }
-    },
-    created() {
-      this.checkLoginStatus();
-    }
-  };
-</script>
-
 <template>
-  <div>
-    <div class="context">
-      <router-view />
-    </div>
-  </div>
+  <!-- Preloader, Glow Background, Scroll Progress -->
+  <Preloader :is-loading="isLoading" />
+  <GlowBackground />
+  <ScrollProgress :scroll-percentage="scrollPercentage" />
+
+  <!-- Header -->
+  <TheHeader :is-scrolled="isScrolled"
+             @toggle-menu="toggleMobileMenu"
+             @toggle-search="toggleSearch"
+             @toggle-account-dropdown="toggleAccountDropdown"
+             @open-account-popup="openAccountPopup"
+             @toggle-cart="toggleCartPopup"
+             :is-mobile-menu-active="isMobileMenuActive"
+             :is-search-active="isSearchActive"
+             :is-account-dropdown-active="isAccountDropdownActive"
+             :cart-item-count="totalCartItems" />
+
+  <!-- Mobile Menu Overlay -->
+  <div id="menu-overlay" @click="closeMobileMenu" :class="{ active: isMobileMenuActive }"></div>
+
+  <!-- Main Content Area -->
+  <router-view v-slot="{ Component }">
+    <transition name="fade" mode="out-in">
+      <component :is="Component" @add-to-cart="handleAddToCart" />
+    </transition>
+  </router-view>
+
+  <!-- Footer -->
+  <TheFooter />
+
+  <!-- Popups (Rendered here to overlay everything) -->
+  <AccountPopup :is-active="isAccountPopupActive"
+                :initial-tab="accountPopupTab"
+                @close="closeAccountPopup" />
+  <CartPopup :is-active="isCartPopupActive"
+             :cart-items="cartData"
+             :subtotal="cartSubtotal"
+             @close="closeCartPopup"
+             @update-quantity="updateCartItemQuantity"
+             @remove-item="removeCartItem" />
+
 </template>
 
-<style scoped>
-  /* (Keep the existing styles from App.vue) */
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-  }
+<script setup>
+  import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
+  import { useRouter } from 'vue-router'; // Import useRouter
 
-  .site-nav-bd {
-    background-color: #f8f8f8;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+  // Layout Components
+  import TheHeader from './components/layout/TheHeader.vue';
+  import TheFooter from './components/layout/TheFooter.vue';
+  import Preloader from './components/layout/Preloader.vue';
+  import GlowBackground from './components/layout/GlowBackground.vue';
+  import ScrollProgress from './components/layout/ScrollProgress.vue';
 
-    .site-nav-bd a {
-      text-decoration: none;
-      color: #333;
-      margin-right: 20px;
+  // Feature Components
+  import AccountPopup from './components/features/AccountPopup.vue';
+  import CartPopup from './components/features/CartPopup.vue';
+
+  // --- State ---
+  const isLoading = ref(true);
+  const isScrolled = ref(false);
+  const scrollPercentage = ref(0);
+  const isMobileMenuActive = ref(false);
+  const isSearchActive = ref(false);
+  const isAccountDropdownActive = ref(false);
+  const isAccountPopupActive = ref(false);
+  const accountPopupTab = ref('login'); // 'login' or 'register'
+  const isCartPopupActive = ref(false);
+
+  // Simplified Cart State (Replace with Pinia/Vuex later)
+  const cartData = ref([]); // Array of { id, name, price, quantity, image }
+
+  const router = useRouter(); // Get router instance
+
+  // --- Computed ---
+  const totalCartItems = computed(() => cartData.value.reduce((sum, item) => sum + item.quantity, 0));
+  const cartSubtotal = computed(() => cartData.value.reduce((sum, item) => sum + item.price * item.quantity, 0));
+
+  // Global Body Class Management
+  const updateBodyClass = () => {
+    const body = document.body;
+    if (isMobileMenuActive.value || isAccountPopupActive.value || isCartPopupActive.value) {
+      body.classList.add('popup-open');
+    } else {
+      body.classList.remove('popup-open');
     }
+  };
 
-  .dropdown {
-    position: relative;
-    display: inline-block;
-  }
+  // --- Methods ---
+  const handleScroll = () => {
+    const scrollY = window.scrollY;
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
 
-  .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: #f8f8f8;
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
-  }
+    isScrolled.value = scrollY > 50; // SCROLL_OPTIONS.headerScrollThreshold
+    scrollPercentage.value = scrollHeight > 0 ? Math.min(Math.max((scrollY / scrollHeight) * 100, 0), 100) : 0;
+  };
 
-    .dropdown-content a {
-      color: #333;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
+  const toggleMobileMenu = (forceState = null) => {
+    isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
+    // Close other overlays when opening menu
+    if (isMobileMenuActive.value) {
+      isAccountDropdownActive.value = false;
+      isSearchActive.value = false; // Optionally close search
     }
+    updateBodyClass();
+  };
+  const closeMobileMenu = () => toggleMobileMenu(false);
 
-  .dropdown:hover .dropdown-content {
-    display: block;
-  }
-
-  .top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #333;
-    color: white;
-    padding: 10px 20px;
-  }
-
-    .top img {
-      height: 50px;
+  const toggleSearch = (forceState = null) => {
+    isSearchActive.value = typeof forceState === 'boolean' ? forceState : !isSearchActive.value;
+    if (isSearchActive.value) {
+      isAccountDropdownActive.value = false;
+      isMobileMenuActive.value = false; // Close menu if search opens
     }
+    updateBodyClass(); // Update in case menu was closed
+  };
+  const closeSearch = () => toggleSearch(false);
 
-    .top input[type="text"] {
-      width: 50%;
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
+
+  const toggleAccountDropdown = (forceState = null) => {
+    isAccountDropdownActive.value = typeof forceState === 'boolean' ? forceState : !isAccountDropdownActive.value;
+    if (isAccountDropdownActive.value) {
+      isSearchActive.value = false; // Close search if dropdown opens
+      isMobileMenuActive.value = false; // Close menu
     }
+    updateBodyClass(); // Update in case menu was closed
+  };
+  const closeAccountDropdown = () => toggleAccountDropdown(false);
 
-    .top .buttons {
-      display: flex;
+  const openAccountPopup = (tab = 'login') => {
+    accountPopupTab.value = tab;
+    isAccountPopupActive.value = true;
+    isAccountDropdownActive.value = false; // Close dropdown when popup opens
+    isMobileMenuActive.value = false; // Close menu
+    updateBodyClass();
+  };
+  const closeAccountPopup = () => {
+    isAccountPopupActive.value = false;
+    updateBodyClass();
+  };
+
+  const toggleCartPopup = (forceState = null) => {
+    isCartPopupActive.value = typeof forceState === 'boolean' ? forceState : !isCartPopupActive.value;
+    if (isCartPopupActive.value) {
+      isAccountDropdownActive.value = false;
+      isMobileMenuActive.value = false; // Close menu
     }
+    updateBodyClass();
+  };
+  const closeCartPopup = () => toggleCartPopup(false);
 
-      .top .buttons button {
-        margin-left: 10px;
-        padding: 10px;
-        background-color: #555;
-        border: none;
-        color: white;
-        cursor: pointer;
-        border-radius: 4px;
+
+  // --- Cart Methods ---
+  const handleAddToCart = (itemToAdd) => {
+    console.log('Adding to cart (App.vue):', itemToAdd);
+    const existingItemIndex = cartData.value.findIndex(item => item.id === itemToAdd.id);
+    if (existingItemIndex > -1) {
+      cartData.value[existingItemIndex].quantity += itemToAdd.quantity;
+    } else {
+      // Ensure quantity is part of the object being pushed
+      cartData.value.push({ ...itemToAdd, quantity: itemToAdd.quantity || 1 });
+    }
+    isCartPopupActive.value = true; // Open cart on add
+    updateBodyClass();
+  };
+
+  const updateCartItemQuantity = ({ productId, change }) => {
+    const itemIndex = cartData.value.findIndex(item => item.id === productId);
+    if (itemIndex > -1) {
+      const newQuantity = cartData.value[itemIndex].quantity + change;
+      if (newQuantity <= 0) {
+        cartData.value.splice(itemIndex, 1); // Remove if quantity is 0 or less
+      } else {
+        cartData.value[itemIndex].quantity = newQuantity;
       }
+    }
+  };
 
-  .ribbon {
-    background-color: #f1f1f1;
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-  }
+  const removeCartItem = (productId) => {
+    cartData.value = cartData.value.filter(item => item.id !== productId);
+    // Close popup if cart becomes empty? Optional.
+    // if (cartData.value.length === 0) {
+    //     isCartPopupActive.value = false;
+    //     updateBodyClass();
+    // }
+  };
 
-    .ribbon button {
-      margin: 0 10px;
-      padding: 10px;
-      background-color: #007bff;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 4px;
+  // --- Global Click Listener for Closing Things ---
+  const handleClickOutside = (event) => {
+    // Close account dropdown if click is outside
+    const accountTrigger = document.getElementById('account-dropdown-trigger');
+    const accountMenu = document.getElementById('account-dropdown-menu');
+    if (isAccountDropdownActive.value && accountMenu && accountTrigger && !accountMenu.contains(event.target) && !accountTrigger.contains(event.target)) {
+      closeAccountDropdown();
     }
 
-  .context {
-    padding: 0px;
+    // Close search if click is outside
+    const searchContainer = document.querySelector('.search-container');
+    if (isSearchActive.value && searchContainer && !searchContainer.contains(event.target)) {
+      closeSearch();
+    }
+
+    // Popups are closed via their overlay/close button click handlers already
+    // Mobile menu is closed via its overlay click handler
+  };
+
+
+  // --- Lifecycle Hooks ---
+  onMounted(() => {
+    // Hide preloader after a delay
+    setTimeout(() => {
+      isLoading.value = false;
+    }, 500); // Adjust timing
+
+    // Add scroll listener
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+
+    // Add global click listener
+    document.addEventListener('click', handleClickOutside);
+
+    // Handle navigation to close mobile menu/dropdowns
+    router.afterEach(() => {
+      closeMobileMenu();
+      closeAccountDropdown();
+      closeSearch();
+      // Popups usually stay open on navigation unless explicitly closed
+    });
+  });
+
+  onUnmounted(() => {
+    // Clean up listeners
+    window.removeEventListener('scroll', handleScroll);
+    document.removeEventListener('click', handleClickOutside);
+  });
+
+</script>
+
+<style>
+  /* Basic Page Transition */
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
+
+  /* Style for the mobile menu overlay */
+  #menu-overlay {
+    /* Copied from style.css and adapted */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1040; /* Below mobile nav, above content */
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+    #menu-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+  /* Ensure popups have correct z-index relative to overlay if needed */
+  /* Z-indexes are defined in main.css variables, should be okay */
+
+  /* Add body class style */
+  body.popup-open {
+    overflow: hidden;
   }
 </style>
