@@ -1,15 +1,38 @@
+// server/routes/productRoutes.js
 import express from 'express';
 import Product from '../models/Product.js';
 import { isAuthenticated, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all enabled products (public)
+// Get all enabled products (public) - NOW WITH PAGINATION
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find({ enabled: true });
-    res.json(products);
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 12; // Default limit (e.g., 12 products per page)
+    const skip = (page - 1) * limit;
+
+    // TODO: Add filtering/sorting logic here based on other query params (q, category, sort) later
+
+    const query = { enabled: true }; // Only fetch enabled products
+
+    // Get total count for pagination calculation
+    const totalProducts = await Product.countDocuments(query);
+
+    // Fetch paginated products
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 }) // Example sort (newest first), make dynamic later
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    });
   } catch (error) {
+    console.error("Error fetching paginated products:", error); // Add logging
     res.status(500).json({ message: error.message });
   }
 });
@@ -17,7 +40,8 @@ router.get('/', async (req, res) => {
 // Search products (public)
 router.get('/search', async (req, res) => {
   try {
-    const { q, category, minPrice, maxPrice } = req.query;
+    const { q, category, minPrice, maxPrice, page = 1, limit = 12 } = req.query; // Added page/limit
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Build search query
     const query = { enabled: true };
@@ -46,8 +70,18 @@ router.get('/search', async (req, res) => {
       }
     }
 
-    const products = await Product.find(query);
-    res.json(products);
+    const totalProducts = await Product.countDocuments(query);
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 }) // Example sort
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      products,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalProducts / parseInt(limit)),
+      totalProducts,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -56,12 +90,29 @@ router.get('/search', async (req, res) => {
 // Get all products including disabled ones (admin only)
 router.get('/admin', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const products = await Product.find();
-    res.json(products);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15; // Admin might want more per page
+    const skip = (page - 1) * limit;
+
+    const query = {}; // No 'enabled' filter for admin
+
+    const totalProducts = await Product.countDocuments(query);
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // Add validation middleware
 const validateProduct = (req, res, next) => {
@@ -80,12 +131,13 @@ const validateProduct = (req, res, next) => {
 
 // Add slugify function
 const slugify = (text) => {
+  if (!text) return ''; // Handle empty input
   return text
     .toString()
     .toLowerCase()
     .replace(/\s+/g, '-')     // Replace spaces with -
-    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-    .replace(/\-\-+/g, '-')   // Replace multiple - with single -
+    .replace(/[^\w-]+/g, '') // Remove all non-word chars
+    .replace(/--+/g, '-')   // Replace multiple - with single -
     .replace(/^-+/, '')       // Trim - from start of text
     .replace(/-+$/, '');      // Trim - from end of text
 };
@@ -94,6 +146,9 @@ const slugify = (text) => {
 router.post('/', isAuthenticated, isAdmin, validateProduct, async (req, res) => {
   try {
     let slug = slugify(req.body.name);
+    if (!slug) { // Generate slug from timestamp if name is empty or results in empty slug
+      slug = `product-${Date.now()}`;
+    }
     let counter = 1;
     const baseSlug = slug;
 
@@ -117,7 +172,7 @@ router.post('/', isAuthenticated, isAdmin, validateProduct, async (req, res) => 
       images: req.body.images || [],
       slug,  // Now guaranteed unique
       attributes: req.body.attributes || {},
-      enabled: true
+      enabled: req.body.enabled !== undefined ? req.body.enabled : true // Respect passed 'enabled' or default to true
     });
 
     const newProduct = await product.save();
@@ -128,20 +183,27 @@ router.post('/', isAuthenticated, isAdmin, validateProduct, async (req, res) => 
       const field = Object.keys(error.keyPattern)[0];
       res.status(400).json({ message: `${field} must be unique` });
     } else {
-      res.status(400).json({ message: error.message });
+      console.error("Error creating product:", error); // Log the detailed error
+      res.status(400).json({ message: error.message || 'Error creating product' });
     }
   }
 });
 
-// Get a product by ID
+// Get a product by ID (no pagination needed)
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) {
+    if (!product || !product.enabled) { // Also check if enabled for public view
+      // Allow admin to see disabled products?
+      // const userIsAdmin = await checkAdminStatus(req); // Hypothetical function
+      // if (!product && !userIsAdmin) { ... }
       return res.status(404).json({ message: 'Product not found' });
     }
     res.json(product);
   } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ message: 'Invalid product ID format' });
+    }
     res.status(500).json({ message: error.message });
   }
 });
@@ -153,6 +215,8 @@ router.put('/:id', isAuthenticated, isAdmin, validateProduct, async (req, res) =
     let updateData = { ...req.body };
     if (req.body.name) {
       updateData.slug = slugify(req.body.name);
+      // Need to add logic here to check for slug uniqueness on update if the name changes
+      // This can be complex, might need a pre-update hook or manual check
     }
 
     const product = await Product.findByIdAndUpdate(

@@ -11,7 +11,6 @@
 
       <!-- Filter Controls -->
       <div class="filter-controls">
-        <!-- TODO: Add v-model and @change handlers for real filtering -->
         <div class="filter-group">
           <label for="search-products">Search by Name</label>
           <input type="search" id="search-products" name="search" placeholder="e.g., Serene Sofa">
@@ -38,98 +37,305 @@
             <option value="newest">Newest</option>
           </select>
         </div>
-        <!-- Action buttons removed for now, assuming auto-apply on change -->
       </div>
 
-      <!-- Product Grid -->
-      <div class="product-grid">
-        <ProductCard v-for="product in products"
-                     :key="product.id"
-                     :product="product"
-                     :linkTo="`/product-detail/${product.id}`"
-              @add-to-cart="emitAddToCart"
-              :apply-tilt="true"
-            />
-      </div>
-
-      <!-- Pagination -->
-      <!-- TODO: Implement real pagination logic -->
-      <nav class="pagination-container" aria-label="Product pagination">
-        <ul class="pagination">
-          <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
-              <span aria-hidden="true">«</span>
-              <span class="visually-hidden">Previous</span>
-            </a>
-          </li>
-          <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
-          <li class="page-item"><a class="page-link" href="#">2</a></li>
-          <li class="page-item"><a class="page-link" href="#">3</a></li>
-          <li class="page-item"><span class="page-link">...</span></li>
-          <li class="page-item"><a class="page-link" href="#">8</a></li>
-          <li class="page-item">
-            <a class="page-link" href="#">
-              <span aria-hidden="true">»</span>
-              <span class="visually-hidden">Next</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
+      <!-- Transition Wrapper -->
+      <transition name="fade" mode="out-in">
+        <div v-if="isLoading" key="loading" class="loading-indicator">Loading products...</div>
+        <div v-else-if="errorLoading" key="error" class="error-message">{{ errorLoading }}</div>
+        <div v-else-if="products.length > 0" key="grid" class="product-grid">
+          <ProductCard v-for="product in products"
+                       :key="product.id"
+                       :product="product"
+                       :linkTo="`/product-detail/${product.id}`"
+                       @add-to-cart="emitAddToCart"
+                       :apply-tilt="true" />
+        </div>
+        <div v-else key="empty" class="empty-message">No products found matching your criteria.</div>
+      </transition>
 
     </section>
+
+    <!-- Pagination - Positioned via JS/CSS -->
+    <nav v-if="!isLoading && !errorLoading && totalPages > 1"
+         ref="paginationRef"
+         :class="['pagination-container', { 'is-fixed': isPaginationFixed, 'is-absolute': !isPaginationFixed }]"
+         aria-label="Product pagination">
+      <ul class="pagination">
+        <!-- Previous Button -->
+        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+          <button class="page-link" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" aria-label="Previous page">
+            <span aria-hidden="true">«</span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+        </li>
+        <!-- Page Number Buttons -->
+        <li v-for="page in totalPages"
+            :key="page"
+            class="page-item"
+            :class="{ active: currentPage === page }">
+          <button class="page-link" @click="goToPage(page)" :aria-current="currentPage === page ? 'page' : null">
+            {{ page }}
+          </button>
+        </li>
+        <!-- Next Button -->
+        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+          <button class="page-link" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" aria-label="Next page">
+            <span aria-hidden="true">»</span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
   </main>
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, onUnmounted, nextTick } from 'vue';
   import ProductCard from '../components/ui/ProductCard.vue';
-  import { useRoute } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
+  import { throttle } from 'lodash-es'; // Ensure lodash-es is installed
 
-  // Define emits
+  // --- Constants ---
+  const GAP_BETWEEN_PAGINATION_AND_FOOTER = 90; // Gap in pixels
+  // --- NEW: Buffer to trigger switch earlier ---
+  const THRESHOLD_BUFFER = 90; // Pixels. Trigger switch when footer is this close to viewport bottom. Adjust if needed.
+  const THROTTLE_TIME = 30; // Reduced throttle time slightly for faster reaction
+
+  // --- Emits, Refs, State ---
   const emit = defineEmits(['addToCart']);
-
-  const products = ref([]); // Will hold all products for the current view/page
+  const products = ref([]);
+  const isLoading = ref(true);
+  const errorLoading = ref(null);
   const route = useRoute();
+  const router = useRouter();
+  const currentPage = ref(1);
+  const totalPages = ref(1);
+  const limit = ref(12);
+  const totalProducts = ref(0);
+  const defaultDescription = "High-quality, sustainable furniture piece.";
 
-  // --- Placeholder Data Fetching ---
-  const fetchProducts = async () => {
-    console.log("Fetching products...");
-    // --- TODO: Replace with actual API call using route.query for filtering/sorting/pagination ---
-    console.log('Route query for filtering:', route.query); // Check query params
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
+  const paginationRef = ref(null);
+  const isPaginationFixed = ref(true);
+  let footerEl = null;
+  let lastKnownScrollY = 0;
 
-    // Example: Return different sets based on query or just return all for now
-    const allProducts = [
-      { id: 'prod1', name: 'Serene Sofa', description: 'Plush comfort meets modern lines in this eco-friendly fabric sofa.', price: 1899, image: 'https://via.placeholder.com/400x250/4ECDC4/FFFFFF?text=Serene+Sofa', thumbImage: 'https://via.placeholder.com/100x100/4ECDC4/FFFFFF?text=Sofa' },
-      { id: 'prod2', name: 'Aerial Chair', description: 'Lightweight yet sturdy, crafted from reclaimed teak.', price: 649, image: 'https://via.placeholder.com/400x250/FF6B6B/FFFFFF?text=Aerial+Chair', thumbImage: 'https://via.placeholder.com/100x100/FF6B6B/FFFFFF?text=Chair' },
-      { id: 'prod3', name: 'Horizon Console', description: 'Sleek storage solution in FSC-certified walnut.', price: 1199, image: 'https://via.placeholder.com/400x250/FECA57/FFFFFF?text=Horizon+Console', thumbImage: 'https://via.placeholder.com/100x100/FECA57/FFFFFF?text=Console' },
-      { id: 'prod4', name: 'Solstice Lamp', description: 'Warm, ambient illumination from a recycled glass base.', price: 379, image: 'https://via.placeholder.com/400x250/2F3640/FFFFFF?text=Solstice+Lamp', thumbImage: 'https://via.placeholder.com/100x100/2F3640/FFFFFF?text=Lamp' },
-      { id: 'prod5', name: 'Lunar Coffee Table', description: 'Minimalist design featuring a solid oak top.', price: 899, image: 'https://via.placeholder.com/400x250/6c757d/FFFFFF?text=Lunar+Table', thumbImage: 'https://via.placeholder.com/100x100/6c757d/FFFFFF?text=Table' },
-      { id: 'prod6', name: 'Oasis Bed Frame', description: 'Create a serene bedroom retreat with this bamboo frame.', price: 1450, image: 'https://via.placeholder.com/400x250/eef2f5/2F3640?text=Oasis+Bed', thumbImage: 'https://via.placeholder.com/100x100/eef2f5/2F3640?text=Bed' },
-      { id: 'prod7', name: 'Terra Dining Chair', description: 'Comfortable seating crafted from solid ash wood.', price: 320, image: 'https://via.placeholder.com/400x250/ff8c61/FFFFFF?text=Terra+Chair', thumbImage: 'https://via.placeholder.com/100x100/ff8c61/FFFFFF?text=DChair' },
-      { id: 'prod8', name: 'Nebula Pendant Light', description: 'Hand-blown recycled glass pendant light.', price: 450, image: 'https://via.placeholder.com/400x250/a29bfe/FFFFFF?text=Nebula+Light', thumbImage: 'https://via.placeholder.com/100x100/a29bfe/FFFFFF?text=PLight' },
-    ];
-    // --- End TODO ---
+  // --- Helper function for truncation ---
+  function truncateText(text, maxLength) { /* ... no change ... */
+    if (!text) return '';
+    const cleanedText = text.trim();
+    if (cleanedText.length <= maxLength) return cleanedText;
+    let truncated = cleanedText.slice(0, maxLength);
+    let lastSpaceIndex = truncated.lastIndexOf(' ');
+    if (lastSpaceIndex > 0) {
+      truncated = truncated.slice(0, lastSpaceIndex);
+    }
+    return truncated + "...";
+  }
 
-    products.value = allProducts; // Replace with actual fetched data
-    console.log("Products loaded:", products.value);
+
+  // --- Product Fetching Logic ---
+  const fetchProducts = async (page = 1) => { /* ... no change ... */
+    isLoading.value = true;
+    errorLoading.value = null;
+    console.log(`Fetching products for page ${page}, limit ${limit.value}...`);
+    try {
+      const url = `/api/products?page=${page}&limit=${limit.value}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+      }
+      const data = await response.json();
+      const maxDescriptionLength = 75;
+
+      products.value = data.products.map(product => {
+        const originalDescription = product.description || defaultDescription;
+        const truncatedDescription = truncateText(originalDescription, maxDescriptionLength);
+        return { /* ... mapping ... */
+          id: product._id,
+          name: product.name,
+          description: truncatedDescription,
+          price: product.price,
+          image: product.images && product.images.length > 0
+            ? product.images[0]
+            : `https://via.placeholder.com/400x250/cccccc/FFFFFF?text=${encodeURIComponent(product.name)}`,
+        };
+      });
+
+      currentPage.value = data.currentPage;
+      totalPages.value = data.totalPages;
+      totalProducts.value = data.totalProducts;
+
+      console.log("Products updated:", products.value);
+      console.log("Pagination state:", { currentPage: currentPage.value, totalPages: totalPages.value, totalProducts: totalProducts.value });
+
+      isLoading.value = false;
+      await nextTick();
+      handleScroll();
+
+      const sectionElement = document.querySelector('.product-listing-section');
+      if (sectionElement) {
+        const sectionTop = sectionElement.getBoundingClientRect().top + window.scrollY;
+        const headerOffset = document.getElementById('header')?.offsetHeight || 80;
+        window.scrollTo({ top: sectionTop - headerOffset - 20, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      errorLoading.value = "Failed to load products. Please try again later.";
+      products.value = [];
+      currentPage.value = 1;
+      totalPages.value = 1;
+      totalProducts.value = 0;
+      isLoading.value = false;
+    }
   };
 
-  // Fetch products when the component mounts
-  onMounted(() => {
-    fetchProducts();
-  });
+  const goToPage = (pageNumber) => { /* ... no change ... */
+    if (pageNumber >= 1 && pageNumber <= totalPages.value && pageNumber !== currentPage.value && !isLoading.value) {
+      fetchProducts(pageNumber);
+    }
+  };
 
-  // --- Methods ---
-  const emitAddToCart = (productData) => {
+  const emitAddToCart = (productData) => { /* ... no change ... */
+    console.log('Add to cart clicked in ProductsView:', productData);
     emit('addToCart', productData);
   };
 
-  // TODO: Add methods for handling filter changes, pagination clicks,
-  // which would then call fetchProducts() again with updated parameters.
 
+  // --- Sticky Pagination Logic ---
+
+  const handleScroll = () => {
+    if (!paginationRef.value || !footerEl) {
+      return;
+    }
+
+    const paginationHeight = paginationRef.value.offsetHeight;
+    const footerRect = footerEl.getBoundingClientRect(); // Position relative to viewport
+    const viewportHeight = window.innerHeight;
+
+    // --- MODIFIED Threshold ---
+    // Check if the footer's top edge is within THRESHOLD_BUFFER pixels
+    // from the bottom of the viewport (or already above it).
+    const isFooterApproachingOrVisible = footerRect.top <= viewportHeight + THRESHOLD_BUFFER;
+
+    // Calculate the absolute top position (relative to document)
+    const absoluteTopPosition = footerEl.offsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER;
+
+
+    // --- Logic for switching ---
+    if (isFooterApproachingOrVisible) {
+      // Footer is close or visible. Switch/stay absolute.
+      if (isPaginationFixed.value) {
+        // console.log(`Switching to Absolute. FooterTop (viewport): ${footerRect.top.toFixed(0)} <= ${viewportHeight + THRESHOLD_BUFFER}`);
+        paginationRef.value.style.top = `${absoluteTopPosition}px`;
+        paginationRef.value.style.bottom = 'auto';
+        isPaginationFixed.value = false; // Change state AFTER applying position
+      } else {
+        // Already absolute, ensure top position is updated (useful for resize)
+        paginationRef.value.style.top = `${absoluteTopPosition}px`;
+      }
+    } else {
+      // Footer is far below the viewport. Switch/stay fixed.
+      if (!isPaginationFixed.value) {
+        // console.log(`Switching to Fixed. FooterTop (viewport): ${footerRect.top.toFixed(0)} > ${viewportHeight + THRESHOLD_BUFFER}`);
+        paginationRef.value.style.top = ''; // Remove inline styles
+        paginationRef.value.style.bottom = '';
+        isPaginationFixed.value = true; // Change state AFTER removing styles
+      }
+    }
+
+    // Update last scroll position (optional)
+    // lastKnownScrollY = window.scrollY;
+  };
+
+
+  // Throttle the scroll handler
+  const throttledScrollHandler = throttle(handleScroll, THROTTLE_TIME);
+
+  // --- Lifecycle Hooks ---
+  onMounted(async () => { /* ... no change ... */
+    const initialPage = parseInt(route.query.page) || 1;
+    await fetchProducts(initialPage);
+
+    footerEl = document.querySelector('footer');
+    if (!footerEl) {
+      console.error("Footer element not found for sticky calculation!");
+    }
+
+    window.addEventListener('scroll', throttledScrollHandler);
+    window.addEventListener('resize', throttledScrollHandler);
+
+    requestAnimationFrame(() => {
+      handleScroll();
+    });
+  });
+
+  onUnmounted(() => { /* ... no change ... */
+    window.removeEventListener('scroll', throttledScrollHandler);
+    window.removeEventListener('resize', throttledScrollHandler);
+  });
 </script>
 
 <style scoped>
-  /* Scoped styles if needed, most are global */
+  /* Add padding to the bottom of the grid container itself */
+  /* This ensures space below the product cards for the absolute pagination */
+  .product-grid {
+    min-height: 300px;
+    /* Adjust based on pagination height + desired gap */
+    padding-bottom: calc(50px + 16px + 1rem); /* Approx height + gap + some buffer */
+  }
+
+  /* --- Sticky Pagination Classes --- */
+  .pagination-container.is-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* Appearance is inherited from main.css */
+  }
+
+  .pagination-container.is-absolute {
+    position: absolute;
+    /* JS sets the 'top' property */
+    left: 0;
+    right: 0;
+    /* Appearance is inherited */
+  }
+  /* --- End Sticky Classes --- */
+
+
+  /* Loading/Error/Empty states */
+  .loading-indicator,
+  .error-message,
+  .empty-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-style: italic;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .error-message {
+    color: var(--secondary);
+    font-weight: 600;
+  }
+
+  /* Fade Transition */
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
 </style>

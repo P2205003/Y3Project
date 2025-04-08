@@ -1742,12 +1742,20 @@ section {
 
 /* --- Pagination --- */
 .pagination-container {
-    margin-top: 4rem;
+    /* === Appearance Styles ONLY === */
+    background-color: var(--bg-light);
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.07);
+    width: 100%;
+    z-index: 900;
+    /* === Flex Centering === */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
+/* Keep other .pagination, .page-item, .page-link styles as they were */
 .pagination {
     list-style: none;
     padding: 0;
@@ -1757,6 +1765,7 @@ section {
 }
 
 .page-item {
+    /* No specific styles needed here usually */
 }
 
 .page-link {
@@ -1769,24 +1778,32 @@ section {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
     text-decoration: none;
-    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
     font-size: 0.9rem;
     font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
 }
 
-    .page-link:hover,
-    .page-link:focus-visible {
-        color: var(--primary);
-        background-color: var(--bg-off-light);
-        border-color: #adb5bd;
-        outline: none;
-    }
+.page-item:not(.disabled) .page-link:hover,
+.page-item:not(.disabled) .page-link:focus-visible {
+    color: var(--primary);
+    background-color: var(--bg-off-light);
+    border-color: #adb5bd;
+    outline: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+}
 
 .page-item.active .page-link {
     background-color: var(--primary);
     color: var(--white);
     border-color: var(--primary);
-    z-index: 3; /* Above non-active links */
+    z-index: 3;
+    transform: none;
+    box-shadow: none;
+    cursor: default;
 }
 
 .page-item.disabled .page-link {
@@ -1795,9 +1812,14 @@ section {
     background-color: var(--bg-light);
     border-color: var(--border-color);
     opacity: 0.7;
+    cursor: not-allowed;
 }
 
-.page-link .visually-hidden { /* For screen readers */
+.pagination button.page-link {
+    font-family: var(--font-body);
+}
+
+.page-link .visually-hidden {
     position: absolute;
     width: 1px;
     height: 1px;

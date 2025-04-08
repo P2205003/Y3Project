@@ -1,11 +1,8 @@
 <template>
   <main>
     <!-- Hero Section -->
-    <!-- Add ref="heroSectionRef" -->
     <section class="hero" id="hero" ref="heroSectionRef">
       <div class="hero-content">
-        <!-- Add reveal later -->
-        <!-- Add data-animate-heading for potential future text animation -->
         <h1 data-animate-heading>Sustainable Craftsmanship,<br>Illuminated Design.</h1>
         <p>Discover furniture crafted from responsibly sourced materials, blending timeless aesthetics with modern comfort. Elevate your space consciously with AURORA.</p>
         <div class="cta-button-wrapper">
@@ -13,8 +10,6 @@
         </div>
       </div>
       <div class="hero-image-container">
-        <!-- Add reveal later -->
-        <!-- Add ref="heroImageRef" -->
         <div class="hero-image"
              id="hero-interactive-image"
              ref="heroImageRef">
@@ -26,7 +21,6 @@
     <!-- Philosophy Section -->
     <section class="philosophy" id="philosophy">
       <div class="philosophy-content">
-        <!-- Add reveal later -->
         <h2>Our Philosophy</h2>
         <p>We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out.</p>
       </div>
@@ -35,16 +29,13 @@
     <!-- Featured Products Section -->
     <section class="products" id="products">
       <div class="section-header">
-        <!-- Add reveal later -->
         <h2>Curated Comfort, Consciously Crafted</h2>
         <p>Explore signature pieces designed with sustainable materials to bring harmony and style to your everyday living.</p>
       </div>
 
       <!-- Category Links -->
       <div class="category-links-container">
-        <!-- Add reveal later -->
         <ul class="category-links-list">
-          <!-- Use router-link for main categories, could add query params later -->
           <li class="category-link-item"><router-link to="/products?category=new" class="category-link-button">New Arrivals</router-link></li>
           <li class="category-link-item"><router-link to="/products?category=living-room" class="category-link-button">Living Room</router-link></li>
           <li class="category-link-item"><router-link to="/products?category=bedroom" class="category-link-button">Bedroom</router-link></li>
@@ -55,21 +46,23 @@
       </div>
 
       <!-- Featured Product Grid -->
-      <div class="product-grid">
+      <!-- Add loading/error/empty states -->
+      <div v-if="isLoading" class="loading-indicator">Loading featured products...</div>
+      <div v-else-if="errorLoading" class="error-message">{{ errorLoading }}</div>
+      <div v-else-if="featuredProducts.length > 0" class="product-grid">
         <ProductCard v-for="product in featuredProducts"
                      :key="product.id"
                      :product="product"
                      @add-to-cart="emitAddToCart"
                      :linkTo="`/product-detail/${product.id}`"
                      :apply-tilt="true" />
-        <!-- Add reveal + delay classes later -->
       </div>
+      <div v-else class="empty-message">No featured products available at the moment.</div>
     </section>
 
     <!-- Showcase Section -->
     <section class="showcase" id="showcase">
       <div class="showcase-content">
-        <!-- Add reveal later -->
         <h2>Inspiring Spaces</h2>
         <p>See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.</p>
         <div class="cta-button-wrapper">
@@ -77,7 +70,6 @@
         </div>
       </div>
       <div class="showcase-image-wrapper">
-        <!-- Add reveal later -->
         <div class="showcase-image" id="parallax-image"></div> <!-- Add parallax JS later -->
       </div>
     </section>
@@ -85,14 +77,12 @@
     <!-- Testimonials Section -->
     <section class="testimonials" id="testimonials">
       <div class="section-header">
-        <!-- Add reveal later -->
         <h2>Voices of Delight</h2>
         <p>Hear from clients who have transformed their homes with AURORA.</p>
       </div>
       <div class="testimonial-grid">
         <!-- Example Testimonial Card (Repeat or v-for) -->
         <div class="testimonial-card">
-          <!-- Add reveal later -->
           <p class="quote">"The quality exceeded my expectations. It's beautiful, and knowing it's sustainably made makes it even better. The Serene Sofa is the heart of our living room."</p>
           <div class="author">
             <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/44.jpg');" loading="lazy" aria-hidden="true"></div>
@@ -100,7 +90,6 @@
           </div>
         </div>
         <div class="testimonial-card">
-          <!-- Add reveal later -->
           <p class="quote">"From browsing online to the white-glove delivery, the experience was seamless. The Aerial Chair is even more stunning in person, amazing craftsmanship."</p>
           <div class="author">
             <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/men/32.jpg');" loading="lazy" aria-hidden="true"></div>
@@ -108,7 +97,6 @@
           </div>
         </div>
         <div class="testimonial-card">
-          <!-- Add reveal later -->
           <p class="quote">"AURORA helped me find the perfect balance between style and function for my small apartment. The Horizon Console's sustainable walnut is gorgeous!"</p>
           <div class="author">
             <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/68.jpg');" loading="lazy" aria-hidden="true"></div>
@@ -122,16 +110,13 @@
     <!-- Newsletter Section -->
     <section class="newsletter" id="newsletter">
       <div class="section-header">
-        <!-- Add reveal later -->
         <h2>Stay Illuminated</h2>
         <p>Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.</p>
       </div>
       <form class="newsletter-form" @submit.prevent="handleNewsletterSubmit">
-        <!-- Add reveal later -->
         <input type="email" class="newsletter-input" placeholder="Enter your email address" required aria-label="Email address" v-model="newsletterEmail">
         <button type="submit" class="cta-button newsletter-button">Subscribe</button>
       </form>
-      <!-- Add success/error message area -->
       <p v-if="newsletterMessage" :class="newsletterSuccess ? 'success-message' : 'error-message'">{{ newsletterMessage }}</p>
     </section>
 
@@ -139,28 +124,26 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, onUnmounted } from 'vue'; // Import necessary functions
+  import { ref, onMounted, onUnmounted } from 'vue';
   import ProductCard from '../components/ui/ProductCard.vue';
 
   // Define emits to pass event up to App.vue
   const emit = defineEmits(['addToCart']);
 
-  // --- Refs for DOM Elements ---
-  const heroSectionRef = ref(null); // Ref for the entire hero section
-  const heroImageRef = ref(null); // Ref for the interactive hero image
+  // --- Constants ---
+  const FEATURED_PRODUCT_LIMIT = 4; // How many products to show on the home page
+  const HERO_PERSPECTIVE = 1500;
+  const HERO_MAX_ROTATE = 2;
+  const HERO_DEFAULT_TRANSFORM = `perspective(${HERO_PERSPECTIVE}px) rotateX(3deg) rotateY(-5deg)`;
 
-  // --- Constants for Animation ---
-  const HERO_PERSPECTIVE = 1500; // Matches TILT_OPTIONS.perspective
-  const HERO_MAX_ROTATE = 2; // Subtle rotation amount
-  const HERO_DEFAULT_TRANSFORM = `perspective(${HERO_PERSPECTIVE}px) rotateX(3deg) rotateY(-5deg)`; // Default resting state
+  // --- Refs for DOM Elements ---
+  const heroSectionRef = ref(null);
+  const heroImageRef = ref(null);
 
   // --- State ---
-  const featuredProducts = ref([
-    { id: 'prod1', name: 'Serene Sofa', description: 'Plush comfort in eco-friendly fabric.', price: 1899, image: 'https://via.placeholder.com/400x250/4ECDC4/FFFFFF?text=Serene+Sofa', thumbImage: 'https://via.placeholder.com/100x100/4ECDC4/FFFFFF?text=Sofa' },
-    { id: 'prod2', name: 'Aerial Chair', description: 'Lightweight form in reclaimed teak.', price: 649, image: 'https://via.placeholder.com/400x250/FF6B6B/FFFFFF?text=Aerial+Chair', thumbImage: 'https://via.placeholder.com/100x100/FF6B6B/FFFFFF?text=Chair' },
-    { id: 'prod3', name: 'Horizon Console', description: 'Sleek storage, FSC-certified walnut.', price: 1199, image: 'https://via.placeholder.com/400x250/FECA57/FFFFFF?text=Horizon+Console', thumbImage: 'https://via.placeholder.com/100x100/FECA57/FFFFFF?text=Console' },
-    { id: 'prod4', name: 'Solstice Lamp', description: 'Warm illumination, recycled glass base.', price: 379, image: 'https://via.placeholder.com/400x250/2F3640/FFFFFF?text=Solstice+Lamp', thumbImage: 'https://via.placeholder.com/100x100/2F3640/FFFFFF?text=Lamp' },
-  ]);
+  const featuredProducts = ref([]); // Initialize as empty array
+  const isLoading = ref(true);
+  const errorLoading = ref(null);
 
   const newsletterEmail = ref('');
   const newsletterMessage = ref('');
@@ -181,11 +164,9 @@
     newsletterMessage.value = '';
     newsletterSuccess.value = false;
     if (!newsletterEmail.value) return;
-
     console.log('Submitting newsletter:', newsletterEmail.value);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     const success = Math.random() > 0.3;
-
     if (success) {
       newsletterMessage.value = 'Thank you for subscribing!';
       newsletterSuccess.value = true;
@@ -194,41 +175,25 @@
       newsletterMessage.value = 'Subscription failed. Please try again.';
       newsletterSuccess.value = false;
     }
-
-    setTimeout(() => {
-      newsletterMessage.value = '';
-    }, 4000);
+    setTimeout(() => { newsletterMessage.value = ''; }, 4000);
   };
-
 
   // --- Hero Image Interaction Logic ---
   const handleHeroMouseMove = (event) => {
-    // Ensure elements exist and motion is preferred
     if (!heroSectionRef.value || !heroImageRef.value || prefersReducedMotion.value) return;
-
     const heroRect = heroSectionRef.value.getBoundingClientRect();
     const mouseX = event.clientX - heroRect.left;
     const mouseY = event.clientY - heroRect.top;
-
-    // Only proceed if mouse is within hero bounds (optional, but can prevent edge jumps)
     if (mouseX < 0 || mouseX > heroRect.width || mouseY < 0 || mouseY > heroRect.height) {
-      handleHeroMouseLeave(); // Reset if mouse goes out quickly
+      handleHeroMouseLeave();
       return;
     }
-
     const centerX = heroRect.width / 2;
     const centerY = heroRect.height / 2;
-
-    // Calculate rotation (adjust multipliers as needed)
-    // Original logic: RotateY based on X, RotateX based on Y
-    // RotateY: Negative makes right side tilt away when mouse is on right
-    // RotateX: Positive makes bottom tilt away when mouse is on bottom
-    const rotateY = -5 - ((mouseX - centerX) / centerX) * HERO_MAX_ROTATE; // Start from -5, add variation
-    const rotateX = 3 + ((mouseY - centerY) / centerY) * HERO_MAX_ROTATE; // Start from 3, add variation
-
+    const rotateY = -5 - ((mouseX - centerX) / centerX) * HERO_MAX_ROTATE;
+    const rotateX = 3 + ((mouseY - centerY) / centerY) * HERO_MAX_ROTATE;
     requestAnimationFrame(() => {
       if (heroImageRef.value) {
-        // Apply immediate transform during move
         heroImageRef.value.style.transition = 'transform 0.05s linear';
         heroImageRef.value.style.transform = `perspective(${HERO_PERSPECTIVE}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
       }
@@ -236,35 +201,92 @@
   };
 
   const handleHeroMouseLeave = () => {
-    // Ensure element exists and motion is preferred
     if (!heroImageRef.value || prefersReducedMotion.value) return;
-
     requestAnimationFrame(() => {
       if (heroImageRef.value) {
-        // Apply smooth transition back to default state
-        heroImageRef.value.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)'; // Slower transition on exit
+        heroImageRef.value.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
         heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
       }
     });
   };
 
+  // --- Helper function for truncation ---
+  function truncateText(text, maxLength) {
+    if (!text) return '';
+    const cleanedText = text.trim();
+    if (cleanedText.length <= maxLength) return cleanedText;
+    let truncated = cleanedText.slice(0, maxLength);
+    let lastSpaceIndex = truncated.lastIndexOf(' ');
+    if (lastSpaceIndex > 0) {
+      truncated = truncated.slice(0, lastSpaceIndex);
+    }
+    return truncated + "...";
+  }
+
+  // --- Fetch Featured Products (Using Paginated API) ---
+  const fetchFeaturedProducts = async () => {
+    isLoading.value = true;
+    errorLoading.value = null;
+    console.log(`Fetching ${FEATURED_PRODUCT_LIMIT} featured products from backend...`);
+    try {
+      // Use the paginated endpoint: fetch page 1 with a limit
+      const url = `/api/products?page=1&limit=${FEATURED_PRODUCT_LIMIT}`;
+      // Optional: Add sort parameter if backend supports it e.g., &sort=featured or &sort=newest
+      // const url = `/api/products?page=1&limit=${FEATURED_PRODUCT_LIMIT}&sort=newest`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+      }
+      // The data now contains { products, currentPage, totalPages, totalProducts }
+      const data = await response.json();
+
+      // Define max description length for the home page cards
+      const maxDescriptionLength = 32; // Keep short for home page
+
+      // Map the products array from the response data
+      featuredProducts.value = data.products.map(product => {
+        const originalDescription = product.description || "High-quality, sustainable furniture piece.";
+        const truncatedDescription = truncateText(originalDescription, maxDescriptionLength);
+        return {
+          id: product._id,
+          name: product.name,
+          description: truncatedDescription,
+          price: product.price,
+          image: product.images && product.images.length > 0
+            ? product.images[0]
+            : `https://via.placeholder.com/400x250/cccccc/FFFFFF?text=${encodeURIComponent(product.name)}`,
+        };
+      });
+
+      console.log("Featured products loaded:", featuredProducts.value);
+
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+      errorLoading.value = "Failed to load featured products. Please try again later.";
+      featuredProducts.value = []; // Ensure empty array on error
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   // --- Lifecycle Hooks ---
   onMounted(() => {
+    // Fetch featured product data efficiently
+    fetchFeaturedProducts();
+
     // Setup Hero Interaction Listeners
     if (heroSectionRef.value && heroImageRef.value && !prefersReducedMotion.value) {
-      // Set initial transform and will-change for performance
       heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
       heroImageRef.value.style.willChange = 'transform';
-
       heroSectionRef.value.addEventListener('mousemove', handleHeroMouseMove, { passive: true });
       heroSectionRef.value.addEventListener('mouseleave', handleHeroMouseLeave, { passive: true });
       console.log("Hero interaction listeners added.");
     } else if (prefersReducedMotion.value) {
-      // Apply default static transform if reduced motion is on
       if (heroImageRef.value) heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
       console.log("Hero interaction skipped due to reduced motion preference.");
     }
-
     // TODO: Add IntersectionObserver logic for reveal animations if needed
     // TODO: Add Parallax logic for showcase section if needed
   });
@@ -276,12 +298,27 @@
       heroSectionRef.value.removeEventListener('mouseleave', handleHeroMouseLeave);
       console.log("Hero interaction listeners removed.");
     }
-
     // TODO: Disconnect IntersectionObservers if used
   });
 
 </script>
 
 <style scoped>
+  /* Scoped styles for loading/error messages */
+  .loading-indicator,
+  .error-message,
+  .empty-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
 
+  .error-message {
+    color: var(--secondary);
+    font-weight: 600;
+  }
+
+  /* Other styles are global from main.css */
 </style>
