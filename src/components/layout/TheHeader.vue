@@ -46,7 +46,7 @@
             <div class="dropdown-item user-info" role="menuitem" aria-disabled="true">
               <span>Hi, {{ currentUser.fullName || currentUser.username }}</span>
             </div>
-            <router-link to="/account/orders" custom v-slot="{ navigate }">
+            <router-link :to="{ name: 'orders-history' }" custom v-slot="{ navigate }">
               <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
                 <font-awesome-icon icon="receipt" fixed-width />
                 <span>My Orders</span>
@@ -107,7 +107,6 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-// Other icons are registered globally or added in App.vue
 
 const props = defineProps({
   isScrolled: Boolean,
@@ -118,13 +117,13 @@ const props = defineProps({
       type: Number,
       default: 0
   },
-  isLoggedIn: { // <-- Add prop for login state
+  isLoggedIn: {
       type: Boolean,
       required: true
   },
-  currentUser: { // <-- Add prop for user info
+  currentUser: {
       type: Object,
-      default: null // Can be null if not logged in
+      default: null
   }
 });
 
@@ -134,7 +133,7 @@ const emit = defineEmits([
     'toggleAccountDropdown',
     'openAccountPopup',
     'toggleCart',
-    'logout' // <-- Add emit for logout
+    'logout'
 ]);
 
 const searchInputRef = ref(null);
