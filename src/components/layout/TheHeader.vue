@@ -41,22 +41,46 @@
           <font-awesome-icon icon="user" />
         </button>
         <div id="account-dropdown-menu" role="menu" :class="{ active: isAccountDropdownActive }">
-          <button class="dropdown-item" data-action="login" role="menuitem" @click="$emit('openAccountPopup', 'login')">
-            <font-awesome-icon icon="sign-in-alt" fixed-width />
-            <span>Login</span>
-          </button>
-          <button class="dropdown-item" data-action="register" role="menuitem" @click="$emit('openAccountPopup', 'register')">
-            <font-awesome-icon icon="user-plus" fixed-width />
-            <span>Sign Up</span>
-          </button>
+          <!-- Logged In State -->
+          <template v-if="isLoggedIn && currentUser">
+            <div class="dropdown-item user-info" role="menuitem" aria-disabled="true">
+              <span>Hi, {{ currentUser.fullName || currentUser.username }}</span>
+            </div>
+            <router-link to="/account/orders" custom v-slot="{ navigate }">
+              <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
+                <font-awesome-icon icon="receipt" fixed-width />
+                <span>My Orders</span>
+              </button>
+            </router-link>
+            <router-link to="/account/profile" custom v-slot="{ navigate }">
+              <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
+                <font-awesome-icon icon="user" fixed-width />
+                <span>My Profile</span>
+              </button>
+            </router-link>
+            <button class="dropdown-item logout-item" role="menuitem" @click="$emit('logout')">
+              <font-awesome-icon icon="sign-out-alt" fixed-width />
+              <span>Logout</span>
+            </button>
+          </template>
+          <!-- Logged Out State -->
+          <template v-else>
+            <button class="dropdown-item" data-action="login" role="menuitem" @click="$emit('openAccountPopup', 'login')">
+              <font-awesome-icon icon="sign-in-alt" fixed-width />
+              <span>Login</span>
+            </button>
+            <button class="dropdown-item" data-action="register" role="menuitem" @click="$emit('openAccountPopup', 'register')">
+              <font-awesome-icon icon="user-plus" fixed-width />
+              <span>Sign Up</span>
+            </button>
+          </template>
         </div>
       </div>
 
-      <!-- Orders (Example: Link or Button) -->
-      <button id="orders-trigger" title="View Your Orders" aria-label="View Your Orders">
+      <!-- Orders (If keeping separate button, maybe hide when logged in and using dropdown?) -->
+      <!-- <button id="orders-trigger" title="View Your Orders" aria-label="View Your Orders">
         <font-awesome-icon icon="receipt" />
-      </button>
-
+      </button> -->
       <!-- Cart -->
       <button id="cart-popup-trigger"
               title="View Cart"
@@ -82,7 +106,8 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-// Font Awesome is registered globally
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+// Other icons are registered globally or added in App.vue
 
 const props = defineProps({
   isScrolled: Boolean,
@@ -92,6 +117,14 @@ const props = defineProps({
   cartItemCount: {
       type: Number,
       default: 0
+  },
+  isLoggedIn: { // <-- Add prop for login state
+      type: Boolean,
+      required: true
+  },
+  currentUser: { // <-- Add prop for user info
+      type: Object,
+      default: null // Can be null if not logged in
   }
 });
 
@@ -100,7 +133,8 @@ const emit = defineEmits([
     'toggleSearch',
     'toggleAccountDropdown',
     'openAccountPopup',
-    'toggleCart'
+    'toggleCart',
+    'logout' // <-- Add emit for logout
 ]);
 
 const searchInputRef = ref(null);
@@ -114,9 +148,87 @@ watch(() => props.isSearchActive, (newValue) => {
     }
 });
 
-// Close mobile menu handled by App.vue via overlay click or router navigation
 </script>
 
 <style scoped>
+  /* Optional: Add specific styles for the logged-in user info or logout item */
+  .dropdown-item.user-info {
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: default; /* Not clickable */
+    background-color: var(--bg-off-light); /* Subtle background */
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+  }
 
+    .dropdown-item.user-info span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 150px; /* Adjust as needed */
+      display: inline-block; /* Needed for text-overflow */
+      vertical-align: middle;
+    }
+
+    .dropdown-item.user-info:hover {
+      background-color: var(--bg-off-light); /* Don't change on hover */
+      color: var(--text-dark);
+    }
+
+  .dropdown-item.logout-item {
+    color: var(--secondary);
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+  }
+
+    .dropdown-item.logout-item:hover,
+    .dropdown-item.logout-item:focus-visible {
+      background-color: #ffe8e8; /* Light red background on hover */
+      color: #c82333; /* Darker red text */
+    }
+
+      .dropdown-item.logout-item:hover .svg-inline--fa,
+      .dropdown-item.logout-item:focus-visible .svg-inline--fa {
+        color: #c82333; /* Darker red icon */
+      }
+
+  /* Ensure router-link items close dropdown */
+  .dropdown-item {
+    display: flex; /* Use flex for alignment */
+    align-items: center; /* Vertically center icon and text */
+    gap: 0.8rem; /* Space between icon and text */
+    width: 100%; /* Ensure button takes full width */
+    text-align: left; /* Align text left */
+    background: none; /* Remove default button background */
+    border: none; /* Remove default button border */
+    padding: 0.8rem 1.2rem; /* Match existing padding */
+    font-size: 0.9rem; /* Match existing font size */
+    font-family: var(--font-body); /* Match existing font family */
+    color: var(--text-dark); /* Match existing color */
+    cursor: pointer; /* Ensure cursor indicates clickability */
+    white-space: nowrap; /* Prevent text wrapping */
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+  }
+
+    .dropdown-item .svg-inline--fa {
+      width: 16px; /* Ensure fixed width for alignment */
+      text-align: center; /* Center icon if needed */
+      color: var(--text-muted);
+      transition: color var(--transition-fast);
+      flex-shrink: 0; /* Prevent icon from shrinking */
+    }
+
+    .dropdown-item:hover,
+    .dropdown-item:focus-visible {
+      background-color: var(--bg-off-light);
+      color: var(--primary);
+      outline: none;
+    }
+
+      .dropdown-item:hover .svg-inline--fa,
+      .dropdown-item:focus-visible .svg-inline--fa {
+        color: var(--primary);
+      }
 </style>

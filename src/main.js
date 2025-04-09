@@ -13,7 +13,11 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 /* import specific SOLID icons */
 import {
-  faSearch, faUser, faReceipt, faShoppingCart, faSignInAlt, faUserPlus
+  faSearch, faUser, faReceipt, faShoppingCart, faSignInAlt, faUserPlus,
+  faSignOutAlt, // <-- Added
+  faUserCog,    // <-- Added (for My Account example)
+  faExclamationTriangle, faBoxOpen, faChevronLeft, faChevronRight, // From ProductDetail
+  faCheck, faRulerCombined, faGem, faSeedling // From ProductDetail
 } from '@fortawesome/free-solid-svg-icons'
 /* import specific BRAND icons */
 import {
@@ -22,12 +26,18 @@ import {
 
 /* add icons to the library */
 library.add(
+  // Base Icons
   faSearch, faUser, faReceipt, faShoppingCart, faSignInAlt, faUserPlus,
-  faInstagram, faPinterest, faTwitter, faFacebookF
+  faSignOutAlt, faUserCog, // Auth icons
+  // Brand Icons
+  faInstagram, faPinterest, faTwitter, faFacebookF,
+  // ProductDetail Icons
+  faExclamationTriangle, faBoxOpen, faChevronLeft, faChevronRight,
+  faCheck, faRulerCombined, faGem, faSeedling
 )
 
 // --- Import the custom directive ---
-import tiltDirective from './directives/tilt.js'; // Adjust path if needed
+import tiltDirective from './directives/tilt.js';
 
 const app = createApp(App)
 
