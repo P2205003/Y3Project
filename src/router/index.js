@@ -9,7 +9,12 @@ const OrderDetailView = () => import('../views/OrderDetailView.vue'); // Use laz
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // ... other routes (home) ...
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+      meta: { title: 'AURORA Furnishings | Sustainable Craftsmanship' }
+    },
     {
       path: '/products',
       name: 'products',
