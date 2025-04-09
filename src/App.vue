@@ -170,13 +170,23 @@
   // --- Cart Methods ---
   const handleAddToCart = (itemToAdd) => {
     console.log('Adding to cart (App.vue):', itemToAdd);
-    const existingItemIndex = cartData.value.findIndex(item => item.id === itemToAdd.id);
+    const existingItemIndex = cartData.value.findIndex(item => item.id === itemToAdd.id && JSON.stringify(item.attributes || {}) === JSON.stringify(itemToAdd.attributes || {})); // Include attributes check
+
     if (existingItemIndex > -1) {
       cartData.value[existingItemIndex].quantity += itemToAdd.quantity;
     } else {
-      cartData.value.push({ ...itemToAdd, quantity: itemToAdd.quantity || 1 });
+      // Ensure quantity is at least 1
+      const newItem = { ...itemToAdd, quantity: Math.max(1, itemToAdd.quantity || 1) };
+      cartData.value.push(newItem);
     }
-    isCartPopupActive.value = true; // Open cart on add
+
+    // --- Delay Cart Opening ---
+    const cartOpenDelay = 600; // Delay in milliseconds (adjust as needed)
+    console.log(`Cart popup will open in ${cartOpenDelay}ms`);
+    setTimeout(() => {
+      isCartPopupActive.value = true;
+      console.log("Opening cart popup now.");
+    }, cartOpenDelay);
   };
 
   const updateCartItemQuantity = ({ productId, change }) => {
