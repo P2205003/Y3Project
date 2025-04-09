@@ -304,21 +304,5 @@
 </script>
 
 <style scoped>
-  /* Scoped styles for loading/error messages */
-  .loading-indicator,
-  .error-message,
-  .empty-message {
-    text-align: center;
-    padding: 3rem 1rem;
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    font-style: italic;
-  }
 
-  .error-message {
-    color: var(--secondary);
-    font-weight: 600;
-  }
-
-  /* Other styles are global from main.css */
 </style>
