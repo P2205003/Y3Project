@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+// Import Review model to use in the static method
+import Review from './Review.js';
 
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -18,10 +20,31 @@ const productSchema = new mongoose.Schema({
     of: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  metaSEO: mongoose.Schema.Types.Mixed
+  metaSEO: mongoose.Schema.Types.Mixed,
+
+  // --- NEW REVIEW FIELDS ---
+  averageRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  // Optional: Distribution breakdown
+  ratingDistribution: {
+    type: Map,
+    of: Number,
+    default: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
+  }
+  // --- END NEW REVIEW FIELDS ---
+
 }, { timestamps: true });
 
-// Static method to generate product number (similar to Order)
+// --- EXISTING generateProductNumber ---
 productSchema.statics.generateProductNumber = async function () {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -41,5 +64,83 @@ productSchema.statics.generateProductNumber = async function () {
 
   return `${prefix}${sequence.toString().padStart(4, '0')}`;
 };
+// --- END EXISTING generateProductNumber ---
 
-export default mongoose.model('Product', productSchema);
+// --- NEW STATIC METHOD: Recalculate Ratings ---
+productSchema.statics.recalculateRating = async function (productId) {
+  try {
+    const stats = await Review.aggregate([
+      { $match: { productId: new mongoose.Types.ObjectId(productId) } }, // Match reviews for this product
+      {
+        $group: {
+          _id: '$productId', // Group by product ID
+          averageRating: { $avg: '$rating' }, // Calculate average rating
+          reviewCount: { $sum: 1 }, // Count the reviews
+           // Calculate distribution (optional but useful)
+          ratingDistribution: {
+            $push: { // Push ratings into an array for further processing
+              k: { $toString: '$rating' }, // Key as string '1' through '5'
+              v: 1 // Value is 1 for each review
+            }
+          }
+        }
+      },
+       // Convert the pushed array into the Map format
+      {
+        $addFields: {
+          ratingDistribution: {
+             $arrayToObject: { // Converts [{k:'5',v:1}, {k:'4',v:1}, {k:'5',v:1}]
+                $map: { // Iterate over possible ratings 1 to 5
+                   input: [1, 2, 3, 4, 5],
+                   as: "rate",
+                   in: {
+                      k: { $toString: "$$rate" }, // Key '1' to '5'
+                      v: { // Count occurrences of this rating
+                         $size: {
+                            $filter: {
+                               input: "$ratingDistribution",
+                               cond: { $eq: ["$$this.k", { $toString: "$$rate" }] }
+                            }
+                         }
+                      }
+                   }
+                }
+             }
+          }
+        }
+      }
+    ]);
+
+
+    let updateData;
+    if (stats.length > 0) {
+      // Reviews found, update with calculated stats
+      const { averageRating, reviewCount, ratingDistribution } = stats[0];
+      updateData = {
+        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+        reviewCount,
+        ratingDistribution
+      };
+    } else {
+      // No reviews found, reset stats
+      updateData = {
+        averageRating: 0,
+        reviewCount: 0,
+        ratingDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
+      };
+    }
+
+    // Update the product document
+    await this.findByIdAndUpdate(productId, updateData);
+    console.log(`Updated ratings for product ${productId}:`, updateData);
+
+  } catch (error) {
+    console.error(`Error recalculating ratings for product ${productId}:`, error);
+    // Decide how to handle the error, maybe log it or throw it
+  }
+};
+// --- END NEW STATIC METHOD ---
+
+const Product = mongoose.model('Product', productSchema); // Export model
+
+export default Product; // Ensure it's default export

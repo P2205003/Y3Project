@@ -192,7 +192,7 @@ input[type="text"], input[type="email"], input[type="password"], textarea, input
 }
 
 /* --- Header --- */
-header {
+#header { /* <--- Use the ID selector */
     position: fixed;
     top: 0;
     left: 0;
@@ -202,27 +202,24 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: var(--header-z-index); /* <<< Z-INDEX (Base) */
-    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s 0.4s; /* Delay z-index change on exit */
+    z-index: var(--header-z-index);
+    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s 0.4s;
     background-color: rgba(248, 249, 250, 0.8);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid transparent;
 }
 
-    header.scrolled {
+    #header.scrolled { /* <--- Use the ID selector */
         height: calc(var(--header-height) - 20px);
         background-color: rgba(255, 255, 255, 0.9);
         box-shadow: var(--shadow-soft);
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
 
-/* --- Mobile Menu Active State Header Adjustment --- */ /* <<< Z-INDEX */
-body.mobile-menu-active header {
-    /* Temporarily boost header z-index when mobile menu is active */
-    /* Needs to be higher than overlay, but lower than nav/toggle were they outside */
-    /* Setting it just below the mobile nav allows children to layer correctly */
-    z-index: 1019; /* Higher than overlay (1010), below nav (1020) */
-    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s; /* Immediate z-index change on enter */
+/* --- Mobile Menu Active State Header Adjustment --- */
+body.mobile-menu-active #header { /* <--- Use the ID selector */
+    z-index: 1019;
+    transition: background-color var(--transition-med), height var(--transition-med), box-shadow var(--transition-med), z-index 0s;
 }
 
 

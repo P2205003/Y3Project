@@ -18,14 +18,6 @@
       </div>
     </section>
 
-    <!-- Philosophy Section -->
-    <section class="philosophy" id="philosophy">
-      <div class="philosophy-content">
-        <h2>Our Philosophy</h2>
-        <p>We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out.</p>
-      </div>
-    </section>
-
     <!-- Featured Products Section -->
     <section class="products" id="products">
       <div class="section-header">
@@ -60,64 +52,74 @@
       <div v-else class="empty-message">No featured products available at the moment.</div>
     </section>
 
-    <!-- Showcase Section -->
-    <section class="showcase" id="showcase">
-      <div class="showcase-content">
-        <h2>Inspiring Spaces</h2>
-        <p>See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.</p>
-        <div class="cta-button-wrapper">
-          <router-link to="/products" class="cta-button">View Inspiration</router-link>
+    <!-- Showcase Section - COMMENTED OUT -->
+    <!--
+  <section class="showcase" id="showcase">
+    <div class="showcase-content">
+      <h2>Inspiring Spaces</h2>
+      <p>See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.</p>
+      <div class="cta-button-wrapper">
+        <router-link to="/products" class="cta-button">View Inspiration</router-link>
+      </div>
+    </div>
+    <div class="showcase-image-wrapper">
+      <div class="showcase-image" id="parallax-image"></div>
+    </div>
+  </section>
+  -->
+    <!-- Testimonials Section - COMMENTED OUT -->
+    <!--
+  <section class="testimonials" id="testimonials">
+    <div class="section-header">
+      <h2>Voices of Delight</h2>
+      <p>Hear from clients who have transformed their homes with AURORA.</p>
+    </div>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <p class="quote">"The quality exceeded my expectations. It's beautiful, and knowing it's sustainably made makes it even better. The Serene Sofa is the heart of our living room."</p>
+        <div class="author">
+          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/44.jpg');" loading="lazy" aria-hidden="true"></div>
+          <div class="author-info"><h4>Elena Rodriguez</h4><p>Interior Designer</p></div>
         </div>
       </div>
-      <div class="showcase-image-wrapper">
-        <div class="showcase-image" id="parallax-image"></div> <!-- Add parallax JS later -->
+      <div class="testimonial-card">
+        <p class="quote">"From browsing online to the white-glove delivery, the experience was seamless. The Aerial Chair is even more stunning in person, amazing craftsmanship."</p>
+        <div class="author">
+          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/men/32.jpg');" loading="lazy" aria-hidden="true"></div>
+          <div class="author-info"><h4>Marcus Chen</h4><p>Software Engineer</p></div>
+        </div>
       </div>
-    </section>
+      <div class="testimonial-card">
+        <p class="quote">"AURORA helped me find the perfect balance between style and function for my small apartment. The Horizon Console's sustainable walnut is gorgeous!"</p>
+        <div class="author">
+          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/68.jpg');" loading="lazy" aria-hidden="true"></div>
+          <div class="author-info"><h4>Aisha Khan</h4><p>Graphic Artist</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  -->
+    <!-- Newsletter Section - COMMENTED OUT -->
+    <!--
+  <section class="newsletter" id="newsletter">
+    <div class="section-header">
+      <h2>Stay Illuminated</h2>
+      <p>Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.</p>
+    </div>
+    <form class="newsletter-form" @submit.prevent="handleNewsletterSubmit">
+      <input type="email" class="newsletter-input" placeholder="Enter your email address" required aria-label="Email address" v-model="newsletterEmail">
+      <button type="submit" class="cta-button newsletter-button">Subscribe</button>
+    </form>
+    <p v-if="newsletterMessage" :class="newsletterSuccess ? 'success-message' : 'error-message'">{{ newsletterMessage }}</p>
+  </section>
+  -->
 
-    <!-- Testimonials Section -->
-    <section class="testimonials" id="testimonials">
-      <div class="section-header">
-        <h2>Voices of Delight</h2>
-        <p>Hear from clients who have transformed their homes with AURORA.</p>
+    <!-- Philosophy Section -->
+    <section class="philosophy" id="philosophy">
+      <div class="philosophy-content">
+        <h2>Our Philosophy</h2>
+        <p>We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out.</p>
       </div>
-      <div class="testimonial-grid">
-        <!-- Example Testimonial Card (Repeat or v-for) -->
-        <div class="testimonial-card">
-          <p class="quote">"The quality exceeded my expectations. It's beautiful, and knowing it's sustainably made makes it even better. The Serene Sofa is the heart of our living room."</p>
-          <div class="author">
-            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/44.jpg');" loading="lazy" aria-hidden="true"></div>
-            <div class="author-info"><h4>Elena Rodriguez</h4><p>Interior Designer</p></div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <p class="quote">"From browsing online to the white-glove delivery, the experience was seamless. The Aerial Chair is even more stunning in person, amazing craftsmanship."</p>
-          <div class="author">
-            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/men/32.jpg');" loading="lazy" aria-hidden="true"></div>
-            <div class="author-info"><h4>Marcus Chen</h4><p>Software Engineer</p></div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <p class="quote">"AURORA helped me find the perfect balance between style and function for my small apartment. The Horizon Console's sustainable walnut is gorgeous!"</p>
-          <div class="author">
-            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/68.jpg');" loading="lazy" aria-hidden="true"></div>
-            <div class="author-info"><h4>Aisha Khan</h4><p>Graphic Artist</p></div>
-          </div>
-        </div>
-        <!-- ... more testimonials ... -->
-      </div>
-    </section>
-
-    <!-- Newsletter Section -->
-    <section class="newsletter" id="newsletter">
-      <div class="section-header">
-        <h2>Stay Illuminated</h2>
-        <p>Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.</p>
-      </div>
-      <form class="newsletter-form" @submit.prevent="handleNewsletterSubmit">
-        <input type="email" class="newsletter-input" placeholder="Enter your email address" required aria-label="Email address" v-model="newsletterEmail">
-        <button type="submit" class="cta-button newsletter-button">Subscribe</button>
-      </form>
-      <p v-if="newsletterMessage" :class="newsletterSuccess ? 'success-message' : 'error-message'">{{ newsletterMessage }}</p>
     </section>
 
   </main>
@@ -257,6 +259,8 @@
           image: product.images && product.images.length > 0
             ? product.images[0]
             : `https://via.placeholder.com/400x250/cccccc/FFFFFF?text=${encodeURIComponent(product.name)}`,
+          averageRating: product.averageRating || 0,
+          reviewCount: product.reviewCount || 0,
         };
       });
 

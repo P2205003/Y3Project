@@ -259,6 +259,8 @@
         image: product.images && product.images.length > 0
           ? product.images[0]
           : `https://via.placeholder.com/400x250/cccccc/FFFFFF?text=${encodeURIComponent(product.name)}`,
+        averageRating: product.averageRating || 0,
+        reviewCount: product.reviewCount || 0,
       }));
 
       currentPage.value = data.currentPage;

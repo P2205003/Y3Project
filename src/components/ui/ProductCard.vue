@@ -1,42 +1,21 @@
 <template>
-  <!-- Conditionally wrap with router-link if linkTo is provided -->
-  <router-link v-if="linkTo"
-               :to="linkTo"
-               class="product-card-link"
-               :aria-label="`View details for ${product.name}`">
-    <!-- The actual card content, apply tilt conditionally -->
-    <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-if="applyTilt" v-tilt>
-      <div class="tilt-shine-overlay"></div>
-      <div class="product-image"
-           :style="{ backgroundImage: `url('${product.image}')` }"
-           loading="lazy"></div>
+  <!-- Link Wrapper -->
+  <router-link v-if="linkTo" :to="linkTo" class="product-card-link" :aria-label="`View details for ${product.name}`">
+    <!-- Actual Card Content -->
+    <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-tilt="tiltOptions">
+      <div v-if="applyTilt" class="tilt-shine-overlay"></div>
+      <div class="product-image" :style="{ backgroundImage: `url('${product.image}')` }" loading="lazy"></div>
       <div class="product-info">
         <h3>{{ product.name }}</h3>
+        <!-- Display Rating -->
+        <div v-if="product.reviewCount > 0" class="product-card__rating">
+          <StarRatingDisplay :rating="product.averageRating" />
+          <span class="product-card__review-count">({{ product.reviewCount }})</span>
+        </div>
+        <!-- End Rating Display -->
         <p>{{ product.description || defaultDescription }}</p>
         <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <!-- Use .prevent to stop the link navigation when button is clicked -->
-        <button class="add-to-cart-btn"
-                @click.prevent="addToCart"
-                :aria-label="`Add ${product.name} to cart`">
-          <font-awesome-icon icon="shopping-cart" />
-          <span>Add to Cart</span>
-        </button>
-      </div>
-    </div>
-    <!-- Same card structure, but without v-tilt if applyTilt is false -->
-    <div class="product-card" v-else>
-      <!-- No shine overlay -->
-      <div class="product-image"
-           :style="{ backgroundImage: `url('${product.image}')` }"
-           loading="lazy"></div>
-      <div class="product-info">
-        <h3>{{ product.name }}</h3>
-        <p>{{ product.description || defaultDescription }}</p>
-        <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <!-- Use .prevent here too for consistency, though less critical -->
-        <button class="add-to-cart-btn"
-                @click.prevent="addToCart"
-                :aria-label="`Add ${product.name} to cart`">
+        <button class="add-to-cart-btn" @click.prevent="addToCart" :aria-label="`Add ${product.name} to cart`">
           <font-awesome-icon icon="shopping-cart" />
           <span>Add to Cart</span>
         </button>
@@ -44,42 +23,22 @@
     </div>
   </router-link>
 
-  <!-- Render without router-link if linkTo is not provided -->
+  <!-- Card without link -->
   <div v-else>
-    <!-- Apply tilt conditionally -->
-    <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-if="applyTilt" v-tilt>
-      <div class="tilt-shine-overlay"></div>
-      <div class="product-image"
-           :style="{ backgroundImage: `url('${product.image}')` }"
-           loading="lazy"
-           :aria-label="product.name"></div>
+    <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-tilt="tiltOptions">
+      <div v-if="applyTilt" class="tilt-shine-overlay"></div>
+      <div class="product-image" :style="{ backgroundImage: `url('${product.image}')` }" loading="lazy" :aria-label="product.name"></div>
       <div class="product-info">
         <h3>{{ product.name }}</h3>
+        <!-- Display Rating -->
+        <div v-if="product.reviewCount > 0" class="product-card__rating">
+          <StarRatingDisplay :rating="product.averageRating" />
+          <span class="product-card__review-count">({{ product.reviewCount }})</span>
+        </div>
+        <!-- End Rating Display -->
         <p>{{ product.description || defaultDescription }}</p>
         <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <!-- No .prevent needed here as there's no link to prevent -->
-        <button class="add-to-cart-btn"
-                @click="addToCart"
-                :aria-label="`Add ${product.name} to cart`">
-          <font-awesome-icon icon="shopping-cart" />
-          <span>Add to Cart</span>
-        </button>
-      </div>
-    </div>
-    <!-- No tilt, no link -->
-    <div class="product-card" v-else>
-      <!-- No shine overlay -->
-      <div class="product-image"
-           :style="{ backgroundImage: `url('${product.image}')` }"
-           loading="lazy"
-           :aria-label="product.name"></div>
-      <div class="product-info">
-        <h3>{{ product.name }}</h3>
-        <p>{{ product.description || defaultDescription }}</p>
-        <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <button class="add-to-cart-btn"
-                @click="addToCart"
-                :aria-label="`Add ${product.name} to cart`">
+        <button class="add-to-cart-btn" @click="addToCart" :aria-label="`Add ${product.name} to cart`">
           <font-awesome-icon icon="shopping-cart" />
           <span>Add to Cart</span>
         </button>
@@ -89,50 +48,70 @@
 </template>
 
 <script setup>
-  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  // v-tilt directive is globally registered in main.js
+import { computed } from 'vue';
+import StarRatingDisplay from './StarRatingDisplay.vue'; // Import rating display
+// FontAwesomeIcon imported globally
+// v-tilt directive is globally registered in main.js
 
-  const props = defineProps({
-    product: {
-      type: Object,
-      required: true,
-      validator: (value) => {
-        return value && value.id && value.name && typeof value.price === 'number' && value.image;
-      }
-    },
-    // Optional: Path or route object for router-link
-    linkTo: {
-      type: [String, Object],
-      default: null
-    },
-    // Optional: Boolean to enable/disable the v-tilt directive
-    applyTilt: {
-      type: Boolean,
-      default: false // Default to no tilt
+const props = defineProps({
+  product: {
+    type: Object,
+    required: true,
+    validator: (value) => {
+      // Adjusted validator to accept new rating fields (optional)
+      return value && value.id && value.name && typeof value.price === 'number' && value.image;
     }
+  },
+  linkTo: { type: [String, Object], default: null },
+  applyTilt: { type: Boolean, default: false }
+});
+
+const emit = defineEmits(['add-to-cart']);
+
+const defaultDescription = "High-quality, sustainable furniture piece.";
+const tiltOptions = computed(() => ({ /* Define custom tilt options here if needed */ }));
+
+const formatCurrency = (amount) => `$${Number(amount).toFixed(2)}`;
+
+const addToCart = () => {
+  emit('add-to-cart', {
+    id: props.product.id,
+    name: props.product.name,
+    price: props.product.price,
+    image: props.product.image, // Use the image provided in the prop
+    quantity: 1
   });
-
-  const emit = defineEmits(['add-to-cart']);
-
-  const defaultDescription = "High-quality, sustainable furniture piece.";
-
-  const formatCurrency = (amount) => {
-    return `$${Number(amount).toFixed(2)}`;
-  };
-
-  const addToCart = () => {
-    // Emit necessary data for App.vue to handle
-    emit('add-to-cart', {
-      id: props.product.id,
-      name: props.product.name,
-      price: props.product.price,
-      // Use thumbImage if available, otherwise full image
-      image: props.product.thumbImage || props.product.image,
-      quantity: 1
-    });
-  };
+};
 </script>
 
 <style scoped>
+  .product-card__rating {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-bottom: 0.6rem; /* Space below rating */
+    font-size: 0.85rem; /* Smaller size for card */
+  }
 
+  .product-card__review-count {
+    color: var(--text-muted);
+    font-size: 0.9em;
+  }
+
+  /* Ensure the rating display doesn't push content too much */
+  .product-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+    .product-info p {
+      flex-grow: 1; /* Allow description to take space */
+      margin-bottom: 0.8rem; /* Adjust spacing */
+    }
+
+    .product-info .price-tag {
+      margin-top: auto; /* Push price/button towards bottom if needed */
+      margin-bottom: 0.8rem;
+    }
 </style>

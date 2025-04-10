@@ -1,15 +1,20 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import productRoutes from './routes/productRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import cartRoutes from './routes/cartRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import { isAuthenticated } from './middleware/auth.js';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import MongoStore from 'connect-mongo';
 import 'dotenv/config'; // Load environment variables
+
+// Import Routes
+import productRoutes from './routes/productRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js'; // <--- Import new routes
+
+// Import Middleware
+import { isAuthenticated } from './middleware/auth.js';
 
 const app = express();
 
@@ -19,21 +24,20 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-
 app.use(cookieParser());
 
-// --- Session Configuration ---
+// --- Session Configuration --- (Keep existing)
 app.use(session({
-  secret: process.env.SESSION_SECRET, // Use a strong, random secret in .env
-  resave: false, // Don't save the session if it wasn't modified
-  saveUninitialized: false, // Don't create a session until something is stored
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI, // Use your MongoDB connection string
-    collectionName: 'sessions' // Optional: Specify a collection name for sessions
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions'
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Set to true in production (HTTPS)
-    maxAge: 1000 * 60 * 60 * 24 * 7 // Example: 7 days (milliseconds)
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 }));
 
@@ -42,7 +46,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error(err));
 
-//request error logging middleware
+// Request error logging middleware (Keep existing)
 app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 400) {
@@ -57,19 +61,18 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api', reviewRoutes); // <--- Register new routes (prefix with /api)
 
-// --- Example Protected Route (Requires Authentication) ---
+// --- Example Protected Route --- (Keep existing)
 app.get('/api/protected', isAuthenticated, (req, res) => {
-  // If the isAuthenticated middleware passes, this code will execute.
-  // You can access the user's ID from req.session.userId here.
   res.json({ message: 'This is a protected route. You are logged in!', userId: req.session.userId });
 });
 
-// Error handling middleware (keep this at the end)
+// Error handling middleware (Keep existing)
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
-    message: 'Something broke!',
+  res.status(err.status || 500).json({ // Use err.status if available
+    message: err.message || 'Something broke!',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });

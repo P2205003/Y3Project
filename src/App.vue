@@ -47,7 +47,8 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
+  // --- IMPORTANT: Import provide ---
+  import { ref, onMounted, onUnmounted, computed, nextTick, watch, provide } from 'vue';
   import { useRouter } from 'vue-router';
   import cartService from '@/services/cartService'; // Import cart service
 
@@ -76,7 +77,7 @@
 
   // --- Authentication State ---
   const isLoggedIn = ref(false);
-  const currentUser = ref(null); // Store { username, fullName }
+  const currentUser = ref(null); // Store { username, fullName, _id (optional but useful) }
 
   // --- Cart State ---
   const cartData = ref([]); // Now managed by cartService interaction
@@ -85,7 +86,16 @@
 
   const router = useRouter(); // Get router instance
 
-  // --- Computed --- (Removed totalCartItems and cartSubtotal, handled differently now)
+  // --- Provide Application Context ---
+  // Make reactive state and methods available to descendants
+  provide('appContext', {
+    isLoggedIn, // Provide the ref directly for reactivity
+    currentUser, // Provide the ref directly
+    openAccountPopup, // Provide the method
+    // Add other things if needed by descendants later
+  });
+  // --- End Provide ---
+
 
   // --- Methods ---
 
@@ -97,10 +107,9 @@
         if (response.ok) {
             const data = await response.json();
             isLoggedIn.value = data.isLoggedIn;
-            currentUser.value = data.isLoggedIn ? data.user : null;
+            currentUser.value = data.isLoggedIn ? data.user : null; // user object now includes shippingAddress
             console.log('Login status checked:', { isLoggedIn: isLoggedIn.value, user: currentUser.value });
-            // Fetch cart after confirming login status
-            await fetchCart();
+            await fetchCart(); // Fetch cart after confirming login status
         } else {
             console.warn('Failed to check login status, assuming logged out.');
             isLoggedIn.value = false;
@@ -135,29 +144,33 @@
 
   // Update cart count separately
   const updateCartCount = () => {
-      totalCartItems.value = cartData.value.reduce((sum, item) => sum + item.quantity, 0);
-  }
+      totalCartItems.value = cartData.value.reduce((sum, item) => sum + (item.quantity || 0), 0); // Ensure quantity exists
+  };
 
   // Call fetchCart whenever cart needs refresh (add, update, remove, login, logout)
   cartService.onCartUpdate(fetchCart); // Subscribe to cart service updates
 
   const handleAddToCart = async (itemToAdd) => {
     console.log('Adding to cart (App.vue):', itemToAdd);
-    // Map itemToAdd to the format expected by cartService.addItem
     const cartItem = {
         productId: itemToAdd.id,
         quantity: Math.max(1, itemToAdd.quantity || 1),
-        // Pass necessary details that might not be in the basic 'itemToAdd'
         name: itemToAdd.name,
         price: itemToAdd.price,
         image: itemToAdd.image,
         attributes: itemToAdd.attributes || {}
     };
+
+    // --- Add loading state for cart action ---
+    // You might want a more global loading indicator for this
+    // isLoading.value = true; // Example: reuse main loader, or use a dedicated one
+
     await cartService.addItem(cartItem, isLoggedIn.value);
+
+    // isLoading.value = false; // Turn off loader
     // fetchCart() will be triggered by cartService.notifyCartUpdated()
 
-    // --- Delay Cart Opening ---
-    const cartOpenDelay = 600; // Delay in milliseconds
+    const cartOpenDelay = 300; // Shorten delay slightly
     console.log(`Cart popup will open in ${cartOpenDelay}ms`);
     setTimeout(() => {
       isCartPopupActive.value = true;
@@ -177,24 +190,23 @@
         } else {
             await cartService.updateItemQuantity(productId, newQuantity, attributes, isLoggedIn.value);
         }
-        // fetchCart() will be triggered by cartService.notifyCartUpdated()
+        // fetchCart() triggered by service
     }
   };
 
   const removeCartItem = async ({ productId, attributes }) => { // Expect attributes
     await cartService.removeItem(productId, attributes, isLoggedIn.value);
-    // fetchCart() will be triggered by cartService.notifyCartUpdated()
+    // fetchCart() triggered by service
   };
 
 
   // --- Authentication Actions ---
-  const handleLoginSuccess = (userData) => {
+  const handleLoginSuccess = async (userData) => { // Make async
     console.log('Login successful in App.vue, user:', userData);
     isLoggedIn.value = true;
     currentUser.value = userData;
-    // Cart merge is handled within AccountPopup after login response
-    // but we fetch the latest cart state here after merge attempt
-    fetchCart();
+    // Explicitly fetch cart again AFTER login success event is handled in App.vue
+    await fetchCart();
   };
 
   const handleLogout = async () => {
@@ -202,35 +214,25 @@
     try {
         const response = await fetch('/api/users/logout', {
             method: 'POST',
-            credentials: 'include' // Important to clear the session cookie
+            credentials: 'include'
         });
         if (response.ok) {
             console.log('Logout successful on backend.');
-            isLoggedIn.value = false;
-            currentUser.value = null;
-            isAccountDropdownActive.value = false; // Close dropdown
-            // Fetch cart after logout (will fetch local cart now)
-            await fetchCart();
-             // Optionally redirect to home or another public page
-            router.push('/');
         } else {
             const errorData = await response.json().catch(() => ({}));
             console.error('Logout failed:', errorData.message || response.statusText);
-            // Handle logout failure (e.g., show message) - For now, we'll assume logout worked client-side anyway
-            isLoggedIn.value = false;
-            currentUser.value = null;
-            isAccountDropdownActive.value = false;
-            await fetchCart();
-            router.push('/'); // Still redirect
         }
     } catch (error) {
         console.error('Error during logout:', error);
-        // Handle network error - For now, assume logout worked client-side
+    } finally {
+        // Ensure client-side state is always reset
         isLoggedIn.value = false;
         currentUser.value = null;
-        isAccountDropdownActive.value = false;
-        await fetchCart();
-        router.push('/'); // Still redirect
+        isAccountDropdownActive.value = false; // Close dropdown
+        await fetchCart(); // Fetch local cart
+        if (router.currentRoute.value.meta.requiresAuth) {
+            router.push('/'); // Redirect if on protected page
+        }
     }
   };
 
@@ -244,51 +246,45 @@
 
   const toggleMobileMenu = (forceState = null) => {
     isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
-    if (isMobileMenuActive.value) {
-        isAccountDropdownActive.value = false;
-        isSearchActive.value = false;
-        isCartPopupActive.value = false; // Close cart on mobile menu open
-        isAccountPopupActive.value = false; // Close account popup
-    }
+    if (isMobileMenuActive.value) { closePopupsAndDropdowns(); }
   };
   const closeMobileMenu = () => toggleMobileMenu(false);
 
   const toggleSearch = (forceState = null) => {
     isSearchActive.value = typeof forceState === 'boolean' ? forceState : !isSearchActive.value;
-    if (isSearchActive.value) {
-        isAccountDropdownActive.value = false;
-        isMobileMenuActive.value = false;
-    }
+    if (isSearchActive.value) { closePopupsAndDropdowns(true); } // Keep search open
   };
   const closeSearch = () => toggleSearch(false);
 
   const toggleAccountDropdown = (forceState = null) => {
     isAccountDropdownActive.value = typeof forceState === 'boolean' ? forceState : !isAccountDropdownActive.value;
-    if (isAccountDropdownActive.value) {
-        isSearchActive.value = false;
-        isMobileMenuActive.value = false;
-    }
+     if (isAccountDropdownActive.value) { closePopupsAndDropdowns(false, true); } // Keep dropdown open
   };
   const closeAccountDropdown = () => toggleAccountDropdown(false);
 
-  const openAccountPopup = (tab = 'login') => {
+  // Updated function signature
+  function openAccountPopup(tab = 'login') {
     accountPopupTab.value = tab;
     isAccountPopupActive.value = true;
-    closeAccountDropdown(); // Ensure dropdown closes
-    closeMobileMenu(); // Ensure mobile menu closes
-  };
-  const closeAccountPopup = () => {
-    isAccountPopupActive.value = false;
-  };
+    closePopupsAndDropdowns(false, false, true); // Keep account popup open
+  }
+  const closeAccountPopup = () => { isAccountPopupActive.value = false; };
 
   const toggleCartPopup = (forceState = null) => {
     isCartPopupActive.value = typeof forceState === 'boolean' ? forceState : !isCartPopupActive.value;
-    if (isCartPopupActive.value) {
-        closeAccountDropdown();
-        closeMobileMenu();
-    }
+    if (isCartPopupActive.value) { closePopupsAndDropdowns(false, false, false, true); } // Keep cart open
   };
   const closeCartPopup = () => toggleCartPopup(false);
+
+  // Helper to close things
+  const closePopupsAndDropdowns = (keepSearch = false, keepDropdown = false, keepAccountPopup = false, keepCart = false) => {
+      if (!keepSearch) isSearchActive.value = false;
+      if (!keepDropdown) isAccountDropdownActive.value = false;
+      if (!keepAccountPopup) isAccountPopupActive.value = false;
+      if (!keepCart) isCartPopupActive.value = false;
+      isMobileMenuActive.value = false; // Always close mobile menu
+  };
+
 
   // --- Global Click Listener ---
   const handleClickOutside = (event) => {
@@ -315,13 +311,12 @@
 
       if (mobileActive || accountActive || cartActive) body.classList.add('popup-open');
       else body.classList.remove('popup-open');
-      // console.log('Body classes updated:', body.className);
     }, { immediate: true }
   );
 
   // --- Lifecycle Hooks ---
   onMounted(async () => {
-    await checkLoginStatus(); // Check login status BEFORE removing preloader
+    await checkLoginStatus(); // Check login and fetch initial cart
     // isLoading is now set inside checkLoginStatus's finally block
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -329,19 +324,15 @@
 
     document.addEventListener('click', handleClickOutside);
 
-    router.afterEach(() => {
-      closeMobileMenu();
-      closeAccountDropdown();
-      closeSearch();
+    router.afterEach(() => { // Close UI elements on route change
+      closePopupsAndDropdowns();
     });
-
-    // Initial cart fetch is now inside checkLoginStatus
   });
 
   onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll);
     document.removeEventListener('click', handleClickOutside);
-    // Unsubscribe from cart service listener? Maybe not necessary if singleton
+    // Unsubscribe? cartService cleans up its own listeners usually.
   });
 
 </script>
