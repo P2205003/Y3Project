@@ -3,9 +3,20 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import ProductsView from '../views/ProductsView.vue';
 import ProductDetailView from '../views/ProductDetailView.vue';
+
+import AdminLayout from '../views/AdminView.vue';
+
 const OrdersView = () => import('../views/OrdersView.vue');
 const OrderDetailView = () => import('../views/OrderDetailView.vue');
 const CheckoutView = () => import('../views/CheckoutView.vue');
+
+const AdminDashboard = () => import('../views/admin/AdminDashboard.vue');
+const AdminProducts = () => import('../views/admin/AdminProducts.vue');
+const AdminAddItem = () => import('../views/admin/AdminAddItem.vue');
+const AdminOrders = () => import('../views/admin/AdminOrders.vue');
+const AdminUsers = () => import('../views/admin/AdminUsers.vue');
+const AdminSettings = () => import('../views/admin/AdminSettings.vue');
+const AdminOrderDetails = () => import('../views/admin/AdminOrderDetails.vue');
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,11 +28,11 @@ const router = createRouter({
       meta: { title: 'AURORA Furnishings | Sustainable Craftsmanship' }
     },
     {
-        path: '/account/profile',
-        name: 'user-profile',
-        // component: () => import('../views/UserProfileView.vue'),
-        component: HomeView, // Placeholder
-        meta: { title: 'My Profile | AURORA', requiresAuth: true }
+      path: '/account/profile',
+      name: 'user-profile',
+      // component: () => import('../views/UserProfileView.vue'),
+      component: HomeView, // Placeholder
+      meta: { title: 'My Profile | AURORA', requiresAuth: true }
     },
     {
       path: '/products',
@@ -69,7 +80,49 @@ const router = createRouter({
       name: 'NotFound',
       component: () => import('../views/NotFoundView.vue'),
       meta: { title: 'Page Not Found | AURORA Furnishings' }
-    }
+    },
+    {
+      path: '/admin',
+      component: AdminLayout,
+      meta: { requiresAuth: true, requiresAdmin: true },
+      children: [
+        {
+          path: '',
+          name: 'AdminDashboard',
+          component: AdminDashboard
+        },
+        {
+          path: 'products',
+          name: 'AdminProducts',
+          component: AdminProducts
+        },
+        {
+          path: 'orders',
+          name: 'AdminOrders',
+          component: AdminOrders
+        },
+        {
+          path: 'orders/:id',
+          name: 'AdminOrderDetails',
+          component: AdminOrderDetails
+        },
+        {
+          path: 'products/add',
+          name: 'AdminAddItem',
+          component: AdminAddItem
+        },
+        {
+          path: 'users',
+          name: 'AdminUsers',
+          component: AdminUsers
+        },
+        {
+          path: 'settings',
+          name: 'AdminSettings',
+          component: AdminSettings
+        }
+      ]
+    },
   ],
   // ... scrollBehavior ...
   scrollBehavior(to, from, savedPosition) {

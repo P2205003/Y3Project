@@ -8,6 +8,9 @@
         <!-- Use router-link for internal pages, keep hash links as is for now -->
         <li><router-link to="/#hero">Home</router-link></li>
         <li><router-link to="/products">Products</router-link></li>
+        <router-link v-if="isAdmin" to="/admin" class="admin-link">
+          <li><router-link to="/products">Admin Panel</router-link></li>
+        </router-link>
       </ul>
     </nav>
 
