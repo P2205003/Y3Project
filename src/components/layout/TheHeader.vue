@@ -8,10 +8,6 @@
         <!-- Use router-link for internal pages, keep hash links as is for now -->
         <li><router-link to="/#hero">Home</router-link></li>
         <li><router-link to="/products">Products</router-link></li>
-        <li><router-link to="/#philosophy">Philosophy</router-link></li>
-        <li><router-link to="/#showcase">Showcase</router-link></li>
-        <li><router-link to="/#testimonials">Reviews</router-link></li>
-        <li><router-link to="/#newsletter">Newsletter</router-link></li>
       </ul>
     </nav>
 

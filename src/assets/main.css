@@ -65,7 +65,7 @@ body {
 }
 
     body.popup-open {
-        overflow: hidden; /* Prevent background scroll when popup is open */
+        overflow: hidden;
     }
 
 /* --- Accessibility --- */
@@ -3939,3 +3939,4 @@ body.lightbox-open {
         color: var(--text-muted);
         margin-bottom: 2rem;
     }
+
