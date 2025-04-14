@@ -1,727 +1,553 @@
 <template>
-  <div class="admin-order-details">
+  <div class="admin-order-management">
+    <!-- Page Header -->
     <div class="admin-page-header">
-      <router-link to="/admin/orders" class="back-link">
-        ← Back to Orders
-      </router-link>
-      <h1>Order Details</h1>
+      <h1>Order Management</h1>
+      <!-- Optional: Add a refresh button or other actions here -->
+      <button @click="fetchOrders(pagination.page, true)" class="button enhanced-button secondary" :disabled="loading">
+        <font-awesome-icon icon="rotate-right" :spin="loading" /> Refresh Orders
+      </button>
     </div>
 
-    <!-- Loading state -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Loading order details...</p>
+    <!-- Filters Panel -->
+    <div class="admin-panel filters-panel">
+      <h2 class="panel-title">
+        <font-awesome-icon icon="filter" /> Filter & Search Orders
+      </h2>
+      <div class="filters-grid order-filters-grid">
+        <!-- Status Filter -->
+        <div class="filter-group">
+          <label for="order-status-filter">Status</label>
+          <select id="order-status-filter" v-model="filters.status" @change="applyFilters" class="enhanced-input" :disabled="loading">
+            <option value="">All Statuses</option>
+            <option v-for="status in statusOptions" :key="status.value" :value="status.value">
+              {{ status.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="filter-group">
+          <label for="start-date">Date From</label>
+          <input type="date" id="start-date" v-model="filters.startDate" @change="applyFilters" class="enhanced-input" :disabled="loading" :max="filters.endDate || today" />
+        </div>
+        <div class="filter-group">
+          <label for="end-date">Date To</label>
+          <input type="date" id="end-date" v-model="filters.endDate" @change="applyFilters" class="enhanced-input" :disabled="loading" :min="filters.startDate" :max="today" />
+        </div>
+
+        <!-- Reset Button -->
+        <div class="filter-group reset-group">
+          <button @click="resetFilters" class="button enhanced-button secondary reset-btn" :disabled="loading || !hasActiveFilters">
+            <font-awesome-icon icon="times-circle" /> Reset Filters
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Error state -->
-    <div v-else-if="error" class="error-container">
-      <p>{{ error }}</p>
-      <button @click="fetchOrderDetails" class="retry-btn">Try Again</button>
-    </div>
-
-    <!-- Order details -->
-    <div v-else-if="order" class="admin-panel">
-      <div class="order-header">
-        <div class="order-id">
-          Order #{{ order.orderNumber }}
-          <span :class="['status-badge', `status-${order.status}`]">
-            {{ getStatusLabel(order.status) }}
-          </span>
+    <!-- Orders Table Panel -->
+    <div class="admin-panel orders-table-panel">
+      <transition name="fade-fast" mode="out-in">
+        <!-- Loading State -->
+        <div v-if="loading && !orders.length" key="loading" class="loading-container orders-loading">
+          <div class="loading-spinner"></div>
+          <p>Loading orders...</p>
         </div>
-        <div class="order-date">
-          Ordered on: {{ formatDate(order.purchaseDate) }}
-        </div>
-      </div>
 
-      <div class="order-grid">
-        <!-- Customer information -->
-        <div class="order-section">
-          <h3>Customer Information</h3>
-          <div class="info-item">
-            <span class="label">Customer ID:</span>
-            <span class="value">{{ order.userId }}</span>
+        <!-- Error State -->
+        <div v-else-if="error" key="error" class="message-container error-container">
+          <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon" />
+          <h2>Failed to Load Orders</h2>
+          <p>{{ error }}</p>
+          <button @click="fetchOrders(1)" class="button enhanced-button primary retry-btn">
+            <font-awesome-icon icon="rotate-right" /> Try Again
+          </button>
+        </div>
+
+        <!-- Table / Empty State Wrapper -->
+        <div v-else key="content">
+          <!-- Table Wrapper for Responsiveness -->
+          <div class="table-wrapper">
+            <table v-if="orders.length > 0" class="data-table orders-data-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th class="text-center">Items</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center actions-header">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="order in orders" :key="order._id" class="order-row">
+                  <!-- Order # -->
+                  <td data-label="Order #" class="order-number-cell" :title="order.orderNumber">
+                    <router-link :to="{ name: 'AdminOrderDetails', params: { id: order._id } }">
+                      {{ order.orderNumber }}
+                    </router-link>
+                  </td>
+                  <!-- Date -->
+                  <td data-label="Date">{{ formatDate(order.purchaseDate) }}</td>
+                  <!-- Customer -->
+                  <td data-label="Customer" class="customer-cell" :title="getCustomerTooltip(order)">
+                    <span class="customer-name">{{ getUserName(order) }}</span>
+                    <span v-if="order.userId?.email" class="customer-email">{{ order.userId.email }}</span>
+                  </td>
+                  <!-- Items -->
+                  <td data-label="Items" class="items-cell text-center">
+                    {{ getTotalQuantity(order) }}
+                    <span class="item-count-detail"> ({{ order.items.length }} type{{ order.items.length !== 1 ? 's' : '' }})</span>
+                  </td>
+                  <!-- Total -->
+                  <td data-label="Total" class="price-cell text-right">${{ order.totalAmount.toFixed(2) }}</td>
+                  <!-- Status -->
+                  <td data-label="Status" class="text-center">
+                    <span :class="['status-badge', `status-badge--${order.status}`]" :title="`Status: ${getStatusLabel(order.status)}`">
+                      {{ getStatusLabel(order.status) }}
+                    </span>
+                  </td>
+                  <!-- Actions -->
+                  <td data-label="Actions" class="actions-cell text-center">
+                    <router-link :to="{ name: 'AdminOrderDetails', params: { id: order._id } }" class="action-btn view-btn" title="View Order Details">
+                      <font-awesome-icon icon="eye" />
+                      <span class="action-label">Details</span>
+                    </router-link>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div> <!-- End Table Wrapper -->
+          <!-- Empty State (if no orders match filters) -->
+          <div v-if="orders.length === 0" class="message-container empty-container">
+            <font-awesome-icon icon="search-minus" class="message-icon empty-icon" />
+            <h2>No Orders Match Filters</h2>
+            <p>Try adjusting your status or date range, or <button @click="resetFilters" class="link-button">reset all filters</button>.</p>
           </div>
-          <div class="info-item">
-            <span class="label">Shipping Address:</span>
-            <span class="value">{{ order.shippingAddress }}</span>
-          </div>
-        </div>
 
-        <!-- Order status management -->
-        <div class="order-section">
-          <h3>Status Management</h3>
+          <!-- Pagination -->
+          <nav v-if="pagination.pages > 1"
+               class="pagination-container standalone-pagination orders-pagination"
+               aria-label="Orders pagination">
+            <ul class="pagination">
+              <li class="page-item" :class="{ disabled: pagination.page === 1 }">
+                <button class="page-link enhanced-page-link page-btn-icon" @click="changePage(pagination.page - 1)" :disabled="pagination.page === 1 || loading" aria-label="Previous page">
+                  <font-awesome-icon icon="chevron-left" />
+                </button>
+              </li>
+              <li v-for="page in paginationRange"
+                  :key="`page-${page}`"
+                  class="page-item"
+                  :class="{ active: pagination.page === page, ellipsis: page === '...' }">
+                <span v-if="page === '...'" class="page-link enhanced-page-link page-link--ellipsis">...</span>
+                <button v-else class="page-link enhanced-page-link" @click="changePage(page)" :disabled="loading" :aria-current="pagination.page === page ? 'page' : null">
+                  {{ page }}
+                </button>
+              </li>
+              <li class="page-item" :class="{ disabled: pagination.page === pagination.pages }">
+                <button class="page-link enhanced-page-link page-btn-icon" @click="changePage(pagination.page + 1)" :disabled="pagination.page === pagination.pages || loading" aria-label="Next page">
+                  <font-awesome-icon icon="chevron-right" />
+                </button>
+              </li>
+            </ul>
+          </nav>
 
-          <div class="status-form">
-            <div class="form-group">
-              <label for="status-select">Update Status:</label>
-              <select id="status-select"
-                      v-model="newStatus"
-                      :disabled="statusUpdateLoading || !allowedTransitions.length">
-                <option value="" disabled selected>Select new status</option>
-                <option v-for="status in allowedTransitions"
-                        :key="status"
-                        :value="status">
-                  {{ getStatusLabel(status) }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="status-notes">Notes:</label>
-              <textarea id="status-notes"
-                        v-model="statusNotes"
-                        :disabled="statusUpdateLoading || !newStatus"
-                        placeholder="Add notes about this status change"></textarea>
-            </div>
-
-            <button @click="updateOrderStatus"
-                    class="update-status-btn"
-                    :disabled="statusUpdateLoading || !newStatus">
-              <span v-if="statusUpdateLoading">Updating...</span>
-              <span v-else>Update Status</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Status history -->
-      <div class="order-section">
-        <h3>Status History</h3>
-        <div class="status-history">
-          <div v-for="(entry, index) in sortedStatusHistory" :key="index" class="history-entry">
-            <div class="history-status">
-              <span :class="['status-dot', `status-${entry.status}`]"></span>
-              <span class="status-name">{{ getStatusLabel(entry.status) }}</span>
-            </div>
-            <div class="history-details">
-              <div class="history-date">
-                {{ formatDate(entry.date) }}
-              </div>
-              <div v-if="entry.changedBy && entry.changedBy.username" class="history-user">
-                By: {{ entry.changedBy.username }}
-              </div>
-              <div v-if="entry.notes" class="history-notes">
-                "{{ entry.notes }}"
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Order items -->
-      <div class="order-section">
-        <h3>Order Items</h3>
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(item, index) in order.items" :key="index">
-              <td class="product-cell">
-                <img :src="item.image || placeholderImage"
-                     :alt="item.name"
-                     class="product-thumbnail" />
-                <div class="product-name">{{ item.name }}</div>
-              </td>
-              <td>${{ item.price.toFixed(2) }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>${{ item.subtotal.toFixed(2) }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3" class="total-label">Total:</td>
-              <td class="total-value">${{ order.totalAmount.toFixed(2) }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
+        </div> <!-- End Content Wrapper -->
+      </transition>
+    </div> <!-- End Table Panel -->
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AdminOrderDetails',
-  data() {
-    return {
-      orderId: null,
-      order: null,
-      loading: true,
-      error: null,
-      statusUpdateLoading: false,
-      newStatus: '',
-      statusNotes: '',
-      placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
-    };
-  },
-  computed: {
-    allowedTransitions() {
-      if (!this.order) return [];
+<script setup>
+  import { ref, onMounted, computed, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import orderService from '@/services/orderService';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import {
+    faFilter, faTimesCircle, faRotateRight, faExclamationTriangle, faReceipt,
+    faSpinner, faEye, faChevronLeft, faChevronRight, faSearchMinus // Added icons
+  } from '@fortawesome/free-solid-svg-icons';
 
-      // Define allowed status transitions
-      const transitions = {
-        'pending': ['shipped', 'cancelled', 'hold'],
-        'hold': ['shipped', 'cancelled'],
-        'shipped': ['delivered'],
-        'cancelled': [],
-        'delivered': []
-      };
+  library.add(
+    faFilter, faTimesCircle, faRotateRight, faExclamationTriangle, faReceipt,
+    faSpinner, faEye, faChevronLeft, faChevronRight, faSearchMinus
+  );
 
-      return transitions[this.order.status] || [];
-    },
-    sortedStatusHistory() {
-      if (!this.order || !this.order.statusHistory) return [];
+  // --- State ---
+  const orders = ref([]);
+  const loading = ref(true);
+  const error = ref(null);
+  const filters = ref({
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+  const pagination = ref({
+    page: 1,
+    limit: 15, // Show more items per page for orders
+    total: 0,
+    pages: 1
+  });
+  const statusOptions = ref(orderService.getStatusOptions()); // Get status options from service
+  const route = useRoute();
+  const router = useRouter();
+  const today = new Date().toISOString().split('T')[0]; // For max date on input
 
-      // Sort by date, newest first
-      return [...this.order.statusHistory].sort((a, b) => {
-        return new Date(b.date) - new Date(a.date);
+  // --- Computed ---
+  const hasActiveFilters = computed(() => {
+    return filters.value.status || filters.value.startDate || filters.value.endDate;
+  });
+
+  const paginationRange = computed(() => {
+    // Reusing the pagination range logic
+    const current = pagination.value.page; const last = pagination.value.pages; if (last <= 1) return []; const delta = 1; const left = current - delta; const right = current + delta + 1; const range = []; const rangeWithDots = []; for (let i = 1; i <= last; i++) { if (i === 1 || i === last || (i >= left && i < right)) { range.push(i); } } let l; for (const i of range) { if (l) { if (i - l === 2) rangeWithDots.push(l + 1); else if (i - l !== 1) rangeWithDots.push('...'); } rangeWithDots.push(i); l = i; } return rangeWithDots.filter((item, index, arr) => item !== '...' || arr[index - 1] !== '...');
+  });
+
+  // --- Methods ---
+  const fetchOrders = async (page = 1, isManualRefresh = false) => {
+    if (!isManualRefresh) {
+      loading.value = true; // Only show full loading on initial/page change
+    } else {
+      // Maybe show a subtle refresh indicator instead of full page load
+      console.log("Manual refresh triggered");
+    }
+    error.value = null;
+
+    // Update URL query parameters
+    const queryParams = { page };
+    if (filters.value.status) queryParams.status = filters.value.status;
+    if (filters.value.startDate) queryParams.startDate = filters.value.startDate;
+    if (filters.value.endDate) queryParams.endDate = filters.value.endDate;
+    // Only replace route if query params actually changed or page changed
+    if (JSON.stringify(route.query) !== JSON.stringify(queryParams)) {
+      router.replace({ query: queryParams }).catch(err => {
+        if (err.name !== 'NavigationDuplicated') console.error('Router replace error:', err);
       });
     }
-  },
-  methods: {
-    formatDate(dateString) {
-      if (!dateString) return 'N/A';
-      const date = new Date(dateString);
-      return date.toLocaleString();
-    },
-    getStatusLabel(status) {
-      const statusLabels = {
-        'pending': 'Pending',
-        'shipped': 'Shipped',
-        'cancelled': 'Cancelled',
-        'hold': 'On Hold',
-        'delivered': 'Delivered'
-      };
 
-      return statusLabels[status] || status;
-    },
-    async fetchOrderDetails() {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        const response = await fetch(`/api/orders/${this.orderId}`, {
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        this.order = await response.json();
-      } catch (error) {
-        console.error('Error fetching order details:', error);
-        this.error = 'Failed to load order details. Please try again.';
-      } finally {
-        this.loading = false;
+    try {
+      const result = await orderService.getAllOrders(
+        { status: filters.value.status, startDate: filters.value.startDate, endDate: filters.value.endDate },
+        page,
+        pagination.value.limit
+      );
+      orders.value = result.orders;
+      pagination.value = result.pagination;
+    } catch (err) {
+      error.value = 'Failed to load orders. Please try again.';
+      console.error('Error fetching admin orders:', err);
+      // Don't clear orders on subsequent load errors if some were previously loaded
+      if (page === 1) {
+        orders.value = [];
+        pagination.value = { page: 1, limit: 15, total: 0, pages: 1 };
       }
-    },
-    async updateOrderStatus() {
-      if (!this.newStatus) return;
-
-      this.statusUpdateLoading = true;
-
-      try {
-        const response = await fetch(`/api/orders/${this.orderId}/status`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            status: this.newStatus,
-            notes: this.statusNotes
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-        }
-
-        this.order = await response.json();
-
-        // Reset form
-        this.newStatus = '';
-        this.statusNotes = '';
-
-        // Show success message
-        alert(`Order status updated to ${this.getStatusLabel(this.order.status)}`);
-      } catch (error) {
-        console.error('Error updating order status:', error);
-        alert(`Error updating order status: ${error.message}`);
-      } finally {
-        this.statusUpdateLoading = false;
-      }
+    } finally {
+      loading.value = false;
     }
-  },
-  created() {
-    this.orderId = this.$route.params.id;
-    this.fetchOrderDetails();
-  }
-};
+  };
+
+  const applyFilters = () => {
+    fetchOrders(1); // Reset to page 1 when filters change
+  };
+
+  const resetFilters = () => {
+    filters.value = { status: '', startDate: '', endDate: '' };
+    fetchOrders(1); // Fetch with reset filters
+  };
+
+  const changePage = (page) => {
+    if (page >= 1 && page <= pagination.value.pages && !loading.value) {
+      fetchOrders(page);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    // Simple date format for the table
+    return new Date(dateString).toLocaleDateString('en-CA'); // YYYY-MM-DD format
+  };
+
+  const getStatusLabel = (statusValue) => {
+    const status = statusOptions.value.find(s => s.value === statusValue);
+    return status ? status.label : statusValue;
+  };
+
+  const getUserName = (order) => {
+    if (order.userId && typeof order.userId === 'object') {
+      return order.userId.fullName || order.userId.username || 'Unknown';
+    }
+    return `User ID: ${typeof order.userId === 'string' ? order.userId.substring(0, 8) + '...' : 'Unknown'}`;
+  };
+
+  const getCustomerTooltip = (order) => {
+    if (order.userId && typeof order.userId === 'object') { let parts = []; if (order.userId.fullName) parts.push(order.userId.fullName); if (order.userId.username) parts.push(`(@${order.userId.username})`); if (order.userId.email) parts.push(order.userId.email); return parts.join(' '); } return `User ID: ${order.userId}`;
+  };
+
+  const getTotalQuantity = (order) => {
+    return order.items.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
+  // Read initial filters from URL on mount
+  const readFiltersFromURL = () => {
+    filters.value.status = route.query.status || '';
+    filters.value.startDate = route.query.startDate || '';
+    filters.value.endDate = route.query.endDate || '';
+    return parseInt(route.query.page) || 1;
+  };
+
+  // --- Lifecycle ---
+  onMounted(() => {
+    const initialPage = readFiltersFromURL();
+    fetchOrders(initialPage);
+  });
+
+  // Watch route query changes (e.g., browser back/forward)
+  watch(() => route.query, (newQuery) => {
+    const needsRefetch =
+      (newQuery.page || '1') !== String(pagination.value.page) ||
+      (newQuery.status || '') !== filters.value.status ||
+      (newQuery.startDate || '') !== filters.value.startDate ||
+      (newQuery.endDate || '') !== filters.value.endDate;
+
+    if (needsRefetch) {
+      const newPage = readFiltersFromURL();
+      fetchOrders(newPage);
+    }
+  }, { deep: true });
+
 </script>
 
 <style scoped>
-  .admin-order-details {
+  /* Use styles from main.css where possible */
+  .admin-order-management {
+    width: 100%;
+  }
+  /* .admin-page-header, .admin-panel, .panel-title, .data-table, etc */
+
+  /* Filter Panel Specifics */
+  .filters-panel .panel-title svg {
+    margin-right: 0.5em;
+  }
+
+  .order-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Adjust min width */
+    gap: 1rem 1.5rem; /* Row gap, Column gap */
+    align-items: end;
+  }
+
+  .filter-group {
+    min-width: 150px; /* Prevent excessive shrinking */
+  }
+
+  .reset-group {
+    grid-column: span 1 / -1; /* Span remaining columns */
+    justify-self: end; /* Push button to the right */
+    margin-top: 0.5rem; /* Add space when it wraps below */
+  }
+
+  .reset-btn {
+    width: auto;
+    min-width: 140px;
+  }
+
+    .reset-btn svg {
+      margin-right: 0.4em;
+    }
+
+  /* Table Styles */
+  .orders-data-table {
+    /* Ensure table respects panel padding */
+    margin: 0 -1.5rem -1.5rem; /* Offset panel padding */
+    width: calc(100% + 3rem);
+    max-width: calc(100% + 3rem);
+    border-top: 1px solid var(--border-color); /* Add top border */
+  }
+
+  .table-wrapper {
+    overflow-x: auto; /* Enable horizontal scroll on wrapper */
     width: 100%;
   }
 
-  .admin-page-header {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1.5rem;
+  .orders-data-table th,
+  .orders-data-table td {
+    vertical-align: middle;
+    white-space: nowrap; /* Prevent wrapping in most cells */
   }
 
-  .back-link {
-    color: #5D5CDE;
+    .orders-data-table th.actions-header {
+      width: 1%; /* Prevent actions column from taking too much space */
+    }
+
+  .order-number-cell a {
+    color: var(--primary);
     text-decoration: none;
-    margin-bottom: 0.5rem;
-    display: inline-block;
+    font-weight: 600;
   }
 
-    .back-link:hover {
+    .order-number-cell a:hover {
       text-decoration: underline;
     }
 
-  .admin-page-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    color: #333;
+  .customer-cell {
+    max-width: 250px; /* Limit width */
+    white-space: normal; /* Allow wrapping for customer */
+    vertical-align: top; /* Align top if wraps */
   }
 
-  .admin-panel {
-    background-color: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+  .customer-name {
+    font-weight: 500;
+    display: block; /* Ensure email below */
   }
 
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
+  .customer-email {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 0.1rem;
   }
 
-  .order-id {
-    font-size: 1.2rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .order-date {
-    color: #666;
-  }
-
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
+  .items-cell .item-count-detail {
     font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .price-cell {
     font-weight: 500;
   }
 
-  .status-pending {
-    background-color: #fff8e1;
-    color: #f57c00;
+  .actions-cell {
+    white-space: nowrap;
   }
-
-  .status-shipped {
-    background-color: #e8f5e9;
-    color: #388e3c;
-  }
-
-  .status-delivered {
-    background-color: #e3f2fd;
-    color: #1976d2;
-  }
-
-  .status-cancelled {
-    background-color: #ffebee;
-    color: #d32f2f;
-  }
-
-  .status-hold {
-    background-color: #f3e5f5;
-    color: #8e24aa;
-  }
-
-  .order-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .order-section {
-    margin-bottom: 1.5rem;
-  }
-
-    .order-section h3 {
-      margin-top: 0;
-      margin-bottom: 1rem;
-      font-size: 1.2rem;
-      color: #333;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid #eee;
+    /* Prevent actions wrapping */
+    .actions-cell .action-btn {
+      margin: 0 0.15rem; /* Tighter spacing */
     }
 
-  .info-item {
-    margin-bottom: 0.75rem;
-  }
-
-  .label {
-    color: #666;
-    font-weight: 500;
-    margin-right: 0.5rem;
-  }
-
-  .value {
-    color: #333;
-  }
-
-  .status-form {
-    margin-top: 1rem;
-  }
-
-  .form-group {
-    margin-bottom: 1rem;
-  }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #333;
+    .actions-cell .action-label {
+      display: none;
     }
+  /* Icon only by default */
 
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
+  @media (min-width: 768px) {
+    .actions-cell .action-label {
+      display: inline;
+      margin-left: 0.4em;
     }
+    /* Show label on larger screens */
+  }
 
-    .form-group textarea {
-      min-height: 80px;
-      resize: vertical;
-    }
+  /* Pagination Styles */
+  .orders-pagination {
+    margin-top: 2rem; /* Add space above pagination */
+    /* Inherits base styles from main.css */
+  }
 
-  .update-status-btn {
-    background-color: #5D5CDE;
-    color: white;
+  .page-btn-icon { /* Style for icon-only buttons */
+    padding: 0.5rem;
+    min-width: 38px;
+  }
+
+  /* Empty State Enhancements */
+  .empty-container .message-icon {
+    font-size: 3.5rem;
+  }
+
+  .link-button {
+    background: none;
     border: none;
-    padding: 0.75rem 1rem;
-    border-radius: 4px;
-    font-weight: 500;
+    padding: 0;
+    color: var(--primary);
+    font-weight: 600;
     cursor: pointer;
+    text-decoration: underline;
+    font-size: inherit;
   }
 
-    .update-status-btn:hover:not(:disabled) {
-      background-color: #4a49b8;
+  /* Mobile Table Styles */
+  @media (max-width: 992px) {
+    /* Apply card-like styles to rows */
+    .orders-data-table thead {
+      display: none;
     }
 
-    .update-status-btn:disabled {
-      background-color: #a5a5a5;
-      cursor: not-allowed;
+    .orders-data-table tbody tr {
+      display: block;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-small);
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      background: var(--white);
     }
 
-  .status-history {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+    .orders-data-table tbody td {
+      display: flex; /* Use flex for better alignment */
+      justify-content: space-between; /* Align label and value */
+      align-items: center;
+      text-align: right !important; /* Value aligns right */
+      border-bottom: 1px dotted var(--border-color);
+      padding: 0.75rem 1rem; /* Adjust padding */
+      position: relative;
+      white-space: normal;
+    }
 
-  .history-entry {
-    display: flex;
-    gap: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #f5f5f5;
-  }
+      .orders-data-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        margin-right: 1rem; /* Space between label and value */
+        text-align: left;
+        white-space: nowrap;
+      }
 
-    .history-entry:last-child {
+    .orders-data-table tbody tr td:last-child {
       border-bottom: none;
     }
 
-  .history-status {
-    display: flex;
-    align-items: center;
-    min-width: 120px;
+    /* Center content for specific cells in mobile view */
+    .orders-data-table .items-cell,
+    .orders-data-table .status-cell,
+    .orders-data-table .actions-cell {
+      justify-content: flex-end; /* Default align value right */
+    }
+
+      .orders-data-table .status-cell::before,
+      .orders-data-table .actions-cell::before {
+        width: auto; /* Let label take natural width */
+        flex-shrink: 0;
+      }
+
+      .orders-data-table .status-cell .status-badge {
+        margin-left: auto; /* Push badge right */
+      }
+
+      .orders-data-table .actions-cell .action-btn {
+        margin: 0.2rem 0; /* Stack buttons slightly */
+      }
+
+    .actions-cell .action-label {
+      display: inline;
+    }
+    /* Ensure label shows on mobile card */
   }
 
-  .status-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 0.5rem;
-  }
-
-    .status-dot.status-pending {
-      background-color: #f57c00;
-    }
-
-    .status-dot.status-shipped {
-      background-color: #388e3c;
-    }
-
-    .status-dot.status-delivered {
-      background-color: #1976d2;
-    }
-
-    .status-dot.status-cancelled {
-      background-color: #d32f2f;
-    }
-
-    .status-dot.status-hold {
-      background-color: #8e24aa;
-    }
-
-  .status-name {
-    font-weight: 500;
-  }
-
-  .history-details {
-    flex: 1;
-  }
-
-  .history-date {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 0.25rem;
-  }
-
-  .history-user {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 0.25rem;
-  }
-
-  .history-notes {
-    background-color: #f9f9f9;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    font-style: italic;
-    color: #555;
-  }
-
-  .items-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-    .items-table th,
-    .items-table td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-
-    .items-table th {
-      font-weight: 600;
-      color: #333;
-    }
-
-  .product-cell {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .product-thumbnail {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 4px;
-  }
-
-  .product-name {
-    font-weight: 500;
-  }
-
-  .total-label {
-    text-align: right;
-    font-weight: 600;
-  }
-
-  .total-value {
-    font-weight: 600;
-    font-size: 1.1rem;
-  }
-
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem;
-  }
-
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #5D5CDE;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-  }
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-
-  .error-container {
-    padding: 1.5rem;
-    background-color: #ffebee;
-    color: #d32f2f;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  .retry-btn {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #5D5CDE;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  /* Dark mode support */
-  @media (prefers-color-scheme: dark) {
-    .admin-page-header h1 {
-      color: #e2e8f0;
-    }
-
-    .back-link {
-      color: #7e7dff;
-    }
-
-    .admin-panel {
-      background-color: #2d3748;
-    }
-
-    .order-header {
-      border-bottom-color: #4a5568;
-    }
-
-    .order-date {
-      color: #a0aec0;
-    }
-
-    .order-section h3 {
-      color: #e2e8f0;
-      border-bottom-color: #4a5568;
-    }
-
-    .label {
-      color: #a0aec0;
-    }
-
-    .value {
-      color: #e2e8f0;
-    }
-
-    .form-group label {
-      color: #e2e8f0;
-    }
-
-    .form-group select,
-    .form-group textarea {
-      background-color: #1a202c;
-      border-color: #4a5568;
-      color: #e2e8f0;
-    }
-
-    .items-table th,
-    .items-table td {
-      border-bottom-color: #4a5568;
-    }
-
-    .items-table th {
-      color: #e2e8f0;
-    }
-
-    .history-entry {
-      border-bottom-color: #2a374a;
-    }
-
-    .history-date,
-    .history-user {
-      color: #a0aec0;
-    }
-
-    .history-notes {
-      background-color: #1a202c;
-      color: #cbd5e0;
-    }
-
-    /* Adjust status badge colors for dark mode */
-    .status-pending {
-      background-color: rgba(245, 124, 0, 0.2);
-      color: #ffb74d;
-    }
-
-    .status-shipped {
-      background-color: rgba(56, 142, 60, 0.2);
-      color: #81c784;
-    }
-
-    .status-delivered {
-      background-color: rgba(25, 118, 210, 0.2);
-      color: #64b5f6;
-    }
-
-    .status-cancelled {
-      background-color: rgba(211, 47, 47, 0.2);
-      color: #e57373;
-    }
-
-    .status-hold {
-      background-color: rgba(142, 36, 170, 0.2);
-      color: #ba68c8;
-    }
-
-    .error-container {
-      background-color: rgba(211, 47, 47, 0.2);
-      color: #e57373;
-    }
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .order-grid {
+  @media (max-width: 576px) {
+    .order-filters-grid {
       grid-template-columns: 1fr;
     }
-
-    .product-cell {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.5rem;
+    /* Stack filters */
+    .reset-group {
+      justify-self: stretch;
     }
 
-    .items-table {
-      display: block;
-      overflow-x: auto;
+    .reset-btn {
+      width: 100%;
     }
   }
 </style>

@@ -1,49 +1,64 @@
+// src/views/admin/AdminProducts.vue
 <template>
   <div class="admin-products">
     <div class="admin-page-header">
       <h1>Product Management</h1>
-      <router-link to="/admin/products/add" class="add-product-btn">
-        Add New Product
+      <!-- Use enhanced button style -->
+      <router-link to="/admin/products/add" class="button enhanced-button primary">
+        <font-awesome-icon icon="plus" /> Add New Product
       </router-link>
     </div>
 
-    <!-- Search and filters -->
+    <!-- Search and filters in an admin-panel -->
     <div class="admin-panel">
       <div class="search-filters">
-        <div class="search-box">
+        <div class="search-box filter-group">
+          <label for="admin-product-search">Search</label>
           <input type="text"
+                 id="admin-product-search"
                  v-model="searchQuery"
                  placeholder="Search products..."
-                 @input="debounceSearch" />
+                 @input="debounceSearch"
+                 class="enhanced-input" />
         </div>
         <div class="filters">
-          <select v-model="categoryFilter" @change="filterProducts">
-            <option value="">All Categories</option>
-            <option v-for="category in categories" :key="category" :value="category">
-              {{ category }}
-            </option>
-          </select>
-          <select v-model="statusFilter" @change="filterProducts">
-            <option value="">All Status</option>
-            <option value="true">Enabled</option>
-            <option value="false">Disabled</option>
-          </select>
+          <div class="filter-group">
+            <label for="admin-product-category">Category</label>
+            <select id="admin-product-category" v-model="categoryFilter" @change="filterProducts" class="enhanced-input">
+              <option value="">All Categories</option>
+              <option v-for="category in categories" :key="category" :value="category">
+                {{ category }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="admin-product-status">Status</label>
+            <select id="admin-product-status" v-model="statusFilter" @change="filterProducts" class="enhanced-input">
+              <option value="">All Status</option>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Products table -->
+    <!-- Products table in an admin-panel -->
     <div class="admin-panel">
+      <!-- Add h2 for table section -->
+      <h2>Product List</h2>
+
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
         <p>Loading products...</p>
       </div>
 
-      <div v-else-if="error" class="error-message">
-        {{ error }}
-        <button @click="fetchProducts" class="retry-btn">Try Again</button>
+      <div v-else-if="error" class="error-container">
+        <p>{{ error }}</p>
+        <button @click="fetchProducts" class="button enhanced-button secondary">Try Again</button>
       </div>
 
+      <!-- Use standard data-table class -->
       <table v-else-if="filteredProducts.length > 0" class="data-table">
         <thead>
           <tr>
@@ -53,7 +68,7 @@
             <th>Price</th>
             <th>Category</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th class="actions-header">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -64,7 +79,7 @@
                    :alt="product.name" />
             </td>
             <td>{{ product.name }}</td>
-            <td>${{ product.price.toFixed(2) }}</td>
+            <td>{{ formatCurrency(product.price) }}</td>
             <td>{{ product.category || 'N/A' }}</td>
             <td class="status-cell">
               <div class="toggle-container">
@@ -81,13 +96,13 @@
             </td>
             <td class="actions-cell">
               <button class="action-btn view-btn" @click="viewProduct(product)">
-                View
+                <font-awesome-icon icon="eye" /> View
               </button>
               <button class="action-btn edit-btn" @click="editProduct(product)">
-                Edit
+                <font-awesome-icon icon="edit" /> Edit
               </button>
-              <button class="action-btn delete-btn" @click="deleteProduct(product)">
-                Delete
+              <button class="action-btn delete-btn" @click="confirmDeleteProduct(product)">
+                <font-awesome-icon icon="trash" /> Delete
               </button>
             </td>
           </tr>
@@ -99,8 +114,7 @@
         <p v-if="searchQuery || categoryFilter || statusFilter !== ''">Try adjusting your search or filters.</p>
       </div>
 
-      <!-- Pagination -->
-      <div v-if="totalPages > 1" class="pagination">
+      <nav v-if="totalPages > 1" class="pagination" aria-label="Product table pagination">
         <button :disabled="currentPage === 1"
                 @click="changePage(currentPage - 1)"
                 class="page-btn">
@@ -114,631 +128,617 @@
                 class="page-btn">
           Next
         </button>
-      </div>
+      </nav>
     </div>
 
-    <!-- Product edit modal -->
-    <div v-if="showEditModal" class="modal-overlay">
+    <div v-if="showEditModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-container">
         <div class="modal-header">
           <h2>{{ isNewProduct ? 'Add Product' : 'Edit Product' }}</h2>
-          <button class="close-modal-btn" @click="closeModal">&times;</button>
+          <button class="close-modal-btn" @click="closeModal">×</button>
         </div>
         <div class="modal-body">
           <form @submit.prevent="saveProduct">
-            <!-- Product Number (read-only for existing products) -->
             <div class="form-group" v-if="!isNewProduct">
               <label for="productNumber">Product Number</label>
-              <input type="text"
-                     id="productNumber"
-                     v-model="editingProduct.productNumber"
-                     readonly />
+              <input type="text" id="productNumber" v-model="editingProduct.productNumber" class="enhanced-input" readonly /> {/* Use enhanced-input */}
             </div>
 
             <div class="form-group">
               <label for="productName">Product Name</label>
-              <input type="text"
-                     id="productName"
-                     v-model="editingProduct.name"
-                     required />
+              <input type="text" id="productName" v-model="editingProduct.name" class="enhanced-input" required />
             </div>
 
             <div class="form-group">
               <label for="productPrice">Price ($)</label>
-              <input type="number"
-                     id="productPrice"
-                     v-model="editingProduct.price"
-                     step="0.01"
-                     min="0"
-                     required />
+              <input type="number" id="productPrice" v-model="editingProduct.price" step="0.01" min="0" class="enhanced-input" required />
             </div>
 
             <div class="form-group">
               <label for="productCategory">Category</label>
-              <input type="text"
-                     id="productCategory"
-                     v-model="editingProduct.category" />
+              <input type="text" id="productCategory" v-model="editingProduct.category" class="enhanced-input" />
             </div>
 
             <div class="form-group">
               <label for="productDescription">Description</label>
-              <textarea id="productDescription"
-                        v-model="editingProduct.description"
-                        rows="4"></textarea>
+              <textarea id="productDescription" v-model="editingProduct.description" rows="4" class="enhanced-textarea"></textarea> {/* Use enhanced-textarea */}
             </div>
 
-            <!-- Attributes Section -->
+            {/* Attributes Section */}
             <div class="form-group">
               <label>Attributes</label>
-              <div v-for="(attr, index) in editingProduct.attributes" :key="index" class="attribute-row">
-                <input type="text"
-                       v-model="attr.key"
-                       placeholder="Attribute name"
-                       class="attribute-input">
-                <input type="text"
-                       v-model="attr.value"
-                       placeholder="Attribute value"
-                       class="attribute-input">
-                <button type="button"
-                        @click="removeAttribute(index)"
-                        class="remove-attribute">
-                  ×
-                </button>
+              <div v-for="(attr, index) in editingProductAttributes" :key="index" class="attribute-row">
+                {/* Use computed property */}
+                <input type="text" v-model="attr.key" placeholder="Attribute name" class="attribute-input enhanced-input"> {/* Use enhanced-input */}
+                <input type="text" v-model="attr.value" placeholder="Attribute value" class="attribute-input enhanced-input">
+                <button type="button" @click="removeAttribute(index)" class="remove-attribute-btn">×</button> {/* Specific class */}
               </div>
-              <button type="button"
-                      @click="addAttribute"
-                      class="add-attribute">
-                Add Attribute
-              </button>
+              <button type="button" @click="addAttribute" class="add-attribute-btn button enhanced-button secondary small">Add Attribute</button> {/* Specific class */}
             </div>
 
-            <!-- Images Section -->
+            {/* Images Section */}
             <div class="form-group">
               <label>Product Images:</label>
-              <div v-for="(imageUrl, index) in editingProduct.images" :key="index" class="image-row">
-                <input type="url"
-                       v-model="editingProduct.images[index]"
-                       placeholder="Image URL"
-                       class="image-input"
-                       required>
-                <button type="button"
-                        @click="removeImage(index)"
-                        class="remove-image"
-                        :disabled="editingProduct.images.length === 1">
-                  ×
-                </button>
+              <div v-for="(imageUrl, index) in editingProductImages" :key="index" class="image-row">
+                {/* Use computed property */}
+                <input type="url" v-model="editingProductImages[index]" placeholder="Image URL" class="image-input enhanced-input" required>
+                <button type="button" @click="removeImage(index)" class="remove-image-btn" :disabled="editingProductImages.length <= 1">×</button> {/* Specific class */}
               </div>
-              <button type="button"
-                      @click="addImage"
-                      class="add-image">
-                Add Another Image
-              </button>
+              <button type="button" @click="addImage" class="add-image-btn button enhanced-button secondary small">Add Another Image</button> {/* Specific class */}
               <p class="help-text">First image will be used as the main product image.</p>
             </div>
 
-            <!-- Image Preview -->
-            <div class="image-preview-container" v-if="editingProduct.images.length > 0">
-              <div v-for="(imageUrl, index) in editingProduct.images" :key="index" class="image-preview">
-                <img v-if="imageUrl" :src="imageUrl" :alt="`Product preview ${index + 1}`" class="preview-image">
-                <div v-else class="preview-placeholder">No image</div>
-                <div class="image-number">{{ index === 0 ? 'Main Image' : `Image ${index + 1}` }}</div>
+            {/* Image Preview */}
+            <div class="image-preview-container" v-if="editingProductImages.length > 0 && editingProductImages[0]">
+              <label>Image Previews:</label> {/* Add label */}
+              <div class="previews-wrapper">
+                {/* Add wrapper */}
+                <div v-for="(imageUrl, index) in editingProductImages" :key="index" class="image-preview">
+                  <img v-if="imageUrl" :src="imageUrl" :alt="`Product preview ${index + 1}`" class="preview-image">
+                  <div v-else class="preview-placeholder">No image URL</div>
+                  <div class="image-number">{{ index === 0 ? 'Main' : `#${index + 1}` }}</div>
+                </div>
               </div>
             </div>
 
-            <div class="form-actions">
-              <button type="button" class="cancel-btn" @click="closeModal">Cancel</button>
-              <button type="submit" class="save-btn">Save Product</button>
-            </div>
+            {/* Actions moved to modal-actions */}
           </form>
+        </div>
+        {/* Modal Actions Footer */}
+        <div class="modal-actions">
+          <button type="button" class="button enhanced-button secondary" @click="closeModal">Cancel</button>
+          <button type="button" class="button enhanced-button primary" @click="saveProduct" :disabled="isSaving">
+            {/* Trigger save, disable */}
+            {{ isSaving ? 'Saving...' : (isNewProduct ? 'Add Product' : 'Save Changes') }}
+          </button>
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>Confirm Delete</h2>
+          <button class="close-modal-btn" @click="closeDeleteModal">×</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete product <strong>"{{ productToDelete?.name }}"</strong>?</p>
+          <p v-if="productToDelete?.productNumber">Product #: {{ productToDelete.productNumber }}</p>
+          <p class="warning-text">This action cannot be undone.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button enhanced-button secondary" @click="closeDeleteModal">Cancel</button>
+          <button type="button" class="button enhanced-button danger" @click="deleteProductConfirmed" :disabled="isDeleting">
+            {/* Use danger style */}
+            {{ isDeleting ? 'Deleting...' : 'Delete Product' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
-<script>
-  export default {
-    name: 'AdminProducts',
-    data() {
-      return {
-        products: [],
-        filteredProducts: [],
-        loading: true,
-        error: null,
-        searchQuery: '',
-        categoryFilter: '',
-        statusFilter: '',
-        categories: [],
-        currentPage: 1,
-        itemsPerPage: 10,
-        totalItems: 0,
-        totalPages: 0,
-        searchTimeout: null,
-        showEditModal: false,
-        isNewProduct: false,
-        editingProduct: {
-          name: '',
-          price: 0,
-          category: '',
-          description: '',
-          enabled: true,
-          productNumber: '',
-          images: [''],
-          attributes: []
-        },
-        originalProduct: null,
-        placeholderImage: 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20200%20200%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1a3f85814e0%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A10pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1a3f85814e0%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23EEEEEE%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2274.5%22%20y%3D%22104.8%22%3ENo%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E'
-      };
-    },
-    created() {
-      this.fetchProducts();
-    },
-    methods: {
-      async fetchProducts() {
-        this.loading = true;
-        this.error = null;
+<script setup>
+  // Import necessary Composition API functions and components
+  import { ref, onMounted, computed, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import { debounce } from 'lodash-es';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import { faPlus, faEye, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 
-        try {
-          const response = await fetch('/api/products/admin', {
-            credentials: 'include'
-          });
+  // Add icons needed specifically for this component
+  library.add(faPlus, faEye, faEdit, faTrash);
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
+  // --- State ---
+  const products = ref([]);
+  const filteredProducts = ref([]);
+  const loading = ref(true);
+  const error = ref(null);
+  const searchQuery = ref('');
+  const categoryFilter = ref('');
+  const statusFilter = ref(''); // Store as string 'true'/'false' or ''
+  const categories = ref([]);
+  const currentPage = ref(1);
+  const itemsPerPage = ref(10); // Adjust as needed
+  const totalItems = ref(0);
+  const totalPages = ref(1);
+  const searchTimeout = ref(null); // Use ref for timeout ID
 
-          this.products = await response.json();
+  const showEditModal = ref(false);
+  const isNewProduct = ref(false);
+  const isSaving = ref(false);
+  const isDeleting = ref(false); // Added deleting state
 
-          // For any products without a productNumber, add a temporary one
-          this.products.forEach((product, index) => {
-            if (!product.productNumber) {
-              // This is for display only, until backend implementation is complete
-              product.productNumber = `PRD-TEMP-${('0000' + (index + 1)).slice(-4)}`;
-            }
-          });
+  const editingProduct = ref({ /* Initial empty state */ });
+  const editingProductAttributes = ref([]); // Separate ref for attributes array
+  const editingProductImages = ref(['']); // Separate ref for images array
 
-          // Extract unique categories
-          const categorySet = new Set();
-          this.products.forEach(product => {
-            if (product.category) {
-              categorySet.add(product.category);
-            }
-          });
-          this.categories = Array.from(categorySet).sort();
+  const showDeleteModal = ref(false);
+  const productToDelete = ref(null);
 
-          this.filterProducts();
-        } catch (error) {
-          console.error('Error fetching products:', error);
-          this.error = 'Failed to load products. Please try again.';
-        } finally {
-          this.loading = false;
-        }
-      },
+  const placeholderImage = `https://via.placeholder.com/60x60/cccccc/FFFFFF?text=N/A`;
 
-      filterProducts() {
-        // Apply filters
-        let filtered = [...this.products];
+  const route = useRoute();
+  const router = useRouter();
 
-        // Apply search query
-        if (this.searchQuery) {
-          const query = this.searchQuery.toLowerCase();
-          filtered = filtered.filter(product =>
-            product.name.toLowerCase().includes(query) ||
-            (product.description && product.description.toLowerCase().includes(query)) ||
-            (product.productNumber && product.productNumber.toLowerCase().includes(query))
-          );
-        }
+  // --- Computed Properties ---
+  const hasActiveFilters = computed(() => {
+    return searchQuery.value || categoryFilter.value || statusFilter.value !== '';
+  });
 
-        // Apply category filter
-        if (this.categoryFilter) {
-          filtered = filtered.filter(product =>
-            product.category === this.categoryFilter
-          );
-        }
+  // --- Methods ---
+  const formatCurrency = (amount) => {
+    return `$${Number(amount).toFixed(2)}`;
+  };
 
-        // Apply status filter
-        if (this.statusFilter !== '') {
-          const enabled = this.statusFilter === 'true';
-          filtered = filtered.filter(product => product.enabled === enabled);
-        }
+  const fetchProducts = async () => {
+    loading.value = true;
+    error.value = null;
 
-        // Update pagination
-        this.totalItems = filtered.length;
-        this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
-        this.currentPage = 1; // Reset to first page when filters change
+    try {
+      // Fetch ALL products for admin view
+      const response = await fetch('/api/products/admin?limit=1000', { // Fetch more if needed, or implement server-side pagination/filtering
+        credentials: 'include'
+      });
 
-        // Apply pagination
-        const start = (this.currentPage - 1) * this.itemsPerPage;
-        const end = start + this.itemsPerPage;
-        this.filteredProducts = filtered.slice(start, end);
-      },
-
-      debounceSearch() {
-        // Debounce search to avoid too many filter operations
-        clearTimeout(this.searchTimeout);
-        this.searchTimeout = setTimeout(() => {
-          this.filterProducts();
-        }, 300);
-      },
-
-      changePage(page) {
-        this.currentPage = page;
-        // Apply pagination
-        const start = (this.currentPage - 1) * this.itemsPerPage;
-        const end = start + this.itemsPerPage;
-
-        // Apply pagination to filtered products
-        let filtered = [...this.products];
-
-        // Reapply all filters
-        if (this.searchQuery) {
-          const query = this.searchQuery.toLowerCase();
-          filtered = filtered.filter(product =>
-            product.name.toLowerCase().includes(query) ||
-            (product.description && product.description.toLowerCase().includes(query)) ||
-            (product.productNumber && product.productNumber.toLowerCase().includes(query))
-          );
-        }
-
-        if (this.categoryFilter) {
-          filtered = filtered.filter(product =>
-            product.category === this.categoryFilter
-          );
-        }
-
-        if (this.statusFilter !== '') {
-          const enabled = this.statusFilter === 'true';
-          filtered = filtered.filter(product => product.enabled === enabled);
-        }
-
-        this.filteredProducts = filtered.slice(start, end);
-      },
-
-      viewProduct(product) {
-        // Navigate to product detail page in the main shop (for viewing)
-        window.open(`/product/${product._id}`, '_blank');
-      },
-
-      editProduct(product) {
-        this.isNewProduct = false;
-        this.originalProduct = { ...product };
-
-        // Convert attributes object to array format for editing
-        const attributesArray = [];
-        if (product.attributes) {
-          for (const [key, value] of Object.entries(product.attributes)) {
-            attributesArray.push({
-              key,
-              value: Array.isArray(value) ? value.join(', ') : value
-            });
-          }
-        }
-
-        this.editingProduct = {
-          ...product,
-          // Ensure productNumber is displayed correctly or marked as auto-generated if missing
-          productNumber: product.productNumber || 'Auto-generated',
-          // Ensure images is always an array
-          images: product.images && product.images.length ? [...product.images] : [''],
-          // Convert attributes object to array format for editing
-          attributes: attributesArray.length > 0 ? attributesArray : []
-        };
-
-        this.showEditModal = true;
-      },
-
-      closeModal() {
-        this.showEditModal = false;
-        this.editingProduct = {
-          name: '',
-          price: 0,
-          category: '',
-          description: '',
-          enabled: true,
-          productNumber: '',
-          images: [''],
-          attributes: []
-        };
-      },
-
-      // Attribute management methods
-      addAttribute() {
-        this.editingProduct.attributes.push({ key: '', value: '' });
-      },
-
-      removeAttribute(index) {
-        this.editingProduct.attributes.splice(index, 1);
-      },
-
-      // Image management methods
-      addImage() {
-        this.editingProduct.images.push('');
-      },
-
-      removeImage(index) {
-        // Keep at least one image
-        if (this.editingProduct.images.length > 1) {
-          this.editingProduct.images.splice(index, 1);
-        }
-      },
-
-      async saveProduct() {
-        try {
-          // Add validation for attribute keys
-          const uniqueKeys = new Set();
-          for (const attr of this.editingProduct.attributes) {
-            if (attr.key && attr.value) {
-              if (uniqueKeys.has(attr.key)) {
-                alert(`Duplicate attribute key: ${attr.key}`);
-                return;
-              }
-              uniqueKeys.add(attr.key);
-            }
-          }
-
-          // Filter out empty image URLs
-          const validImages = this.editingProduct.images.filter(url => url.trim() !== '');
-          if (validImages.length === 0) {
-            alert('Please provide at least one image URL');
-            return;
-          }
-
-          // Convert attributes array to object before sending
-          const attributes = this.editingProduct.attributes.reduce((acc, attr) => {
-            if (attr.key && attr.value) {
-              acc[attr.key] = attr.value.split(',').map(v => v.trim());
-            }
-            return acc;
-          }, {});
-
-          const url = this.isNewProduct
-            ? '/api/products'
-            : `/api/products/${this.editingProduct._id}`;
-
-          const method = this.isNewProduct ? 'POST' : 'PUT';
-
-          // If creating a new product, don't send productNumber (will be auto-generated)
-          const productData = {
-            ...this.editingProduct,
-            images: validImages,
-            attributes,
-            price: parseFloat(this.editingProduct.price)
-          };
-
-          if (this.isNewProduct || productData.productNumber === 'Auto-generated') {
-            delete productData.productNumber;
-          }
-
-          // Show loading state
-          this.loading = true;
-
-          const response = await fetch(url, {
-            method: method,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify(productData)
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to save product');
-          }
-
-          const savedProduct = await response.json();
-
-          // Update local data
-          if (this.isNewProduct) {
-            this.products.push(savedProduct);
-          } else {
-            // Find and update the product in the array
-            const index = this.products.findIndex(p => p._id === savedProduct._id);
-            if (index !== -1) {
-              this.products[index] = savedProduct;
-            }
-          }
-
-          // Re-apply filters to update the view
-          this.filterProducts();
-
-          // Show success message
-          alert(this.isNewProduct ? 'Product created successfully' : 'Product updated successfully');
-
-          // Close the modal
-          this.closeModal();
-
-        } catch (error) {
-          console.error('Error saving product:', error);
-          alert(error.message || 'Error saving product');
-        } finally {
-          this.loading = false;
-        }
-      },
-
-      async toggleProductStatus(product) {
-        try {
-          const response = await fetch(`/api/products/${product._id}/status`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({ enabled: !product.enabled })
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to update product status');
-          }
-
-          // Update product in local array
-          product.enabled = !product.enabled;
-
-        } catch (error) {
-          console.error('Error toggling product status:', error);
-          alert('Error updating product status');
-        }
-      },
-
-      async deleteProduct(product) {
-        if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
-          return;
-        }
-
-        try {
-          const response = await fetch(`/api/products/${product._id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to delete product');
-          }
-
-          // Remove product from arrays
-          this.products = this.products.filter(p => p._id !== product._id);
-          this.filterProducts(); // Re-apply filters
-
-          // Show success message
-          alert('Product deleted successfully');
-        } catch (error) {
-          console.error('Error deleting product:', error);
-          alert('Error deleting product');
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
+      const data = await response.json(); // Assuming the endpoint returns { products, totalProducts, ... }
+      products.value = data.products || []; // Use the raw product list
+
+      // Extract unique categories
+      const categorySet = new Set(products.value.map(p => p.category).filter(Boolean));
+      categories.value = Array.from(categorySet).sort();
+
+      // Apply frontend filtering and pagination
+      applyFiltersAndPagination();
+
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      error.value = 'Failed to load products. Please try again.';
+      products.value = []; // Clear products on error
+      applyFiltersAndPagination(); // Update display even on error
+    } finally {
+      loading.value = false;
     }
   };
+
+  const applyFiltersAndPagination = () => {
+    let tempFiltered = [...products.value];
+
+    // Apply search query
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase();
+      tempFiltered = tempFiltered.filter(product =>
+        product.name.toLowerCase().includes(query) ||
+        (product.description && product.description.toLowerCase().includes(query)) ||
+        (product.productNumber && product.productNumber.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply category filter
+    if (categoryFilter.value) {
+      tempFiltered = tempFiltered.filter(product => product.category === categoryFilter.value);
+    }
+
+    // Apply status filter
+    if (statusFilter.value !== '') {
+      const enabled = statusFilter.value === 'true';
+      tempFiltered = tempFiltered.filter(product => product.enabled === enabled);
+    }
+
+    // Update pagination totals based on filtered results
+    totalItems.value = tempFiltered.length;
+    totalPages.value = Math.ceil(totalItems.value / itemsPerPage.value);
+
+    // Clamp currentPage if it's out of bounds after filtering
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value || 1;
+    }
+
+    // Apply pagination to the filtered list
+    const start = (currentPage.value - 1) * itemsPerPage.value;
+    const end = start + itemsPerPage.value;
+    filteredProducts.value = tempFiltered.slice(start, end);
+
+    // Update URL (optional, but good practice)
+    updateURLQueryParams();
+  };
+
+
+  const debounceSearch = debounce(() => {
+    currentPage.value = 1; // Reset page on search
+    applyFiltersAndPagination();
+  }, 500); // Adjust delay as needed
+
+  const filterProducts = () => {
+    currentPage.value = 1; // Reset page on filter change
+    applyFiltersAndPagination();
+  };
+
+  const changePage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
+      applyFiltersAndPagination(); // Re-apply pagination slice
+    }
+  };
+
+  const updateURLQueryParams = () => {
+    const query = {};
+    if (currentPage.value > 1) query.page = currentPage.value;
+    if (searchQuery.value) query.q = searchQuery.value;
+    if (categoryFilter.value) query.category = categoryFilter.value;
+    if (statusFilter.value !== '') query.status = statusFilter.value;
+
+    // Only push if the query is different from the current route query
+    if (JSON.stringify(query) !== JSON.stringify(route.query)) {
+      router.replace({ query }).catch(err => {
+        if (err.name !== 'NavigationDuplicated') { console.error('Router replace error:', err); }
+      });
+    }
+  };
+
+
+  const viewProduct = (product) => {
+    router.push({ name: 'product-detail', params: { id: product._id } });
+  };
+
+  const editProduct = (product) => {
+    isNewProduct.value = false;
+
+    // Deep copy the product to avoid modifying the original object directly
+    const productCopy = JSON.parse(JSON.stringify(product));
+
+    // Convert attributes object to array format for the form
+    const attributesArray = [];
+    if (productCopy.attributes && typeof productCopy.attributes === 'object') {
+      for (const [key, value] of Object.entries(productCopy.attributes)) {
+        attributesArray.push({
+          key,
+          // Join array values with comma for editing, handle non-arrays
+          value: Array.isArray(value) ? value.join(', ') : String(value)
+        });
+      }
+    }
+
+    editingProductAttributes.value = attributesArray; // Set the separate ref
+    editingProductImages.value = productCopy.images && productCopy.images.length ? [...productCopy.images] : ['']; // Set the separate ref
+
+
+    // Set the main editingProduct ref, EXCLUDING attributes and images initially
+    editingProduct.value = {
+      ...productCopy,
+      attributes: undefined, // Exclude from main ref
+      images: undefined // Exclude from main ref
+    };
+
+    showEditModal.value = true;
+  };
+
+
+  const closeModal = () => {
+    showEditModal.value = false;
+    editingProduct.value = {}; // Reset
+    editingProductAttributes.value = [];
+    editingProductImages.value = [''];
+  };
+
+  // Attribute management methods for the modal
+  const addAttribute = () => {
+    editingProductAttributes.value.push({ key: '', value: '' });
+  };
+
+  const removeAttribute = (index) => {
+    editingProductAttributes.value.splice(index, 1);
+  };
+
+  // Image management methods for the modal
+  const addImage = () => {
+    editingProductImages.value.push('');
+  };
+
+  const removeImage = (index) => {
+    if (editingProductImages.value.length > 1) {
+      editingProductImages.value.splice(index, 1);
+    } else {
+      // Optionally clear the last input instead of removing it
+      editingProductImages.value[0] = '';
+    }
+  };
+
+  const saveProduct = async () => {
+    isSaving.value = true;
+    error.value = null; // Clear previous errors
+
+    try {
+      // 1. Validate Attributes (ensure unique keys, non-empty pairs)
+      const uniqueKeys = new Set();
+      const validAttributes = {};
+      for (const attr of editingProductAttributes.value) {
+        const key = attr.key.trim();
+        const value = attr.value.trim();
+        if (key && value) {
+          if (uniqueKeys.has(key)) {
+            throw new Error(`Duplicate attribute key found: "${key}"`);
+          }
+          uniqueKeys.add(key);
+          // Store as array of strings (split by comma)
+          validAttributes[key] = value.split(',').map(v => v.trim()).filter(Boolean);
+        } else if (key || value) {
+          // Allow empty pairs to be ignored, but throw error if only one part is filled? Your choice.
+          console.warn(`Ignoring attribute pair with empty key or value:`, attr);
+        }
+      }
+
+      // 2. Validate Images (ensure at least one non-empty URL)
+      const validImages = editingProductImages.value.filter(url => url && url.trim() !== '');
+      if (validImages.length === 0) {
+        throw new Error('Please provide at least one valid image URL.');
+      }
+
+      // 3. Prepare Payload (exclude internal/computed properties)
+      const payload = {
+        name: editingProduct.value.name,
+        price: parseFloat(editingProduct.value.price) || 0,
+        description: editingProduct.value.description,
+        category: editingProduct.value.category,
+        enabled: editingProduct.value.enabled, // Include enabled status
+        images: validImages,
+        attributes: validAttributes,
+        // Include productNumber only when editing an existing product (if needed by backend PUT)
+        // productNumber: isNewProduct.value ? undefined : editingProduct.value.productNumber,
+        // Exclude _id, createdAt, updatedAt, __v etc. if present in editingProduct.value
+        _id: undefined,
+        createdAt: undefined,
+        updatedAt: undefined,
+        __v: undefined
+      };
+
+      // Remove potentially undefined properties if backend is strict
+      Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
+
+      // 4. Determine API Endpoint and Method
+      const url = isNewProduct.value
+        ? '/api/products'
+        : `/api/products/${editingProduct.value._id}`;
+      const method = isNewProduct.value ? 'POST' : 'PUT';
+
+      // 5. Make API Call
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})); // Try to parse error
+        throw new Error(errorData.message || `Failed to save product. Status: ${response.status}`);
+      }
+
+      // 6. Handle Success
+      await fetchProducts(); // Refetch the entire list to ensure consistency
+      closeModal();
+      alert(`Product ${isNewProduct.value ? 'added' : 'updated'} successfully!`);
+
+    } catch (err) {
+      console.error('Error saving product:', err);
+      error.value = err.message || 'An unexpected error occurred while saving.';
+      alert(`Error: ${error.value}`); // Show error to user
+    } finally {
+      isSaving.value = false;
+    }
+  };
+
+
+  const toggleProductStatus = async (product) => {
+    const originalStatus = product.enabled;
+    // Optimistic UI update
+    product.enabled = !product.enabled;
+
+    try {
+      const response = await fetch(`/api/products/${product._id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled: product.enabled })
+      });
+
+      if (!response.ok) {
+        // Revert UI on failure
+        product.enabled = originalStatus;
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update product status');
+      }
+      // Success: UI already updated
+      // Optional: Show success message
+      applyFiltersAndPagination(); // Re-apply filters if status filter is active
+
+    } catch (err) {
+      // Revert UI on failure (already done if response not ok)
+      product.enabled = originalStatus;
+      console.error('Error toggling product status:', err);
+      alert(err.message || 'Error updating product status');
+    }
+  };
+
+  const confirmDeleteProduct = (product) => {
+    productToDelete.value = product;
+    showDeleteModal.value = true;
+  };
+
+  const closeDeleteModal = () => {
+    showDeleteModal.value = false;
+    productToDelete.value = null;
+  };
+
+  const deleteProductConfirmed = async () => {
+    if (!productToDelete.value) return;
+    isDeleting.value = true;
+    error.value = null;
+
+    try {
+      const response = await fetch(`/api/products/${productToDelete.value._id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete product');
+      }
+
+      // Remove product from the main list *before* filtering
+      products.value = products.value.filter(p => p._id !== productToDelete.value._id);
+
+      // Re-apply filters and pagination
+      applyFiltersAndPagination();
+
+      alert(`Product "${productToDelete.value.name}" deleted successfully.`);
+      closeDeleteModal();
+
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      error.value = err.message || 'An error occurred while deleting the product.';
+      alert(`Error: ${error.value}`);
+    } finally {
+      isDeleting.value = false;
+    }
+  };
+
+  // --- Lifecycle Hooks ---
+  onMounted(() => {
+    fetchProducts();
+  });
+
+  // Watchers for reactive filtering
+  watch(categoryFilter, () => filterProducts());
+  watch(statusFilter, () => filterProducts());
+
 </script>
 
 <style scoped>
+  /* Reuse styles from main.css where possible using variables */
+  /* Add specific layout styles */
+
   .admin-products {
     width: 100%;
   }
 
-  .admin-page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
+  /* Use styles from main.css */
+  /* .admin-page-header { } */
+  /* .admin-page-header h1 { } */
+  /* .button.enhanced-button.primary { } */
 
-    .admin-page-header h1 {
-      margin: 0;
-      font-size: 1.8rem;
-      color: #333;
-    }
-
-  .add-product-btn {
-    background-color: #5D5CDE;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.2s;
-  }
-
-    .add-product-btn:hover {
-      background-color: #4a49b8;
-    }
-
-  .admin-panel {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    margin-bottom: 1.5rem;
-    padding: 1.5rem;
-  }
+  /* Use styles from main.css */
+  /* .admin-panel { } */
 
   .search-filters {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+    align-items: flex-end; /* Align bottom edges */
   }
 
   .search-box {
-    flex: 1;
-    min-width: 250px;
+    flex: 1 1 300px; /* Allow shrinking but prefer 300px */
   }
-
-    .search-box input {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
 
   .filters {
     display: flex;
     gap: 1rem;
+    flex: 1 1 auto; /* Allow filter selects to take space */
+    flex-wrap: wrap;
   }
 
-    .filters select {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-      min-width: 150px;
-    }
-
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 180px; /* Each filter group takes space */
   }
 
-    .data-table th,
-    .data-table td {
-      padding: 1rem;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
+  .search-box input,
+  .filters select {
+    /* Use enhanced-input styles from main.css */
+  }
 
-    .data-table th {
-      font-weight: 600;
-      color: #333;
-    }
+  /* Use styles from main.css */
+  /* .data-table { } */
+  /* .data-table th, .data-table td { } */
+  /* .data-table th { } */
 
   .image-cell {
-    width: 80px;
+    width: 70px; /* Fixed width */
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
   }
 
     .image-cell img {
-      width: 60px;
-      height: 60px;
+      width: 50px;
+      height: 50px;
       object-fit: cover;
-      border-radius: 4px;
+      border-radius: var(--border-radius-small);
+      border: 1px solid var(--border-color);
+      display: block; /* Remove extra space below image */
     }
 
   .status-cell {
-    min-width: 150px;
+    min-width: 160px; /* Ensure space for toggle + label */
   }
 
   .toggle-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.75rem; /* Space between toggle and label */
   }
 
   .toggle-label {
     font-size: 0.8rem;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
   .status-active {
-    color: #388e3c;
+    color: #388e3c; /* Green */
   }
 
   .status-inactive {
-    color: #d32f2f;
+    color: #d32f2f; /* Red */
   }
 
   /* Toggle Switch Styles */
   .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 40px;
-    height: 20px;
+    width: 40px; /* Width of the switch */
+    height: 20px; /* Height of the switch */
+    flex-shrink: 0; /* Prevent shrinking */
   }
 
     .toggle-switch input {
@@ -754,17 +754,17 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: #ccc; /* Default off color */
     transition: .4s;
-    border-radius: 20px;
+    border-radius: 20px; /* Fully rounded */
   }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 16px;
+      height: 16px; /* Size of the knob */
       width: 16px;
-      left: 2px;
+      left: 2px; /* Padding from edge */
       bottom: 2px;
       background-color: white;
       transition: .4s;
@@ -772,450 +772,196 @@
     }
 
   input:checked + .toggle-slider {
-    background-color: #5D5CDE;
+    background-color: var(--primary); /* Active color */
   }
 
   input:focus + .toggle-slider {
-    box-shadow: 0 0 1px #5D5CDE;
+    box-shadow: 0 0 1px var(--primary);
   }
 
   input:checked + .toggle-slider:before {
-    transform: translateX(20px);
+    transform: translateX(20px); /* Move knob across */
   }
 
   .actions-cell {
-    display: flex;
-    gap: 0.5rem;
+    white-space: nowrap; /* Prevent buttons wrapping */
+    text-align: right; /* Align actions to the right */
   }
 
-  .action-btn {
-    padding: 0.4rem 0.6rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: 500;
+  .actions-header {
+    text-align: right; /* Align header right */
   }
 
-  .view-btn {
-    background-color: #e3f2fd;
-    color: #1976d2;
-  }
+  /* Use styles from main.css */
+  /* .action-btn { } */
+  /* .view-btn { } */
+  /* .edit-btn { } */
+  /* .delete-btn { } */
 
-  .edit-btn {
-    background-color: #e8f5e9;
-    color: #388e3c;
-  }
+  /* Use styles from main.css */
+  /* .pagination { } */
+  /* .page-btn { } */
+  /* .page-info { } */
 
-  .delete-btn {
-    background-color: #ffebee;
-    color: #d32f2f;
-  }
+  /* Use styles from main.css */
+  /* .loading-container { } */
+  /* .loading-spinner { } */
+  /* .error-container { } */ /* Updated class name */
+  /* .retry-btn { Use enhanced-button secondary } */
+  /* .empty-state { } */
 
-  .pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 1.5rem;
-    gap: 1rem;
-  }
-
-  .page-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    background-color: white;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-    .page-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-  .page-info {
-    font-size: 0.9rem;
-    color: #666;
-  }
-
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem;
-  }
-
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #5D5CDE;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-  }
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-
-  .error-message {
-    padding: 1.5rem;
-    background-color: #ffebee;
-    color: #d32f2f;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  .retry-btn {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #5D5CDE;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #666;
-  }
-
-  /* Modal styles */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal-container {
-    background-color: white;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid #eee;
-  }
-
-    .modal-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      color: #333;
-    }
-
-  .close-modal-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-  }
-
-  .form-group {
-    margin-bottom: 1.5rem;
-  }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #333;
-    }
-
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-
-      .form-group input[readonly] {
-        background-color: #f5f5f5;
-        cursor: not-allowed;
-      }
+  /* Modal styles - Use styles from main.css */
+  /* .modal-overlay { } */
+  /* .modal-container { } */
+  /* .modal-header { } */
+  /* .modal-header h2 { } */
+  /* .close-modal-btn { } */
+  /* .modal-body { } */
+  /* .modal-body .warning-text { } */
+  /* .modal-actions { } */
+  /* .modal-actions .cancel-btn { Use enhanced-button secondary } */
+  /* .modal-actions .save-btn { Use enhanced-button primary } */
+  /* .modal-actions .delete-btn { Use enhanced-button danger } */
 
   /* Attribute and image management styles */
   .attribute-row, .image-row {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     align-items: center;
   }
 
   .attribute-input, .image-input {
-    flex: 1;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
+    flex: 1; /* Inputs take available space */
   }
 
-  .remove-attribute, .remove-image, .add-attribute, .add-image {
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 0.5rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .remove-attribute, .remove-image {
-    color: #d32f2f;
-    font-size: 1.2rem;
+  .remove-attribute-btn, .remove-image-btn {
+    background-color: transparent;
+    border: 1px solid var(--secondary);
+    color: var(--secondary);
+    border-radius: 50%; /* Circle */
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
     line-height: 1;
-    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
   }
 
-  .add-attribute, .add-image {
-    color: #5D5CDE;
+    .remove-attribute-btn:hover, .remove-image-btn:hover {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+
+  .add-attribute-btn, .add-image-btn {
     margin-top: 0.5rem;
-    width: 100%;
+    /* Use enhanced-button secondary small styles */
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    width: auto; /* Don't force full width */
+    display: inline-flex;
   }
 
   .help-text {
     font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.25rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    display: block;
   }
 
   .image-preview-container {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+  }
+
+    .image-preview-container label { /* Added label */
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--text-dark);
+    }
+
+  .previews-wrapper { /* Added wrapper */
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: 0.8rem;
   }
 
   .image-preview {
-    width: 100px;
+    width: 80px; /* Smaller preview */
     text-align: center;
   }
 
   .preview-image {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #ddd;
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--border-color);
   }
 
   .preview-placeholder {
-    width: 100px;
-    height: 100px;
-    background-color: #f0f0f0;
-    border: 1px dashed #ddd;
-    border-radius: 4px;
+    width: 80px;
+    height: 80px;
+    background-color: var(--bg-off-light);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius-small);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #666;
-    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.2;
   }
 
   .image-number {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     margin-top: 0.25rem;
-    color: #666;
+    color: var(--text-muted);
   }
 
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-  }
-
-  .cancel-btn,
-  .save-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .cancel-btn {
-    background-color: white;
-    border: 1px solid #ddd;
-    color: #666;
-  }
-
-  .save-btn {
-    background-color: #5D5CDE;
-    border: none;
-    color: white;
-  }
-
-  /* Dark mode support */
-  @media (prefers-color-scheme: dark) {
-    .admin-page-header h1 {
-      color: #e2e8f0;
-    }
-
-    .admin-panel {
-      background-color: #2d3748;
-    }
-
-    .search-box input,
-    .filters select,
-    .form-group input,
-    .form-group textarea,
-    .form-group select,
-    .attribute-input,
-    .image-input {
-      background-color: #1a202c;
-      border-color: #4a5568;
-      color: #e2e8f0;
-    }
-
-      .form-group input[readonly] {
-        background-color: #2d3748;
-      }
-
-    .data-table th {
-      color: #e2e8f0;
-    }
-
-    .data-table th,
-    .data-table td {
-      border-bottom-color: #4a5568;
-    }
-
-    .toggle-slider {
-      background-color: #4a5568;
-    }
-
-      .toggle-slider:before {
-        background-color: #a0aec0;
-      }
-
-    input:checked + .toggle-slider:before {
-      background-color: white;
-    }
-
-    .page-btn {
-      background-color: #2d3748;
-      border-color: #4a5568;
-      color: #e2e8f0;
-    }
-
-    .page-info {
-      color: #a0aec0;
-    }
-
-    .empty-state {
-      color: #a0aec0;
-    }
-
-    .modal-container {
-      background-color: #2d3748;
-    }
-
-    .modal-header {
-      border-bottom-color: #4a5568;
-    }
-
-      .modal-header h2 {
-        color: #e2e8f0;
-      }
-
-    .close-modal-btn {
-      color: #a0aec0;
-    }
-
-    .form-group label {
-      color: #e2e8f0;
-    }
-
-    .cancel-btn {
-      background-color: #2d3748;
-      border-color: #4a5568;
-      color: #e2e8f0;
-    }
-
-    .help-text,
-    .image-number {
-      color: #a0aec0;
-    }
-
-    .preview-placeholder {
-      background-color: #2d3748;
-      border-color: #4a5568;
-      color: #a0aec0;
-    }
-
-    .add-attribute,
-    .add-image,
-    .remove-attribute,
-    .remove-image {
-      background-color: #2d3748;
-      border-color: #4a5568;
-    }
-
-    /* Adjust action buttons for dark mode */
-    .view-btn {
-      background-color: rgba(25, 118, 210, 0.2);
-    }
-
-    .edit-btn {
-      background-color: rgba(56, 142, 60, 0.2);
-    }
-
-    .delete-btn {
-      background-color: rgba(211, 47, 47, 0.2);
-    }
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .search-filters {
-      flex-direction: column;
-    }
-
-    .actions-cell {
-      flex-wrap: wrap;
-    }
-
-    .action-btn {
-      flex: 1;
-      text-align: center;
-    }
-
+  /* Responsive Adjustments */
+  @media (max-width: 992px) {
     .data-table {
       display: block;
       overflow-x: auto;
+      white-space: nowrap;
     }
 
-    .image-preview-container {
-      justify-content: center;
+      .data-table th, .data-table td {
+        white-space: nowrap;
+      }
+
+    .actions-cell {
+      min-width: 200px;
+    }
+    /* Ensure actions fit */
+  }
+
+  @media (max-width: 768px) {
+    .search-filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filters {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .filter-group {
+      flex-basis: auto;
+    }
+
+    .admin-page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
     }
   }
 </style>

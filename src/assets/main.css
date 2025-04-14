@@ -3937,3 +3937,508 @@ body.lightbox-open {
         margin-bottom: 2rem;
     }
 
+
+/* ======================================== */
+/* ===        ADMIN PANEL STYLES        === */
+/* ======================================== */
+
+/* === General Admin Styles === */
+.admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+    .admin-page-header h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        font-family: var(--font-body); /* Use body font for admin headers */
+    }
+
+/* Shared panel style */
+.admin-panel {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+}
+
+    .admin-panel h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+        color: var(--text-dark);
+        font-weight: 600;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .admin-panel h3 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+/* Consistent Form Group Styling */
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+    }
+
+    /* Enhanced inputs/selects */
+    .form-group .enhanced-input,
+    .form-group .enhanced-textarea,
+    .form-group select,
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="number"],
+    .form-group input[type="url"],
+    .form-group input[type="date"],
+    .form-group input[type="datetime-local"],
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        font-size: 0.95rem;
+        font-family: var(--font-body);
+        background-color: var(--white);
+        transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+        box-sizing: border-box;
+        height: auto; /* Reset height for textarea */
+    }
+
+        .form-group .enhanced-input:not(textarea),
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"],
+        .form-group input[type="number"],
+        .form-group input[type="url"],
+        .form-group input[type="date"],
+        .form-group input[type="datetime-local"] {
+            height: 44px; /* Consistent height for inputs/selects */
+        }
+
+    .form-group select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.9rem center;
+        background-size: 16px 12px;
+        padding-right: 2.8rem;
+        cursor: pointer;
+    }
+
+        .form-group .enhanced-input:focus,
+        .form-group .enhanced-textarea:focus,
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--glow-primary);
+            background-color: var(--white);
+        }
+
+/* Consistent Button Styles */
+.button.enhanced-button { /* Use this class for primary/secondary actions */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    border-radius: var(--border-radius-small);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    will-change: transform, box-shadow, background-color, color, border-color;
+    padding: 0.7rem 1.4rem;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+    .button.enhanced-button:not(:disabled):hover, .button.enhanced-button:not(:disabled):focus-visible {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-soft);
+        outline: none;
+    }
+
+    .button.enhanced-button:not(:disabled):active {
+        transform: translateY(0px) scale(0.98);
+        box-shadow: none;
+    }
+
+    .button.enhanced-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    /* Primary */
+    .button.enhanced-button.primary {
+        background-color: var(--primary);
+        color: var(--white);
+        border-color: var(--primary);
+    }
+
+        .button.enhanced-button.primary:not(:disabled):hover, .button.enhanced-button.primary:not(:disabled):focus-visible {
+            background-color: #3dbbab; /* Slightly darker primary */
+            border-color: #3dbbab;
+            box-shadow: 0 6px 15px rgba(78, 205, 196, 0.2);
+        }
+    /* Secondary */
+    .button.enhanced-button.secondary {
+        background-color: var(--white);
+        color: var(--text-muted);
+        border-color: var(--border-color);
+    }
+
+        .button.enhanced-button.secondary:not(:disabled):hover, .button.enhanced-button.secondary:not(:disabled):focus-visible {
+            background-color: var(--bg-off-light);
+            border-color: var(--text-muted);
+            color: var(--text-dark);
+        }
+    /* Danger */
+    .button.enhanced-button.danger {
+        background-color: var(--white);
+        color: var(--secondary);
+        border-color: var(--secondary);
+    }
+
+        .button.enhanced-button.danger:not(:disabled):hover, .button.enhanced-button.danger:not(:disabled):focus-visible {
+            background-color: var(--secondary);
+            color: var(--white);
+            border-color: var(--secondary);
+            box-shadow: 0 6px 15px rgba(255, 107, 107, 0.2);
+        }
+
+/* Data Table Styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+
+    .data-table th,
+    .data-table td {
+        padding: 0.9rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .data-table th {
+        font-weight: 600;
+        color: var(--text-muted);
+        background-color: var(--bg-off-light);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+
+    .data-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+        background-color: var(--bg-off-light);
+    }
+
+/* Status / Role Badges */
+.status-badge, .role-badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid transparent;
+    line-height: 1.2;
+}
+    /* Status Colors (same as OrdersView) */
+    .status-badge.status-pending, .status-timeline__dot.status-badge--pending {
+        background-color: #fff3cd;
+        color: #664d03;
+        border-color: #ffe69c;
+    }
+
+    .status-badge.status-shipped, .status-timeline__dot.status-badge--shipped {
+        background-color: #cfe2ff;
+        color: #0a58ca;
+        border-color: #b6d4fe;
+    }
+
+    .status-badge.status-delivered, .status-timeline__dot.status-badge--delivered {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border-color: #badbcc;
+    }
+
+    .status-badge.status-cancelled, .status-timeline__dot.status-badge--cancelled {
+        background-color: #f8d7da;
+        color: #842029;
+        border-color: #f5c2c7;
+    }
+
+    .status-badge.status-hold, .status-timeline__dot.status-badge--hold {
+        background-color: #e2e3e5;
+        color: #41464b;
+        border-color: #d3d6d8;
+    }
+    /* Role Colors */
+    .role-badge.role-admin {
+        background-color: var(--accent-light, #fff8e1);
+        color: var(--accent-dark, #f57c00);
+        border-color: var(--accent);
+    }
+
+    .role-badge.role-user {
+        background-color: var(--bg-off-light);
+        color: var(--text-muted);
+        border-color: var(--border-color);
+    }
+
+/* Action Buttons (in tables/cards) */
+.action-btn {
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+    margin: 0 0.2rem;
+}
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .action-btn.view-btn {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .action-btn.edit-btn {
+        background-color: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .action-btn.delete-btn {
+        background-color: #ffebee;
+        color: #d32f2f;
+    }
+
+    .action-btn.promote-btn {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .action-btn.revoke-btn {
+        background-color: #fff8e1;
+        color: #f57c00;
+    }
+
+/* Loading / Error / Empty States */
+.loading-container, .error-container, .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--bg-off-light);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: admin-spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes admin-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error-container {
+    background-color: #fff9f9;
+    color: var(--secondary);
+    border: 1px solid var(--secondary);
+    border-radius: var(--border-radius-small);
+}
+
+.empty-state {
+    background-color: var(--bg-light);
+    border-radius: var(--border-radius-small);
+}
+
+    .error-container h3, .empty-state h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .error-container p, .empty-state p {
+        margin-bottom: 1rem;
+    }
+
+.error-container .retry-btn {
+    margin-top: 1rem;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+    gap: 0.5rem;
+}
+
+    .pagination .page-btn, .pagination .page-link {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background-color: var(--white);
+        border-radius: var(--border-radius-small);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        color: var(--text-muted);
+    }
+
+        .pagination .page-btn:disabled, .pagination .page-link:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-btn:not(:disabled):hover, .pagination .page-link:not(:disabled):hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        color: var(--white);
+        cursor: default;
+    }
+
+    .pagination .page-info {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin: 0 0.5rem;
+    }
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100; /* Higher than admin header */
+    padding: 1rem;
+}
+
+.modal-container {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-strong);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-off-light);
+}
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+        color: var(--text-dark);
+    }
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.2rem;
+    line-height: 1;
+}
+
+    .close-modal-btn:hover {
+        color: var(--secondary);
+    }
+
+.modal-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+
+    .modal-body .warning-text {
+        color: var(--secondary);
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+    }
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-off-light);
+}
+
+    .modal-actions .cancel-btn {
+        background-color: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+    }
+
+        .modal-actions .cancel-btn:hover {
+            background-color: var(--bg-light);
+            border-color: var(--text-muted);
+            color: var(--text-dark);
+        }
+
+    .modal-actions .save-btn { /* Uses primary button styles */
+    }
+
+    .modal-actions .delete-btn { /* Uses danger button styles */
+    }
