@@ -1,10 +1,10 @@
 <template>
   <div class="review-form">
-    <h4>Write Your Review</h4>
+    <h4>{{ t('reviewForm.title') }}</h4>
     <form @submit.prevent="submitReview">
       <!-- Rating Input -->
       <div class="form-group rating-group">
-        <label>Your Rating*</label>
+        <label>{{ t('reviewForm.ratingLabel') }}</label>
         <div class="star-input">
           <button type="button"
                   v-for="n in 5"
@@ -14,7 +14,7 @@
                   :class="{ filled: n <= formData.rating, hovered: n <= hoverRating }"
                   @mouseover="hoverRating = n"
                   @mouseleave="hoverRating = 0"
-                  :aria-label="`Rate ${n} out of 5 stars`">
+                  :aria-label="t('reviewForm.rateAriaLabel', { n: n })">
             <font-awesome-icon :icon="n <= (hoverRating || formData.rating) ? ['fas', 'star'] : ['far', 'star']" />
           </button>
         </div>
@@ -22,86 +22,90 @@
 
       <!-- Title Input (Optional) -->
       <div class="form-group">
-        <label for="review-title">Review Title (Optional)</label>
-        <input type="text" id="review-title" v-model="formData.title" placeholder="Summarize your experience" maxlength="100" class="enhanced-input">
+        <label for="review-title">{{ t('reviewForm.reviewTitleLabel') }}</label>
+        <input type="text" id="review-title" v-model="formData.title" :placeholder="t('reviewForm.reviewTitlePlaceholder')" maxlength="100" class="enhanced-input">
       </div>
 
       <!-- Body Textarea -->
       <div class="form-group">
-        <label for="review-body">Your Review*</label>
-        <textarea id="review-body" v-model="formData.body" required placeholder="Tell us more about your thoughts..." rows="5" maxlength="2000" class="enhanced-textarea"></textarea>
+        <label for="review-body">{{ t('reviewForm.reviewBodyLabel') }}</label>
+        <textarea id="review-body" v-model="formData.body" required :placeholder="t('reviewForm.reviewBodyPlaceholder')" rows="5" maxlength="2000" class="enhanced-textarea"></textarea>
       </div>
 
       <!-- Error Message -->
-      <p v-if="error" class="error-message">{{ error }}</p>
-
+      <p v-if="error" class="error-message">{{ error }}</p> <!-- Keep backend/validation error as is, but translate the static parts -->
       <!-- Submit Button -->
       <button type="submit" class="button enhanced-button primary" :disabled="isSubmitting || formData.rating === 0">
         <font-awesome-icon icon="spinner" spin v-if="isSubmitting" />
-        {{ isSubmitting ? 'Submitting...' : 'Submit Review' }}
+        {{ isSubmitting ? t('reviewForm.submittingButton') : t('reviewForm.submitButton') }}
       </button>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import reviewService from '@/services/reviewService';
-// FontAwesomeIcon imported globally
+  import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import reviewService from '@/services/reviewService';
+  // FontAwesomeIcon imported globally
 
-const props = defineProps({
-  productId: {
-    type: String,
-    required: true
-  }
-});
+  // --- Get translation function ---
+  const { t } = useI18n();
 
-const emit = defineEmits(['review-submitted']);
+  const props = defineProps({
+    productId: {
+      type: String,
+      required: true
+    }
+  });
 
-const formData = ref({
-  rating: 0,
-  title: '',
-  body: ''
-});
-const hoverRating = ref(0); // For interactive star hover effect
-const isSubmitting = ref(false);
-const error = ref(null);
+  const emit = defineEmits(['review-submitted']);
 
-const setRating = (rating) => {
-  formData.value.rating = rating;
-};
+  const formData = ref({
+    rating: 0,
+    title: '',
+    body: ''
+  });
+  const hoverRating = ref(0);
+  const isSubmitting = ref(false);
+  const error = ref(null); // This will hold backend errors or translated frontend errors
 
-const submitReview = async () => {
-  if (formData.value.rating === 0 || !formData.value.body) {
-    error.value = "Please provide a rating and review text.";
-    return;
-  }
-  isSubmitting.value = true;
-  error.value = null;
+  const setRating = (rating) => {
+    formData.value.rating = rating;
+  };
 
-  try {
-    const newReview = await reviewService.submitReview(props.productId, {
-      rating: formData.value.rating,
-      title: formData.value.title || undefined, // Don't send empty title
-      body: formData.value.body
-    });
-    console.log("Review submitted:", newReview);
-    emit('review-submitted', newReview); // Notify parent
+  const submitReview = async () => {
+    // Use translated validation error
+    if (formData.value.rating === 0 || !formData.value.body) {
+      error.value = t('reviewForm.validationError');
+      return;
+    }
+    isSubmitting.value = true;
+    error.value = null;
 
-    // Reset form
-    formData.value = { rating: 0, title: '', body: '' };
-    // Optionally show a success message here or rely on parent
+    try {
+      const newReview = await reviewService.submitReview(props.productId, {
+        rating: formData.value.rating,
+        title: formData.value.title || undefined,
+        body: formData.value.body
+      });
+      console.log("Review submitted:", newReview);
+      emit('review-submitted', newReview);
 
-  } catch (err) {
-    console.error("Review submission error:", err);
-    error.value = err.message || "Failed to submit review. Please try again.";
-  } finally {
-    isSubmitting.value = false;
-  }
-};
+      formData.value = { rating: 0, title: '', body: '' };
+
+    } catch (err) {
+      console.error("Review submission error:", err);
+      // Keep specific backend error if available, otherwise use generic translated error
+      error.value = err.message || t('reviewForm.submitError');
+    } finally {
+      isSubmitting.value = false;
+    }
+  };
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   .review-form {
     background-color: var(--bg-off-light);
     padding: 1.5rem;
@@ -162,20 +166,19 @@ const submitReview = async () => {
     background: none;
     border: none;
     padding: 0;
-    font-size: 1.5rem; /* Star size */
-    color: #e0e0e0; /* Default empty star color */
+    font-size: 1.5rem;
+    color: #e0e0e0;
     cursor: pointer;
     transition: color 0.2s ease, transform 0.2s ease;
   }
 
-    .star-button:hover,
-    .star-button.hovered {
-      color: #ffd970; /* Lighter gold on hover */
+    .star-button:hover, .star-button.hovered {
+      color: #ffd970;
       transform: scale(1.1);
     }
 
     .star-button.filled {
-      color: var(--accent); /* Filled star color */
+      color: var(--accent);
     }
 
   .error-message {
@@ -185,10 +188,8 @@ const submitReview = async () => {
   }
 
   .button.primary {
-    /* Styles from main.css */
   }
 
   .button:disabled {
-    /* Styles from main.css */
   }
 </style>

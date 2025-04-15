@@ -5,21 +5,21 @@
       <!-- Loading State -->
       <div v-if="isLoading" key="loading" class="loading-container detail-loading">
         <div class="spinner"></div>
-        <p>Illuminating Product Details...</p>
+        <p>{{ t('productDetail.loading') }}</p>
       </div>
       <!-- Error State -->
       <div v-else-if="errorLoading" key="error" class="message-container error-container detail-error">
         <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon"></font-awesome-icon>
-        <h2>Failed to Load Product</h2>
-        <p>{{ errorLoading }}</p>
-        <router-link to="/products" class="button secondary-button">Back to Products</router-link>
+        <h2>{{ t('productDetail.error.title') }}</h2>
+        <p>{{ errorLoading }}</p> <!-- Keep specific error -->
+        <router-link to="/products" class="button secondary-button">{{ t('productDetail.error.backToProducts') }}</router-link>
       </div>
       <!-- Not Found State -->
       <div v-else-if="!product" key="notfound" class="message-container empty-container detail-notfound">
         <font-awesome-icon icon="box-open" class="message-icon empty-icon"></font-awesome-icon>
-        <h2>Product Not Found</h2>
-        <p>Sorry, we couldn't find the product you were looking for.</p>
-        <router-link to="/products" class="button secondary-button">Back to Products</router-link>
+        <h2>{{ t('productDetail.notFound.title') }}</h2>
+        <p>{{ t('productDetail.notFound.message') }}</p>
+        <router-link to="/products" class="button secondary-button">{{ t('productDetail.error.backToProducts') }}</router-link>
       </div>
       <!-- Product Content -->
       <div v-else key="content" class="product-content-wrapper">
@@ -29,20 +29,22 @@
             <div class="product-gallery">
               <div class="main-image-wrapper clickable-image" @click="openLightbox(currentImageIndex)">
                 <transition :name="transitionName" mode="in-out">
-                  <img :key="selectedImage" :src="selectedImage" :alt="`Image of ${product.name}`" class="main-product-image" loading="eager">
+                  <!-- Alt text remains dynamic -->
+                  <img :key="selectedImage" :src="selectedImage" :alt="t('productDetail.gallery.imageAlt', { name: product.name })" class="main-product-image" loading="eager">
                 </transition>
                 <div v-if="product.images && product.images.length > 1" class="image-count-indicator">
-                  {{ currentImageIndex + 1 }} / {{ product.images.length }}
+                  {{ t('productDetail.gallery.imageCountIndicator', { current: currentImageIndex + 1, total: product.images.length }) }}
                 </div>
-                <button v-if="product.images && product.images.length > 1" @click.stop="prevImage" class="gallery-nav-button prev" aria-label="Previous image">
+                <button v-if="product.images && product.images.length > 1" @click.stop="prevImage" class="gallery-nav-button prev" :aria-label="t('productDetail.gallery.previousAriaLabel')">
                   <font-awesome-icon icon="chevron-left"></font-awesome-icon>
                 </button>
-                <button v-if="product.images && product.images.length > 1" @click.stop="nextImage" class="gallery-nav-button next" aria-label="Next image">
+                <button v-if="product.images && product.images.length > 1" @click.stop="nextImage" class="gallery-nav-button next" :aria-label="t('productDetail.gallery.nextAriaLabel')">
                   <font-awesome-icon icon="chevron-right"></font-awesome-icon>
                 </button>
               </div>
               <div v-if="product.images && product.images.length > 1" class="thumbnail-strip">
-                <button v-for="(image, index) in product.images" :key="index" @click="handleThumbnailClick(index)" class="thumbnail-button" :class="{ active: index === currentImageIndex }" :aria-label="`View image ${index + 1}`">
+                <!-- Alt text remains dynamic, aria-label is translated -->
+                <button v-for="(image, index) in product.images" :key="index" @click="handleThumbnailClick(index)" class="thumbnail-button" :class="{ active: index === currentImageIndex }" :aria-label="t('productDetail.gallery.thumbnailAriaLabel', { index: index + 1 })">
                   <img :src="image" :alt="`${product.name} thumbnail ${index + 1}`" class="thumbnail-image" loading="lazy">
                 </button>
               </div>
@@ -54,12 +56,13 @@
               <div class="product-meta-info">
                 <span v-if="product.category" class="product-category-badge">
                   <router-link :to="`/products?category=${product.category.toLowerCase().replace(' ', '-')}`" class="category-link">
-                    {{ product.category }}
+                    {{ product.category }} <!-- Category name from data -->
                   </router-link>
                 </span>
               </div>
-              <h1 class="product-title">{{ product.name }}</h1>
+              <h1 class="product-title">{{ product.name }}</h1> <!-- Name from data -->
               <div class="key-specs">
+                <!-- Specs content from data -->
                 <div v-if="product.attributes?.dimensions" class="spec-item">
                   <font-awesome-icon icon="ruler-combined" class="spec-icon"></font-awesome-icon>
                   <span>{{ product.attributes.dimensions }}</span>
@@ -77,18 +80,20 @@
               <div class="product-detail__rating-summary">
                 <RatingSummary :average-rating="product.averageRating" :review-count="product.reviewCount" />
                 <a v-if="product.reviewCount > 0" href="#reviews-section" class="scroll-to-reviews">
-                  ({{ product.reviewCount }} review{{ product.reviewCount !== 1 ? 's' : '' }})
+                  <!-- Use translated count from RatingSummary component's translation -->
+                  {{ t('ratingSummary.reviewCount', product.reviewCount) }}
                 </a>
               </div>
-              <p class="product-price">{{ formatCurrency(product.price) }}</p>
+              <p class="product-price">{{ formatCurrency(product.price) }}</p> <!-- Price from data -->
               <!-- Attributes Selection -->
               <div v-if="product.attributes && Object.keys(filteredAttributes).length > 0" class="product-attributes">
                 <div v-for="(options, key) in filteredAttributes" :key="key" class="attribute-group">
                   <label :for="`attr-${key}`" class="attribute-label">
-                    {{ capitalize(key) }}:
-                    <span v-if="isSwatchAttribute(key)" class="selected-swatch-label">{{ selectedAttributes[key] }}</span>
+                    {{ capitalize(key) }}: <!-- Attribute key from data, capitalize helps -->
+                    <span v-if="isSwatchAttribute(key)" class="selected-swatch-label">{{ selectedAttributes[key] }}</span> <!-- Selected value from data -->
                   </label>
                   <div v-if="isSwatchAttribute(key)" class="swatch-options">
+                    <!-- Options from data -->
                     <button v-for="option in options" :key="option" class="swatch-button" :class="{ active: selectedAttributes[key] === option, color: key.toLowerCase() === 'color' || key.toLowerCase() === 'colour', texture: isTextureAttribute(key) }" :style="getSwatchStyle(key, option)" @click="selectAttribute(key, option)" :aria-pressed="selectedAttributes[key] === option" :title="option">
                       <span v-if="!(key.toLowerCase() === 'color' || key.toLowerCase() === 'colour')">{{ option }}</span>
                       <span v-if="selectedAttributes[key] === option" class="swatch-checkmark">
@@ -97,6 +102,7 @@
                     </button>
                   </div>
                   <select v-else :id="`attr-${key}`" v-model="selectedAttributes[key]" class="attribute-select">
+                    <!-- Options from data -->
                     <option v-for="option in options" :key="option" :value="option">{{ option }}</option>
                   </select>
                 </div>
@@ -104,53 +110,57 @@
               <!-- Quantity & Add to Cart -->
               <div class="product-actions">
                 <div class="quantity-selector">
-                  <label for="quantity" class="sr-only">Quantity</label>
+                  <label for="quantity" class="sr-only">{{ t('productDetail.actions.quantityAriaLabel') }}</label>
                   <div class="quantity-controls">
-                    <button @click="decreaseQuantity" :disabled="quantity <= 1" class="quantity-btn minus" aria-label="Decrease quantity">-</button>
-                    <input type="number" id="quantity" v-model.number="quantity" min="1" @change="validateQuantity" class="quantity-input" aria-label="Product quantity">
-                    <button @click="increaseQuantity" class="quantity-btn plus" aria-label="Increase quantity">+</button>
+                    <button @click="decreaseQuantity" :disabled="quantity <= 1" class="quantity-btn minus" :aria-label="t('productDetail.actions.decreaseQuantityAriaLabel')">-</button>
+                    <input type="number" id="quantity" v-model.number="quantity" min="1" @change="validateQuantity" class="quantity-input" :aria-label="t('productDetail.actions.quantityAriaLabel')">
+                    <button @click="increaseQuantity" class="quantity-btn plus" :aria-label="t('productDetail.actions.increaseQuantityAriaLabel')">+</button>
                   </div>
                 </div>
                 <button @click="handleAddToCart" class="cta-button detail-add-btn" :class="{ 'added': justAdded, 'pulse-add': shouldPulseAddBtn }" :disabled="justAdded">
                   <span class="btn-icon-wrapper">
                     <font-awesome-icon :icon="justAdded ? 'check' : 'shopping-cart'"></font-awesome-icon>
                   </span>
-                  <span class="btn-text">{{ justAdded ? 'Added!' : 'Add to Cart' }}</span>
+                  <span class="btn-text">{{ t(justAdded ? 'productDetail.actions.addedToCart' : 'productDetail.actions.addToCart') }}</span>
                 </button>
               </div>
               <hr class="info-divider subtle">
               <!-- Description -->
               <div class="product-description-wrapper">
-                <h4 class="section-subheading">Description</h4>
-                <div class="product-description" v-html="product.description || 'No description available.'"></div>
+                <h4 class="section-subheading">{{ t('productDetail.info.descriptionTitle') }}</h4>
+                <!-- Use translated fallback -->
+                <div class="product-description" v-html="product.description || t('productDetail.info.noDescription')"></div>
               </div>
               <!-- Additional Info -->
               <div class="additional-info">
                 <details class="info-accordion" open>
-                  <summary>Specifications</summary>
+                  <summary>{{ t('productDetail.info.specificationsTitle') }}</summary>
                   <div class="info-content">
                     <ul>
+                      <!-- Specs key/value from data -->
                       <li v-for="(value, key) in filteredSpecifications" :key="key">
                         <strong>{{ capitalize(key) }}:</strong>
                         <span>{{ value }}</span>
                       </li>
                       <li v-if="Object.keys(filteredSpecifications).length === 0">
-                        <span>No specific details provided.</span>
+                        <span>{{ t('productDetail.info.noSpecifications') }}</span>
                       </li>
                     </ul>
                   </div>
                 </details>
                 <details class="info-accordion">
-                  <summary>Shipping & Returns</summary>
+                  <summary>{{ t('productDetail.info.shippingReturnsTitle') }}</summary>
                   <div class="info-content">
-                    <p>Standard delivery within 5-7 business days. Expedited options available at checkout.</p>
-                    <p>We offer a 30-day return policy for items in original condition. See our full <router-link to="/shipping-policy">Shipping & Returns Policy</router-link> for details.</p>
+                    <!-- Use v-html for these paragraphs as they contain links -->
+                    <p v-html="t('productDetail.info.shippingInfo')"></p>
+                    <p v-html="t('productDetail.info.returnsInfo')"></p>
                   </div>
                 </details>
                 <details class="info-accordion">
-                  <summary>Care Instructions</summary>
+                  <summary>{{ t('productDetail.info.careInstructionsTitle') }}</summary>
                   <div class="info-content">
-                    <p>{{ product.attributes?.care || 'Please refer to the product tag for specific care instructions. Generally, wipe clean with a soft, damp cloth. Avoid harsh chemicals.' }}</p>
+                    <!-- Use translated fallback -->
+                    <p>{{ product.attributes?.care || t('productDetail.info.defaultCare') }}</p>
                   </div>
                 </details>
               </div>
@@ -160,7 +170,7 @@
 
         <!-- Reviews Section -->
         <div id="reviews-section" class="product-reviews-section">
-          <h2 class="reviews-section__title">Customer Reviews & Ratings</h2>
+          <h2 class="reviews-section__title">{{ t('productDetail.reviews.title') }}</h2>
           <!-- Rating Breakdown -->
           <RatingDistribution v-if="product.reviewCount > 0" :distribution="product.ratingDistribution" />
           <!-- Write Review Section -->
@@ -168,13 +178,14 @@
             <!-- Show form/button if logged in -->
             <div v-if="isUserLoggedIn">
               <button v-if="!showReviewForm" @click="showReviewForm = true" class="button enhanced-button primary">
-                Write a Review
+                {{ t('productDetail.reviews.writeReviewButton') }}
               </button>
               <ReviewForm v-else :product-id="product.id" @review-submitted="handleReviewSubmitted" @cancel="showReviewForm = false" />
             </div>
             <!-- Show login prompt if not logged in -->
-            <div v-else class="login-prompt">
-              <p>Please <button class="link-button" @click="requestLogin">log in</button> to write a review.</p>
+            <!-- Use v-html for the prompt, handle click on the wrapper -->
+            <div v-else class="login-prompt" @click.capture="handleLoginPromptClick">
+              <p v-html="t('productDetail.actions.loginToReview')"></p>
             </div>
           </div>
           <!-- Review List -->
@@ -188,7 +199,7 @@
                    :images="product.images"
                    :start-index="lightboxStartIndex"
                    :is-active="isLightboxActive"
-                   :image-alt-text="`${product?.name || 'Product'} image`"
+                   :image-alt-text="t('productDetail.gallery.imageAlt', { name: product?.name || 'Product' })"
                    @close="closeLightbox" />
   </main>
 </template>
@@ -196,12 +207,13 @@
 <script setup>
   import { ref, onMounted, watch, computed, nextTick, inject } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
   import { library } from '@fortawesome/fontawesome-svg-core';
   import {
     faShoppingCart, faExclamationTriangle, faBoxOpen, faChevronLeft,
     faChevronRight, faCheck, faRulerCombined, faGem, faSeedling,
-    faStar, faStarHalfAlt, faWeightHanging // Ensure faWeightHanging is imported
+    faStar, faStarHalfAlt, faWeightHanging
   } from '@fortawesome/free-solid-svg-icons';
   import LightboxModal from '../components/ui/LightboxModal.vue';
   import RatingSummary from '../components/ui/RatingSummary.vue';
@@ -212,19 +224,20 @@
   library.add(
     faShoppingCart, faExclamationTriangle, faBoxOpen, faChevronLeft,
     faChevronRight, faCheck, faRulerCombined, faGem, faSeedling,
-    faStar, faStarHalfAlt, faWeightHanging // Ensure faWeightHanging is added
+    faStar, faStarHalfAlt, faWeightHanging
   );
+
+  // --- Get translation function ---
+  const { t } = useI18n();
 
   const route = useRoute();
   const router = useRouter();
   const emit = defineEmits(['add-to-cart']);
 
   // --- Inject App Context ---
-  // Use a default object structure matching what you provide in App.vue
-  // Ensure the default refs match the types expected (ref(boolean), ref(object|null))
   const appContext = inject('appContext', {
-    isLoggedIn: ref(false), // Default to a ref(false)
-    currentUser: ref(null), // Default to a ref(null)
+    isLoggedIn: ref(false),
+    currentUser: ref(null),
     openAccountPopup: () => console.warn('openAccountPopup called before appContext provided')
   });
 
@@ -246,50 +259,40 @@
 
   // --- Computed ---
   const productId = computed(() => route.params.id);
+  const userId = computed(() => appContext?.currentUser?.value?._id ?? null);
+  const isUserLoggedIn = computed(() => appContext?.isLoggedIn?.value ?? false);
 
-  // --- CORRECTED: Access the .value of the injected refs ---
-  const userId = computed(() => appContext?.currentUser?.value?._id ?? null); // Access .value
-  const isUserLoggedIn = computed(() => appContext?.isLoggedIn?.value ?? false); // Access .value
-
-  // ... (filteredAttributes, filteredSpecifications computed properties remain the same) ...
-   const filteredAttributes = computed(() => {
-        if (!product.value?.attributes) return {};
-        const excludedKeys = ['dimensions', 'material', 'care', 'weight']; // Add 'weight' if needed
-        const attributes = {};
-        for (const key in product.value.attributes) {
-             // Check if the key exists directly on the object
-            if (Object.prototype.hasOwnProperty.call(product.value.attributes, key)) {
-                const lowerKey = key.toLowerCase();
-                const value = product.value.attributes[key];
-                // Check if it's not excluded and is an array (common pattern for options)
-                if (!excludedKeys.includes(lowerKey) && Array.isArray(value) && value.length > 0) {
-                    attributes[key] = value;
-                }
-                 // Optionally handle non-array attributes if needed for display elsewhere
-                 // else if (!excludedKeys.includes(lowerKey)) {
-                 //    console.log(`Attribute '${key}' is not an array or excluded.`);
-                 // }
-            }
+  const filteredAttributes = computed(() => {
+    if (!product.value?.attributes) return {};
+    const excludedKeys = ['dimensions', 'material', 'care', 'weight'];
+    const attributes = {};
+    for (const key in product.value.attributes) {
+      if (Object.prototype.hasOwnProperty.call(product.value.attributes, key)) {
+        const lowerKey = key.toLowerCase();
+        const value = product.value.attributes[key];
+        if (!excludedKeys.includes(lowerKey) && Array.isArray(value) && value.length > 0) {
+          attributes[key] = value;
         }
-        return attributes;
-    });
+      }
+    }
+    return attributes;
+  });
 
-    const filteredSpecifications = computed(() => {
-        if (!product.value?.attributes) return {};
-        const includedKeys = ['dimensions', 'material', 'weight', 'care']; // Add more if needed
-        const specs = {};
-        for (const key in product.value.attributes) {
-            if (Object.prototype.hasOwnProperty.call(product.value.attributes, key)) {
-                const lowerKey = key.toLowerCase();
-                if (includedKeys.includes(lowerKey)) {
-                    const value = product.value.attributes[key];
-                    // Ensure values are presentable, join arrays if needed
-                    specs[key] = Array.isArray(value) ? value.join(', ') : value;
-                }
-            }
+  const filteredSpecifications = computed(() => {
+    if (!product.value?.attributes) return {};
+    const includedKeys = ['dimensions', 'material', 'weight', 'care'];
+    const specs = {};
+    for (const key in product.value.attributes) {
+      if (Object.prototype.hasOwnProperty.call(product.value.attributes, key)) {
+        const lowerKey = key.toLowerCase();
+        if (includedKeys.includes(lowerKey)) {
+          const value = product.value.attributes[key];
+          specs[key] = Array.isArray(value) ? value.join(', ') : value;
         }
-        return specs;
-    });
+      }
+    }
+    return specs;
+  });
 
   // --- Methods ---
   const formatCurrency = (amount) => {
@@ -299,154 +302,158 @@
 
   const capitalize = (s) => {
     if (typeof s !== 'string' || !s) return '';
-    // Improved capitalization for camelCase or snake_case
     const spaced = s.replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ');
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   };
 
-  // ... (fetchProductDetails remains the same, it correctly sets product.value which includes ratings) ...
   const fetchProductDetails = async (id) => {
+    // ... (fetch logic remains the same) ...
     isLoading.value = true; errorLoading.value = null; product.value = null;
     showReviewForm.value = false; selectedAttributes.value = {}; quantity.value = 1;
     currentImageIndex.value = 0; selectedImage.value = ''; isLightboxActive.value = false;
     console.log(`Fetching product details for ID: ${id}`);
     try {
-        const response = await fetch(`/api/products/${id}`);
-        if (!response.ok) {
-            const status = response.status; console.error(`HTTP error! Status: ${status}`);
-            if (status === 404) throw new Error('Product not found.');
-            let errorMessage = `Failed to load product (Status: ${status})`;
-            try { const errorBody = await response.json(); errorMessage = errorBody.message || errorMessage; } catch (e) { /* Ignore */ }
-            throw new Error(errorMessage);
+      const response = await fetch(`/api/products/${id}`);
+      if (!response.ok) {
+        const status = response.status; console.error(`HTTP error! Status: ${status}`);
+        // Use translated error message for not found
+        if (status === 404) throw new Error(t('productDetail.notFound.message'));
+        let errorMessage = `Failed to load product (Status: ${status})`;
+        try { const errorBody = await response.json(); errorMessage = errorBody.message || errorMessage; } catch (e) { /* Ignore */ }
+        throw new Error(errorMessage);
+      }
+      const data = await response.json();
+      console.log("Product data received:", data);
+      if (!data || !data._id) throw new Error('Invalid product data received.');
+
+      product.value = {
+        id: data._id, name: data.name, description: data.description, price: data.price,
+        category: data.category,
+        images: data.images?.length ? data.images : [`https://via.placeholder.com/600?text=${encodeURIComponent(data.name || 'No+Image')}`],
+        attributes: data.attributes || {}, averageRating: data.averageRating || 0,
+        reviewCount: data.reviewCount || 0,
+        ratingDistribution: data.ratingDistribution || { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
+      };
+      console.log("Processed product object:", product.value);
+
+      if (product.value.attributes) {
+        selectedAttributes.value = {};
+        for (const key in filteredAttributes.value) {
+          const options = product.value.attributes[key];
+          if (Array.isArray(options) && options.length > 0) {
+            selectedAttributes.value[key] = options[0];
+          }
         }
-        const data = await response.json();
-        console.log("Product data received:", data);
-        if (!data || !data._id) throw new Error('Invalid product data received.');
+        console.log("Default attributes selected:", selectedAttributes.value);
+      }
 
-        product.value = {
-            id: data._id, name: data.name, description: data.description, price: data.price,
-            category: data.category,
-            images: data.images?.length ? data.images : [`https://via.placeholder.com/600?text=${encodeURIComponent(data.name||'No+Image')}`],
-            attributes: data.attributes || {}, averageRating: data.averageRating || 0,
-            reviewCount: data.reviewCount || 0,
-            ratingDistribution: data.ratingDistribution || { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
-        };
-        console.log("Processed product object:", product.value);
-
-        // Initialize selectedAttributes based on the *filtered* attributes
-        if (product.value.attributes) {
-            selectedAttributes.value = {}; // Reset first
-            for (const key in filteredAttributes.value) { // Iterate over computed property keys
-                const options = product.value.attributes[key]; // Get options from original data
-                if (Array.isArray(options) && options.length > 0) {
-                    selectedAttributes.value[key] = options[0]; // Set default
-                }
-            }
-            console.log("Default attributes selected:", selectedAttributes.value);
-        }
-
-        changeMainImage(0, false);
-        document.title = `${data.name || 'Product'} | AURORA Furnishings`;
-        await nextTick();
-        shouldPulseAddBtn.value = true;
-        setTimeout(() => shouldPulseAddBtn.value = false, 1200);
+      changeMainImage(0, false);
+      // Use translated title if product name exists
+      document.title = `${data.name || t('productDetail.notFound.title')} | ${t('appName')}`;
+      await nextTick();
+      shouldPulseAddBtn.value = true;
+      setTimeout(() => shouldPulseAddBtn.value = false, 1200);
 
     } catch (error) {
-        console.error("Error fetching product details:", error);
-        errorLoading.value = error.message || "An unknown error occurred.";
-        product.value = null;
-        document.title = 'Product Not Found | AURORA Furnishings';
+      console.error("Error fetching product details:", error);
+      errorLoading.value = error.message || t('productDetail.error.title'); // Generic translated fallback
+      product.value = null;
+      document.title = `${t('productDetail.notFound.title')} | ${t('appName')}`;
     } finally {
-        isLoading.value = false;
+      isLoading.value = false;
     }
   };
 
 
   const handleReviewSubmitted = async (newReview) => {
+    // ... (logic remains the same) ...
     console.log("Review submitted successfully, refreshing list and product data...");
     showReviewForm.value = false;
-    // Use optional chaining for safety
     reviewListRef.value?.refreshReviews(1);
-    // Refetch the product data to get updated rating summary and distribution
     await fetchProductDetails(productId.value);
   };
 
   const requestLogin = () => {
-    // Use the injected method
+    // ... (logic remains the same) ...
     appContext?.openAccountPopup?.('login');
-    // Add a check if the method doesn't exist (though it should with provide)
     if (!appContext?.openAccountPopup) {
-        console.warn("App Context or openAccountPopup method not available.");
-        // Optionally redirect or show a generic message
-        // router.push('/login'); // If you have a dedicated login page
+      console.warn("App Context or openAccountPopup method not available.");
     }
   };
 
-  // ... (changeMainImage, next/prev, thumbnail, lightbox, attribute/quantity, addToCart methods remain the same) ...
-    const changeMainImage = (index, openLightboxAfter = false) => {
-        if (!product.value?.images || index < 0 || index >= product.value.images.length) return;
-        transitionName.value = index > currentImageIndex.value ? 'image-slide-next' : 'image-slide-prev';
-        currentImageIndex.value = index;
-        selectedImage.value = product.value.images[index];
-        if (openLightboxAfter) openLightbox(index);
-    };
-    const nextImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value + 1) % product.value.images.length; changeMainImage(newIndex); };
-    const prevImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value - 1 + product.value.images.length) % product.value.images.length; changeMainImage(newIndex); };
-    const handleThumbnailClick = (index) => changeMainImage(index);
-    const openLightbox = (index = 0) => { lightboxStartIndex.value = index; isLightboxActive.value = true; document.body.classList.add('lightbox-open'); };
-    const closeLightbox = () => { isLightboxActive.value = false; document.body.classList.remove('lightbox-open'); };
-    const isSwatchAttribute = (key) => ['color', 'colour', 'material', 'finish', 'wood'].includes(key.toLowerCase());
-    const isTextureAttribute = (key) => ['material', 'finish', 'wood'].includes(key.toLowerCase());
-    const getSwatchStyle = (key, option) => {
-        const k = key.toLowerCase();
-        if (k === 'color' || k === 'colour') {
-        const colors = { black: '#333', white: '#f8f8f8', grey: '#aaa', gray: '#aaa', blue: '#3498db', red: '#e74c3c', green: '#2ecc71', natural: '#f5deb3', oak: '#c19a6b', walnut: '#705446' };
-        return { backgroundColor: colors[option.toLowerCase()] || option };
-        } return {};
-    };
-    const selectAttribute = (key, value) => { selectedAttributes.value[key] = value; };
-    const increaseQuantity = () => { quantity.value = Math.min(99, (quantity.value || 0) + 1); }; // Add upper limit maybe
-    const decreaseQuantity = () => { quantity.value = Math.max(1, (quantity.value || 1) - 1); };
-    const validateQuantity = () => { quantity.value = Math.max(1, Math.min(99, parseInt(quantity.value) || 1)); }; // Clamp between 1 and 99
-    const handleAddToCart = () => {
-        if (!product.value || justAdded.value) return;
-        justAdded.value = true;
-        const attributesToSend = {};
-        for(const key in filteredAttributes.value){ if(selectedAttributes.value[key]){ attributesToSend[key] = selectedAttributes.value[key]; } }
-        emit('add-to-cart', {
-            id: product.value.id,
-            name: product.value.name,
-            price: product.value.price,
-            image: product.value.images[0],
-            quantity: quantity.value,
-            attributes: attributesToSend, // Send selected attributes
-        });
-        setTimeout(() => { justAdded.value = false; }, 1500);
-    };
+  // --- Handle click on the login prompt using v-html ---
+  const handleLoginPromptClick = (event) => {
+    // Check if the click target is the button within the prompt
+    if (event.target.tagName === 'BUTTON' && event.target.classList.contains('link-button')) {
+      requestLogin();
+    }
+  };
+
+  // --- Gallery & Lightbox ---
+  const changeMainImage = (index, openLightboxAfter = false) => {
+    if (!product.value?.images || index < 0 || index >= product.value.images.length) return;
+    transitionName.value = index > currentImageIndex.value ? 'image-slide-next' : 'image-slide-prev';
+    currentImageIndex.value = index;
+    selectedImage.value = product.value.images[index];
+    if (openLightboxAfter) openLightbox(index);
+  };
+  const nextImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value + 1) % product.value.images.length; changeMainImage(newIndex); };
+  const prevImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value - 1 + product.value.images.length) % product.value.images.length; changeMainImage(newIndex); };
+  const handleThumbnailClick = (index) => changeMainImage(index);
+  const openLightbox = (index = 0) => { lightboxStartIndex.value = index; isLightboxActive.value = true; document.body.classList.add('lightbox-open'); };
+  const closeLightbox = () => { isLightboxActive.value = false; document.body.classList.remove('lightbox-open'); };
+
+  // --- Attributes & Quantity ---
+  const isSwatchAttribute = (key) => ['color', 'colour', 'material', 'finish', 'wood'].includes(key.toLowerCase());
+  const isTextureAttribute = (key) => ['material', 'finish', 'wood'].includes(key.toLowerCase());
+  const getSwatchStyle = (key, option) => {
+    const k = key.toLowerCase();
+    if (k === 'color' || k === 'colour') {
+      const colors = { black: '#333', white: '#f8f8f8', grey: '#aaa', gray: '#aaa', blue: '#3498db', red: '#e74c3c', green: '#2ecc71', natural: '#f5deb3', oak: '#c19a6b', walnut: '#705446' };
+      return { backgroundColor: colors[option.toLowerCase()] || option };
+    } return {};
+  };
+  const selectAttribute = (key, value) => { selectedAttributes.value[key] = value; };
+  const increaseQuantity = () => { quantity.value = Math.min(99, (quantity.value || 0) + 1); };
+  const decreaseQuantity = () => { quantity.value = Math.max(1, (quantity.value || 1) - 1); };
+  const validateQuantity = () => { quantity.value = Math.max(1, Math.min(99, parseInt(quantity.value) || 1)); };
+
+  // --- Add to Cart ---
+  const handleAddToCart = () => {
+    if (!product.value || justAdded.value) return;
+    justAdded.value = true;
+    const attributesToSend = {};
+    for (const key in filteredAttributes.value) { if (selectedAttributes.value[key]) { attributesToSend[key] = selectedAttributes.value[key]; } }
+    emit('add-to-cart', {
+      id: product.value.id,
+      name: product.value.name,
+      price: product.value.price,
+      image: product.value.images[0],
+      quantity: quantity.value,
+      attributes: attributesToSend,
+    });
+    setTimeout(() => { justAdded.value = false; }, 1500);
+  };
 
   // --- Lifecycle & Watchers ---
   onMounted(() => {
-      console.log("ProductDetailView Mounted. Injected isLoggedIn:", isUserLoggedIn.value); // Log injected state
-      fetchProductDetails(productId.value);
+    // ... (remains the same) ...
+    console.log("ProductDetailView Mounted. Injected isLoggedIn:", isUserLoggedIn.value);
+    fetchProductDetails(productId.value);
   });
   watch(productId, (newId) => { if (newId) fetchProductDetails(newId); });
   watch(route, () => { if (isLightboxActive.value) closeLightbox(); });
-  // Watch the injected reactive ref for changes
   watch(() => appContext?.isLoggedIn?.value, (newLoginState) => {
-      console.log("ProductDetailView detected login state change:", newLoginState);
-      // You might re-evaluate computed properties or perform actions if needed
+    // ... (remains the same) ...
+    console.log("ProductDetailView detected login state change:", newLoginState);
   });
 
 </script>
 
 <style scoped>
-  /* Only include styles specific to ProductDetailView layout and reviews section */
-
+  /* Styles remain the same */
   .product-detail-page {
     padding-bottom: 6rem;
-  }
-
-  .product-content-wrapper {
   }
 
   .product-detail-layout {
@@ -458,7 +465,6 @@
     padding: 0 4%;
   }
 
-  /* --- Rating Summary layout --- */
   .product-detail__rating-summary {
     display: flex;
     align-items: center;
@@ -475,20 +481,18 @@
     font-weight: 600;
     border-bottom: 1px solid transparent;
     transition: border-color var(--transition-fast);
-    margin-left: 0.2em; /* Small space after stars */
+    margin-left: 0.2em;
   }
 
     .scroll-to-reviews:hover {
       border-bottom-color: var(--primary);
     }
 
-  /* --- Reviews Section Layout --- */
   .product-reviews-section {
-    max-width: 1300px; /* Match layout width */
+    max-width: 1300px;
     margin: 3rem auto 0;
     padding: 2rem 4%;
     border-top: 1px solid var(--border-color);
-    /* Removed grid-column span as it's outside the main layout grid now */
   }
 
   .reviews-section__title {
@@ -505,7 +509,7 @@
     background-color: var(--white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    max-width: 800px; /* Constrain form width */
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -539,7 +543,6 @@
     color: var(--text-muted);
   }
 
-  /* Responsive adjustments */
   @media (min-width: 768px) {
     .product-detail-layout {
       grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
@@ -576,7 +579,6 @@
     }
   }
 
-  /* Keep Loading/Error/Not Found styles */
   .loading-container, .message-container {
     min-height: 60vh;
     display: flex;
@@ -632,7 +634,6 @@
     margin-top: 1rem;
   }
 
-  /* Keep Inherited Styles Note & Placeholders */
   .spec-icon {
     color: var(--primary);
     width: 14px;
@@ -646,8 +647,16 @@
     padding: 0.75rem 0;
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
-
+  /* Added flex styles */
+  .spec-item {
+    display: flex;
+    align-items: center;
+  }
+  /* Added */
   .info-divider.subtle {
     border: none;
     height: 1px;
@@ -685,6 +694,70 @@
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
   }
+
+  .info-accordion {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+  }
+
+    .info-accordion summary {
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0.8rem 0;
+      list-style: none; /* Remove default marker */
+      position: relative;
+      padding-right: 1.5rem; /* Space for custom marker */
+    }
+
+      .info-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      /* Hide default marker */
+      .info-accordion summary::after {
+        content: '+';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.4rem;
+        color: var(--primary);
+        transition: transform 0.2s ease;
+      }
+
+    .info-accordion[open] summary::after {
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .info-accordion .info-content {
+      padding: 0 0 1rem 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+      .info-accordion .info-content ul {
+        list-style: disc;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0 0 0;
+      }
+
+      .info-accordion .info-content li {
+        margin-bottom: 0.4rem;
+      }
+
+      .info-accordion .info-content strong {
+        color: var(--text-dark);
+        margin-right: 0.3em;
+      }
+
+      .info-accordion .info-content a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+        .info-accordion .info-content a:hover {
+          text-decoration: underline;
+        }
 
   .sr-only {
     position: absolute;
@@ -729,8 +802,7 @@
       color: var(--white);
       border-color: var(--primary);
     }
-
-  /* Ensure all other gallery/info/actions styles from previous version are present */
+  /* --- Gallery --- */
   .product-gallery-container {
     position: sticky;
     top: calc(var(--header-height) + 1.5rem);
@@ -946,7 +1018,7 @@
     object-fit: cover;
     border-radius: calc(var(--border-radius-small) - 2px);
   }
-
+  /* --- Info & Actions --- */
   .product-info-container {
     padding-top: 0;
   }

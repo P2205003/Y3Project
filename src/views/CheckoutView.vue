@@ -1,10 +1,9 @@
-// src/views/CheckoutView.vue
 <template>
   <main class="checkout-page">
     <!-- Page Header -->
     <section class="page-header enhanced-page-header checkout-view__header">
-      <h1>Checkout</h1>
-      <p>Review your order and provide shipping details.</p>
+      <h1>{{ t('checkout.pageTitle') }}</h1>
+      <p>{{ t('checkout.pageSubtitle') }}</p>
     </section>
 
     <!-- Main Content Area -->
@@ -13,29 +12,29 @@
         <!-- Loading State -->
         <div v-if="loading" key="loading" class="loading-container checkout-view__loading">
           <div class="spinner"></div>
-          <p>Preparing your checkout...</p>
+          <p>{{ t('checkout.loading') }}</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="loadError" key="error" class="message-container error-container checkout-view__error">
           <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon" />
-          <h2>Checkout Unavailable</h2>
-          <p>{{ loadError }}</p>
-          <router-link to="/products" class="button enhanced-button secondary">Back to Products</router-link>
+          <h2>{{ t('checkout.error.title') }}</h2>
+          <p>{{ loadError }}</p> <!-- Keep raw error message -->
+          <router-link to="/products" class="button enhanced-button secondary">{{ t('checkout.error.backToProducts') }}</router-link>
         </div>
 
         <!-- Success State -->
         <div v-else-if="orderComplete" key="success" class="message-container success-container checkout-view__success">
           <font-awesome-icon icon="check-circle" class="message-icon success-icon" />
-          <h2>Order Placed Successfully!</h2>
-          <p>Your order number is: <strong class="order-number">#{{ orderNumber }}</strong></p>
-          <p>Thank you for your purchase. We'll process your order shortly.</p>
+          <h2>{{ t('checkout.success.title') }}</h2>
+          <p>{{ t('checkout.success.orderNumberLabel') }} <strong class="order-number">#{{ orderNumber }}</strong></p>
+          <p>{{ t('checkout.success.thankYouMessage') }}</p>
           <div class="checkout-view__success-actions">
             <router-link :to="{ name: 'orders-history' }" class="button enhanced-button primary">
-              View My Orders
+              {{ t('checkout.success.viewMyOrdersButton') }}
             </router-link>
             <router-link to="/products" class="button enhanced-button secondary">
-              Continue Shopping
+              {{ t('checkout.success.continueShoppingButton') }}
             </router-link>
           </div>
         </div>
@@ -48,20 +47,20 @@
             <!-- Shipping Address Card -->
             <div class="order-card checkout-view__shipping-card">
               <div class="order-card__header">
-                <h3>Shipping Information</h3>
+                <h3>{{ t('checkout.shipping.title') }}</h3>
               </div>
               <form @submit.prevent="placeOrder" id="checkout-form">
                 <div class="order-card__body">
                   <div class="form-group">
-                    <label for="shippingAddress">Full Shipping Address</label>
+                    <label for="shippingAddress">{{ t('checkout.shipping.addressLabel') }}</label>
                     <textarea id="shippingAddress"
                               class="enhanced-textarea"
                               v-model="shippingAddress"
                               rows="4"
                               required
-                              placeholder="Enter your street address, city, state, and zip code"
+                              :placeholder="t('checkout.shipping.addressPlaceholder')"
                               aria-describedby="shipping-address-hint"></textarea>
-                    <p id="shipping-address-hint" class="form-text">Please provide the complete address for delivery.</p>
+                    <p id="shipping-address-hint" class="form-text">{{ t('checkout.shipping.addressHint') }}</p>
                   </div>
                 </div>
                 <!-- Form submit is handled by the button in the summary column -->
@@ -71,13 +70,13 @@
             <!-- Payment Information Card (Placeholder) -->
             <div class="order-card checkout-view__payment-card">
               <div class="order-card__header">
-                <h3>Payment Details</h3>
+                <h3>{{ t('checkout.payment.title') }}</h3>
               </div>
               <div class="order-card__body">
                 <div class="payment-placeholder">
                   <font-awesome-icon icon="credit-card" class="payment-icon" />
-                  <p>Secure payment processing will be integrated here.</p>
-                  <p class="payment-note">(Currently simulates successful payment on order placement)</p>
+                  <p>{{ t('checkout.payment.placeholderText') }}</p>
+                  <p class="payment-note">{{ t('checkout.payment.simulationNote') }}</p>
                 </div>
               </div>
             </div>
@@ -87,15 +86,15 @@
           <div class="checkout-layout__summary-column">
             <div class="order-card checkout-view__summary-card">
               <div class="order-card__header">
-                <h3>Order Summary</h3>
+                <h3>{{ t('checkout.summary.title') }}</h3>
               </div>
               <div class="order-card__body checkout-view__summary-body">
                 <div v-if="!cart.items || cart.items.length === 0" class="checkout-view__empty-cart">
-                  <p>Your cart is empty.</p>
-                  <router-link to="/products" class="button enhanced-button secondary">Start Shopping</router-link>
+                  <p>{{ t('checkout.summary.emptyCart') }}</p>
+                  <router-link to="/products" class="button enhanced-button secondary">{{ t('checkout.summary.startShoppingButton') }}</router-link>
                 </div>
                 <div v-else class="checkout-view__items-list">
-                  <!-- Reuse order-item styles from OrderDetailView -->
+                  <!-- Items Loop (Item details are dynamic, no text changes here) -->
                   <div v-for="(item) in cart.items" :key="`${item.productId}-${JSON.stringify(item.attributes || {})}`" class="order-item">
                     <router-link :to="{ name: 'product-detail', params: { id: item.productId } }" class="order-item__image-link" tabindex="-1">
                       <img :src="item.image || placeholderImage" :alt="item.name" class="order-item__image">
@@ -123,20 +122,20 @@
               <div v-if="cart.items && cart.items.length > 0" class="order-card__footer checkout-view__summary-footer">
                 <div class="checkout-totals">
                   <div class="total-row">
-                    <span>Subtotal</span>
+                    <span>{{ t('checkout.summary.subtotal') }}</span>
                     <span>{{ formatCurrency(subtotal) }}</span>
                   </div>
                   <div class="total-row">
-                    <span>Shipping</span>
-                    <span>Free</span>
+                    <span>{{ t('checkout.summary.shipping') }}</span>
+                    <span>{{ t('checkout.summary.shippingValue') }}</span>
                   </div>
                   <div class="total-row total">
-                    <span>Total</span>
+                    <span>{{ t('checkout.summary.total') }}</span>
                     <strong>{{ formatCurrency(subtotal) }}</strong>
                   </div>
                 </div>
                 <div v-if="submitError" class="checkout-submit-error">
-                  {{ submitError }}
+                  {{ submitError }} <!-- Keep raw error message -->
                 </div>
                 <button type="submit"
                         form="checkout-form"
@@ -144,7 +143,7 @@
                         :disabled="isSubmitting || !cart.items || cart.items.length === 0">
                   <font-awesome-icon icon="spinner" spin v-if="isSubmitting" />
                   <font-awesome-icon icon="lock" v-else />
-                  <span>{{ isSubmitting ? 'Processing...' : 'Place Secure Order' }}</span>
+                  <span>{{ isSubmitting ? t('checkout.summary.processingButton') : t('checkout.summary.placeOrderButton') }}</span>
                 </button>
               </div>
             </div>
@@ -157,164 +156,154 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import cartService from '@/services/cartService';
-import orderService from '@/services/orderService';
-// Assuming Element Plus is not installed/used based on request, using simple alerts or refs for errors
-// import { ElMessage } from 'element-plus';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import {
-  faExclamationTriangle, faCheckCircle, faCreditCard, faLock, faSpinner
-} from '@fortawesome/free-solid-svg-icons';
+  import { ref, computed, onMounted } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import cartService from '@/services/cartService';
+  import orderService from '@/services/orderService';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import {
+    faExclamationTriangle, faCheckCircle, faCreditCard, faLock, faSpinner
+  } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faExclamationTriangle, faCheckCircle, faCreditCard, faLock, faSpinner);
+  // --- Get translation function ---
+  const { t } = useI18n();
 
-// --- State ---
-const loading = ref(true);
-const loadError = ref(null); // Error during initial load
-const submitError = ref(null); // Error during order submission
-const cart = ref({ items: [] });
-const shippingAddress = ref('');
-const isSubmitting = ref(false);
-const orderComplete = ref(false);
-const orderNumber = ref(null);
-const placeholderImage = `https://via.placeholder.com/100x100/cccccc/FFFFFF?text=N/A`;
-const router = useRouter();
+  library.add(faExclamationTriangle, faCheckCircle, faCreditCard, faLock, faSpinner);
 
-// --- Computed ---
-const subtotal = computed(() => {
-  if (!cart.value || !cart.value.items) return 0;
-  return cart.value.items.reduce((total, item) => {
-    // Ensure price and quantity are numbers
-    const price = Number(item.price) || 0;
-    const quantity = Number(item.quantity) || 0;
-    return total + (price * quantity);
-  }, 0);
-});
+  // --- State ---
+  const loading = ref(true);
+  const loadError = ref(null);
+  const submitError = ref(null);
+  const cart = ref({ items: [] });
+  const shippingAddress = ref('');
+  const isSubmitting = ref(false);
+  const orderComplete = ref(false);
+  const orderNumber = ref(null);
+  const placeholderImage = `https://via.placeholder.com/100x100/cccccc/FFFFFF?text=N/A`;
+  const router = useRouter();
 
-// --- Methods ---
-const formatCurrency = (amount) => {
-  if (typeof amount !== 'number') return '$--.--';
-  return `$${Number(amount).toFixed(2)}`;
-};
+  // --- Computed ---
+  const subtotal = computed(() => {
+    if (!cart.value || !cart.value.items) return 0;
+    return cart.value.items.reduce((total, item) => {
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      return total + (price * quantity);
+    }, 0);
+  });
 
-const capitalize = (s) => {
+  // --- Methods ---
+  const formatCurrency = (amount) => {
+    if (typeof amount !== 'number') return '$--.--';
+    return `$${Number(amount).toFixed(2)}`;
+  };
+
+  const capitalize = (s) => {
     if (typeof s !== 'string' || !s) return '';
-    // Handle camelCase or snake_case slightly better
     const formatted = s.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ');
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-};
+  };
 
-const loadCheckoutData = async () => {
-  loading.value = true;
-  loadError.value = null;
-  try {
-    // Fetch cart data (assuming user must be logged in, handled by route guard)
-    const fetchedCart = await cartService.getCart(true); // Pass true for logged-in user
-    cart.value = fetchedCart || { items: [] }; // Ensure cart is an object
-
-    if (!cart.value.items || cart.value.items.length === 0) {
-      // Don't set loadError, let the template handle empty cart message
-      console.warn("Cart is empty, proceeding to checkout page display.");
-    }
-
-    // Fetch user data to pre-fill shipping address if available
-    // Note: Assumes user is logged in due to route guard.
-    // A more robust solution might involve a dedicated user store/service.
+  const loadCheckoutData = async () => {
+    loading.value = true;
+    loadError.value = null;
     try {
+      const fetchedCart = await cartService.getCart(true);
+      cart.value = fetchedCart || { items: [] };
+
+      if (!cart.value.items || cart.value.items.length === 0) {
+        console.warn("Cart is empty, proceeding to checkout page display.");
+      }
+
+      try {
         const response = await fetch('/api/users/check-login', { credentials: 'include' });
         if (response.ok) {
-            const userData = await response.json();
-            if (userData.isLoggedIn && userData.user?.shippingAddress) {
-                shippingAddress.value = userData.user.shippingAddress;
-            } else if (!userData.isLoggedIn) {
-                // This case should ideally be caught by the route guard, but handle defensively
-                throw new Error("User is not logged in.");
-            }
+          const userData = await response.json();
+          if (userData.isLoggedIn && userData.user?.shippingAddress) {
+            shippingAddress.value = userData.user.shippingAddress;
+          } else if (!userData.isLoggedIn) {
+            // Use translated error message
+            throw new Error(t('checkout.error.userSession'));
+          }
         } else {
-            console.warn("Could not fetch user data to prefill address.");
+          console.warn("Could not fetch user data to prefill address.");
+          // Optionally set a non-blocking warning message
         }
-    } catch (userError) {
-        // If user check fails or not logged in (guard missed?), redirect or show error
+      } catch (userError) {
         console.error("Error fetching user data:", userError);
-        loadError.value = "Could not verify user session. Please log in again.";
-        // Optionally redirect: router.push('/login');
-        return; // Stop further execution if user data fails critically
+        // Display translated error from catch or a generic one
+        loadError.value = userError.message || t('checkout.error.userSession');
+        return;
+      }
+
+    } catch (error) {
+      console.error('Checkout loading error:', error);
+      // Use translated error message with interpolation
+      loadError.value = t('checkout.error.loadData', { message: error.message || t('checkout.error.genericLoad') });
+      cart.value = { items: [] };
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const placeOrder = async () => {
+    // Use translated validation messages
+    if (!shippingAddress.value.trim()) {
+      submitError.value = t('checkout.error.shippingRequired');
+      document.getElementById('shippingAddress')?.focus();
+      return;
+    }
+    if (!cart.value.items || cart.value.items.length === 0) {
+      submitError.value = t('checkout.error.emptyCart');
+      return;
     }
 
-  } catch (error) {
-    console.error('Checkout loading error:', error);
-    loadError.value = `Failed to load checkout data: ${error.message || 'Please try again.'}`;
-    cart.value = { items: [] }; // Ensure cart is reset on error
-  } finally {
-    loading.value = false;
-  }
-};
+    isSubmitting.value = true;
+    submitError.value = null;
 
-const placeOrder = async () => {
-  // Basic validation
-  if (!shippingAddress.value.trim()) {
-    submitError.value = 'Please enter your full shipping address.';
-    // Focus the textarea
-    document.getElementById('shippingAddress')?.focus();
-    return;
-  }
-  if (!cart.value.items || cart.value.items.length === 0) {
-    submitError.value = 'Your cart is empty. Cannot place order.';
-    return;
-  }
+    try {
+      console.log('Placing order with address:', shippingAddress.value);
+      const order = await orderService.createOrder(shippingAddress.value);
+      console.log('Order created successfully:', order);
 
-  isSubmitting.value = true;
-  submitError.value = null; // Clear previous errors
+      orderComplete.value = true;
+      orderNumber.value = order.orderNumber;
 
-  try {
-    console.log('Placing order with address:', shippingAddress.value);
-    const order = await orderService.createOrder(shippingAddress.value);
-    console.log('Order created successfully:', order);
+      await cartService.clearCart(true);
 
-    // Order success state
-    orderComplete.value = true;
-    orderNumber.value = order.orderNumber;
+      // Use alert or a more sophisticated UI notification system
+      // alert('Order placed successfully!'); // Keep if no UI library
 
-    // IMPORTANT: Clear the cart via the service AFTER successful order creation
-    // The service should handle both API and local storage if needed,
-    // but for logged-in users, it primarily hits the API.
-    await cartService.clearCart(true); // Pass true for logged-in user
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Use a simple alert or console log as Element Plus is not used
-    // ElMessage.success('Order placed successfully!');
-    alert('Order placed successfully!'); // Replace with a better UI notification if possible
+    } catch (error) {
+      console.error('Order placement error:', error);
+      // Keep backend error if available, otherwise use translated generic error
+      submitError.value = error.message || t('checkout.error.submitGeneric');
+      // alert(`Order Error: ${submitError.value}`); // Keep if no UI library
+    } finally {
+      isSubmitting.value = false;
+    }
+  };
 
-    // Scroll to top to show success message
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  } catch (error) {
-    console.error('Order placement error:', error);
-    submitError.value = error.message || 'Failed to place your order. Please check your details and try again.';
-    // ElMessage.error(submitError.value);
-    alert(`Order Error: ${submitError.value}`); // Replace with a better UI notification
-  } finally {
-    isSubmitting.value = false;
-  }
-};
-
-// --- Lifecycle ---
-onMounted(() => {
-  loadCheckoutData();
-});
+  // --- Lifecycle ---
+  onMounted(() => {
+    loadCheckoutData();
+  });
 
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   /* --- Base & Layout --- */
   .checkout-page {
     padding-bottom: 6rem;
   }
 
   .checkout-view__header {
-    padding-top: calc(var(--header-height) + 2rem); /* Adjust as needed */
+    padding-top: calc(var(--header-height) + 2rem);
     padding-bottom: 2.5rem;
     text-align: center;
   }
@@ -324,12 +313,8 @@ onMounted(() => {
     margin: 0 auto;
     padding: 1.5rem 4%;
   }
-
   /* --- Loading/Error/Success/Empty States --- */
-  .checkout-view__loading,
-  .checkout-view__error,
-  .checkout-view__success,
-  .checkout-view__empty-cart {
+  .checkout-view__loading, .checkout-view__error, .checkout-view__success, .checkout-view__empty-cart {
     min-height: 40vh;
     display: flex;
     flex-direction: column;
@@ -347,8 +332,7 @@ onMounted(() => {
     background-color: transparent;
   }
 
-
-  .checkout-view__loading .spinner::after { /* Reuse spinner style */
+  .checkout-view__loading .spinner::after {
     content: '';
     width: 40px;
     height: 40px;
@@ -357,7 +341,7 @@ onMounted(() => {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     display: block;
-    margin: 0 auto 1.5rem; /* Center spinner */
+    margin: 0 auto 1.5rem;
   }
 
   @keyframes spin {
@@ -366,14 +350,13 @@ onMounted(() => {
     }
   }
 
-  .checkout-view__error .button,
-  .checkout-view__success-actions .button {
+  .checkout-view__error .button, .checkout-view__success-actions .button {
     margin: 1.5rem 0.5rem 0;
   }
 
   .checkout-view__success .message-icon {
     font-size: 3.5rem;
-    color: #2ecc71; /* Success green */
+    color: #2ecc71;
     margin-bottom: 1rem;
   }
 
@@ -392,35 +375,33 @@ onMounted(() => {
     color: var(--primary);
     font-weight: 600;
   }
-
   /* --- Checkout Layout Grid --- */
   .checkout-layout {
     display: grid;
-    grid-template-columns: 1fr; /* Default stack */
+    grid-template-columns: 1fr;
     gap: 2rem;
   }
 
   @media (min-width: 992px) {
     .checkout-layout {
-      grid-template-columns: 1fr minmax(320px, 400px); /* Form | Summary */
+      grid-template-columns: 1fr minmax(320px, 400px);
       gap: 2.5rem;
-      align-items: flex-start; /* Align tops */
+      align-items: flex-start;
     }
 
     .checkout-layout__summary-column {
-      position: sticky; /* Make summary sticky */
-      top: calc(var(--header-height) + 1.5rem); /* Adjust top offset */
+      position: sticky;
+      top: calc(var(--header-height) + 1.5rem);
     }
   }
-
-  /* --- Reusable Card Styles (from main.css via OrderDetailView) --- */
+  /* --- Reusable Card Styles --- */
   .order-card {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--border-color);
     overflow: hidden;
-    margin-bottom: 1.5rem; /* Space between cards in the same column */
+    margin-bottom: 1.5rem;
   }
 
   .order-card__header {
@@ -445,9 +426,7 @@ onMounted(() => {
     background-color: var(--bg-off-light);
     border-top: 1px solid var(--border-color);
   }
-
   /* --- Form Styles --- */
-  /* .form-group and .enhanced-textarea are defined in main.css */
   .form-group label {
     display: block;
     margin-bottom: 0.5rem;
@@ -456,12 +435,11 @@ onMounted(() => {
     color: var(--text-dark);
   }
 
-  .form-text { /* Hint text */
+  .form-text {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 0.5rem;
   }
-
   /* --- Payment Placeholder --- */
   .payment-placeholder {
     text-align: center;
@@ -487,26 +465,24 @@ onMounted(() => {
     font-size: 0.8rem;
     font-style: italic;
   }
-
-
   /* --- Order Summary --- */
   .checkout-view__summary-card .order-card__body {
-    padding: 0; /* Remove body padding, items list will handle it */
+    padding: 0;
   }
 
   .checkout-view__items-list {
-    max-height: 40vh; /* Limit height and allow scroll */
+    max-height: 40vh;
     overflow-y: auto;
     border-bottom: 1px solid var(--border-color);
   }
-  /* Reuse item styles from OrderDetailView (already in main.css potentially) */
+
   .order-item {
     display: flex;
     align-items: flex-start;
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    background-color: var(--white); /* Ensure background */
+    background-color: var(--white);
   }
 
     .order-item:last-child {
@@ -553,9 +529,6 @@ onMounted(() => {
     color: var(--text-muted);
   }
 
-  .order-item__attribute { /* Style each attribute line if needed */
-  }
-
   .order-item__meta {
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -576,7 +549,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    margin-bottom: 1.5rem; /* Space before button */
+    margin-bottom: 1.5rem;
   }
 
   .total-row {
@@ -609,7 +582,7 @@ onMounted(() => {
   }
 
   .checkout-view__place-order-btn {
-    width: 100%; /* Make button full width */
+    width: 100%;
     padding-top: 0.9rem;
     padding-bottom: 0.9rem;
     font-size: 1rem;
@@ -618,7 +591,6 @@ onMounted(() => {
     .checkout-view__place-order-btn svg {
       margin-right: 0.6em;
     }
-
   /* --- Responsive --- */
   @media (max-width: 768px) {
     .checkout-view__content {
@@ -642,6 +614,5 @@ onMounted(() => {
       position: static;
       top: auto;
     }
-    /* Unset sticky */
   }
 </style>

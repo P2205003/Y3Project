@@ -1,9 +1,10 @@
 <template>
   <div class="rating-distribution" v-if="totalReviews > 0">
-    <h4>Rating Breakdown</h4>
+    <h4>{{ t('ratingDistribution.title') }}</h4>
     <div class="distribution-bars">
       <div v-for="rating in [5, 4, 3, 2, 1]" :key="`dist-${rating}`" class="distribution-row">
-        <span class="rating-label">{{ rating }} star{{ rating !== 1 ? 's' : '' }}</span>
+        <!-- Use t() with pluralization syntax -->
+        <span class="rating-label">{{ t('ratingDistribution.starLabel', rating) }}</span>
         <div class="bar-container">
           <div class="bar" :style="{ width: calculatePercentage(rating) + '%' }"></div>
         </div>
@@ -12,33 +13,38 @@
     </div>
   </div>
   <div v-else class="rating-distribution--empty">
-    <p>No ratings available to display distribution.</p>
+    <p>{{ t('ratingDistribution.emptyMessage') }}</p>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
 
-const props = defineProps({
-  distribution: {
-    type: Object, // Expects { '1': count, '2': count, ... '5': count }
-    required: true,
-    default: () => ({ '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 })
-  }
-});
+  // Get translation function
+  const { t } = useI18n();
 
-const totalReviews = computed(() => {
-  return Object.values(props.distribution).reduce((sum, count) => sum + (count || 0), 0);
-});
+  const props = defineProps({
+    distribution: {
+      type: Object,
+      required: true,
+      default: () => ({ '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 })
+    }
+  });
 
-const calculatePercentage = (rating) => {
-  if (totalReviews.value === 0) return 0;
-  const count = props.distribution[rating] || 0;
-  return Math.round((count / totalReviews.value) * 100);
-};
+  const totalReviews = computed(() => {
+    return Object.values(props.distribution).reduce((sum, count) => sum + (count || 0), 0);
+  });
+
+  const calculatePercentage = (rating) => {
+    if (totalReviews.value === 0) return 0;
+    const count = props.distribution[rating] || 0;
+    return Math.round((count / totalReviews.value) * 100);
+  };
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   .rating-distribution {
     margin-bottom: 1.5rem;
   }
@@ -64,7 +70,7 @@ const calculatePercentage = (rating) => {
   }
 
   .rating-label {
-    width: 50px; /* Fixed width for labels */
+    width: 50px;
     text-align: right;
     color: var(--text-muted);
     flex-shrink: 0;
@@ -80,13 +86,13 @@ const calculatePercentage = (rating) => {
 
   .bar {
     height: 100%;
-    background-color: var(--accent); /* Or use primary color */
+    background-color: var(--accent);
     border-radius: 4px;
     transition: width 0.5s ease-out;
   }
 
   .rating-count {
-    width: 30px; /* Fixed width for counts */
+    width: 30px;
     text-align: right;
     color: var(--text-muted);
     font-weight: 500;

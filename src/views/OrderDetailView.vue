@@ -5,9 +5,9 @@
     <section class="page-header enhanced-page-header order-detail-view__header">
       <router-link :to="{ name: 'orders-history' }" class="order-detail-view__back-link">
         <font-awesome-icon icon="chevron-left" />
-        <span>Back to Orders</span>
+        <span>{{ t('orderDetails.backLink') }}</span>
       </router-link>
-      <h1>Order Details</h1>
+      <h1>{{ t('orderDetails.pageTitle') }}</h1>
     </section>
 
     <!-- Main Content Area -->
@@ -16,15 +16,15 @@
         <!-- Loading State -->
         <div v-if="loading" key="loading" class="loading-container order-detail-view__loading">
           <div class="spinner"></div>
-          <p>Loading your order details...</p>
+          <p>{{ t('orderDetails.loading') }}</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="error" key="error" class="message-container error-container order-detail-view__error">
           <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon" />
-          <h2>Failed to Load Order</h2>
-          <p>{{ error }}</p>
-          <button @click="fetchOrderDetails" class="button enhanced-button primary">Try Again</button>
+          <h2>{{ t('orderDetails.errorTitle') }}</h2>
+          <p>{{ error }}</p> <!-- Keep error message raw -->
+          <button @click="fetchOrderDetails" class="button enhanced-button primary">{{ t('orderDetails.tryAgainButton') }}</button>
         </div>
 
         <!-- Order Found -->
@@ -36,25 +36,25 @@
             <div class="order-card order-detail-view__summary-card">
               <div class="order-card__header">
                 <div class="order-card__identifier">
-                  <h2>Order #{{ order.orderNumber }}</h2>
+                  <h2>{{ t('orderDetails.orderNumberPrefix') }}{{ order.orderNumber }}</h2>
                 </div>
                 <div class="order-card__status-area">
                   <span :class="['status-badge', `status-badge--${order.status}`]">
-                    {{ getStatusLabel(order.status) }}
+                    {{ getStatusLabel(order.status) }} <!-- Status labels might come from service or this t() -->
                   </span>
                 </div>
               </div>
               <div class="order-card__body order-detail-view__summary-body">
                 <div class="summary-item">
-                  <span class="summary-item__label">Order Date:</span>
+                  <span class="summary-item__label">{{ t('orderDetails.summary.orderDate') }}</span>
                   <span class="summary-item__value">{{ formatDate(order.purchaseDate) }}</span>
                 </div>
                 <div v-if="order.statusDates && order.statusDates[order.status]" class="summary-item">
-                  <span class="summary-item__label">Status Updated:</span>
+                  <span class="summary-item__label">{{ t('orderDetails.summary.statusUpdated') }}</span>
                   <span class="summary-item__value">{{ formatDate(order.statusDates[order.status]) }}</span>
                 </div>
                 <div class="summary-item summary-item--total">
-                  <span class="summary-item__label">Order Total:</span>
+                  <span class="summary-item__label">{{ t('orderDetails.summary.orderTotal') }}</span>
                   <strong class="summary-item__value">${{ order.totalAmount.toFixed(2) }}</strong>
                 </div>
               </div>
@@ -62,28 +62,28 @@
 
             <!-- User Actions (Cancel) -->
             <div v-if="isUser && canCancelOrder" class="order-detail-view__user-actions">
-              <h4>Need to cancel?</h4>
+              <h4>{{ t('orderDetails.userActions.cancelPrompt') }}</h4>
               <button @click="showCancelConfirmation = true" class="button enhanced-button danger full-width" :disabled="isCancelling">
                 <font-awesome-icon icon="times-circle" v-if="!isCancelling" />
                 <font-awesome-icon icon="spinner" spin v-else />
-                <span>{{ isCancelling ? 'Cancelling...' : 'Request Cancellation' }}</span>
+                <span>{{ isCancelling ? t('orderDetails.userActions.cancellingButton') : t('orderDetails.userActions.requestCancelButton') }}</span>
               </button>
-              <p v-if="cancelError" class="action-error">{{ cancelError }}</p>
+              <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Raw error -->
             </div>
 
             <!-- Admin Actions (Status Update) -->
             <div v-if="isAdmin" class="order-card order-detail-view__admin-update">
               <div class="order-card__header">
-                <h3 class="admin-update__title">Update Order Status</h3>
+                <h3 class="admin-update__title">{{ t('orderDetails.adminActions.updateStatusTitle') }}</h3>
               </div>
               <div class="order-card__body">
                 <div class="form-group">
-                  <label for="admin-status-select">New Status:</label>
+                  <label for="admin-status-select">{{ t('orderDetails.adminActions.newStatusLabel') }}</label>
                   <select id="admin-status-select"
                           v-model="newStatus"
                           :disabled="isUpdating || allowedStatusTransitions.length === 0"
                           class="enhanced-input">
-                    <option value="" disabled>Select New Status</option>
+                    <option value="" disabled>{{ t('orderDetails.adminActions.selectStatusPlaceholder') }}</option>
                     <option v-for="status in allowedStatusTransitions"
                             :key="status"
                             :value="status">
@@ -91,28 +91,28 @@
                     </option>
                   </select>
                   <p v-if="allowedStatusTransitions.length === 0 && !isUpdating" class="info-text">
-                    No further status updates possible from '{{ getStatusLabel(order.status) }}'.
+                    {{ t('orderDetails.adminActions.noUpdatesPossible', { statusLabel: getStatusLabel(order.status) }) }}
                   </p>
                 </div>
 
                 <div class="form-group">
-                  <label for="admin-status-notes">Notes (optional):</label>
+                  <label for="admin-status-notes">{{ t('orderDetails.adminActions.notesLabel') }}</label>
                   <textarea id="admin-status-notes"
                             v-model="statusNotes"
-                            placeholder="Add internal notes..."
+                            :placeholder="t('orderDetails.adminActions.notesPlaceholder')"
                             :disabled="isUpdating || !newStatus"
                             class="enhanced-textarea"
                             rows="3"></textarea>
                 </div>
 
-                <p v-if="updateError" class="action-error">{{ updateError }}</p>
+                <p v-if="updateError" class="action-error">{{ updateError }}</p> <!-- Raw error -->
 
                 <button @click="updateOrderStatus"
                         class="button enhanced-button primary full-width"
                         :disabled="isUpdating || !newStatus">
                   <font-awesome-icon icon="spinner" spin v-if="isUpdating" />
                   <font-awesome-icon icon="save" v-else />
-                  <span>{{ isUpdating ? 'Updating...' : 'Save Status Update' }}</span>
+                  <span>{{ isUpdating ? t('orderDetails.adminActions.savingButton') : t('orderDetails.adminActions.saveButton') }}</span>
                 </button>
               </div>
             </div>
@@ -124,7 +124,7 @@
             <div class="order-detail-view__info-row">
               <!-- Shipping Address Card -->
               <div class="order-card order-detail-view__info-card order-detail-view__info-card--shipping">
-                <div class="order-card__header"><h3>Shipping Address</h3></div>
+                <div class="order-card__header"><h3>{{ t('orderDetails.info.shippingAddressTitle') }}</h3></div>
                 <div class="order-card__body">
                   <p>{{ order.shippingAddress }}</p>
                 </div>
@@ -132,7 +132,7 @@
 
               <!-- Status History Card -->
               <div class="order-card order-detail-view__info-card order-detail-view__info-card--history">
-                <div class="order-card__header"><h3>Status History</h3></div>
+                <div class="order-card__header"><h3>{{ t('orderDetails.info.statusHistoryTitle') }}</h3></div>
                 <div class="order-card__body">
                   <div v-if="sortedStatusHistory.length" class="status-timeline">
                     <div v-for="(record, index) in sortedStatusHistory" :key="record._id || index" class="status-timeline__item">
@@ -146,7 +146,7 @@
                           <span class="status-timeline__date">{{ formatDateRelative(record.date) }}</span>
                         </div>
                         <div v-if="record.changedBy && record.changedBy.username && isAdmin" class="status-timeline__updater">
-                          <font-awesome-icon icon="user-shield" /> By: {{ record.changedBy.username }}
+                          <font-awesome-icon icon="user-shield" /> {{ t('orderDetails.info.historyUpdaterPrefix') }} {{ record.changedBy.username }}
                         </div>
                         <p v-if="record.notes" class="status-timeline__notes">
                           {{ record.notes }}
@@ -154,7 +154,7 @@
                       </div>
                     </div>
                   </div>
-                  <p v-else class="empty-message">No status history recorded yet.</p>
+                  <p v-else class="empty-message">{{ t('orderDetails.info.noHistory') }}</p>
                 </div>
               </div>
             </div>
@@ -162,7 +162,8 @@
             <!-- Items Card -->
             <div class="order-card order-detail-view__items-card">
               <div class="order-card__header">
-                <h3>Items in this Order ({{ getTotalQuantity(order) }})</h3>
+                <!-- Use interpolation for item count -->
+                <h3>{{ t('orderDetails.items.title', { itemCount: getTotalQuantity(order) }) }}</h3>
               </div>
               <div class="order-card__body order-detail-view__items-list">
                 <div v-for="(item, index) in order.items" :key="item.productId + index" class="order-item">
@@ -173,10 +174,9 @@
                     <router-link :to="{ name: 'product-detail', params: { id: item.productId } }" class="order-item__name">
                       {{ item.name }}
                     </router-link>
-                    <!-- Display attributes if they exist -->
                     <div v-if="item.attributes && Object.keys(item.attributes).length > 0" class="order-item__attributes">
                       <span v-for="(value, key) in item.attributes" :key="key" class="order-item__attribute">
-                        {{ capitalize(key) }}: {{ value }}
+                        {{ capitalize(key) }}: {{ value }} <!-- Attributes are dynamic, keep as is -->
                       </span>
                     </div>
                     <div class="order-item__meta">
@@ -190,7 +190,7 @@
                 </div>
               </div>
               <div class="order-card__footer order-detail-view__items-footer">
-                <span>Order Total</span>
+                <span>{{ t('orderDetails.items.footerTotal') }}</span>
                 <strong>{{ formatCurrency(order.totalAmount) }}</strong>
               </div>
             </div>
@@ -205,27 +205,27 @@
     <transition name="modal-fade">
       <div v-if="showCancelConfirmation" class="modal-overlay" @click.self="closeCancelModal">
         <div class="modal-content order-detail-view__cancel-modal">
-          <h3>Confirm Cancellation</h3>
-          <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
+          <h3>{{ t('orderDetails.cancelModal.title') }}</h3>
+          <p>{{ t('orderDetails.cancelModal.confirmationText') }}</p>
           <div class="form-group">
-            <label for="cancel-reason">Reason (Optional):</label>
+            <label for="cancel-reason">{{ t('orderDetails.cancelModal.reasonLabel') }}</label>
             <textarea id="cancel-reason"
                       v-model="cancelReason"
                       class="enhanced-textarea"
-                      placeholder="Why are you cancelling?"
+                      :placeholder="t('orderDetails.cancelModal.reasonPlaceholder')"
                       rows="3"></textarea>
           </div>
           <div class="modal-actions">
             <button @click="cancelOrder" class="button enhanced-button danger" :disabled="isCancelling">
               <font-awesome-icon icon="spinner" spin v-if="isCancelling" />
-              <span>{{ isCancelling ? 'Cancelling...' : 'Yes, Cancel Order' }}</span>
+              <span>{{ isCancelling ? t('orderDetails.userActions.cancellingButton') : t('orderDetails.cancelModal.confirmButton') }}</span>
             </button>
             <button @click="closeCancelModal" class="button enhanced-button secondary" :disabled="isCancelling">
-              No, Keep Order
+              {{ t('orderDetails.cancelModal.keepButton') }}
             </button>
           </div>
-          <p v-if="cancelError" class="action-error">{{ cancelError }}</p>
-          <button @click="closeCancelModal" class="modal-close-btn" aria-label="Close cancellation dialog">×</button>
+          <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Raw error -->
+          <button @click="closeCancelModal" class="modal-close-btn" :aria-label="t('orderDetails.cancelModal.closeAriaLabel')">×</button>
         </div>
       </div>
     </transition>
@@ -234,87 +234,85 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import orderService from '@/services/orderService';
-// Assuming ElMessage is globally available or imported differently in setup
-// import { ElMessage } from 'element-plus'; // If using Element Plus
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import {
-  faChevronLeft, faExclamationTriangle, faSpinner, faTimesCircle,
-  faUserShield, faSave // Added icons
-} from '@fortawesome/free-solid-svg-icons';
-
-// Add required icons to the library
-library.add(
+  import { ref, computed, onMounted } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import orderService from '@/services/orderService';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import {
     faChevronLeft, faExclamationTriangle, faSpinner, faTimesCircle,
     faUserShield, faSave
-);
+  } from '@fortawesome/free-solid-svg-icons';
 
+  library.add(
+    faChevronLeft, faExclamationTriangle, faSpinner, faTimesCircle,
+    faUserShield, faSave
+  );
 
-// --- State ---
-const order = ref(null);
-const loading = ref(true);
-const error = ref(null);
-const newStatus = ref('');
-const statusNotes = ref('');
-const isUpdating = ref(false);
-const updateError = ref(null);
-const placeholderImage = `https://via.placeholder.com/100x100/cccccc/FFFFFF?text=N/A`;
-const showCancelConfirmation = ref(false);
-const cancelReason = ref('');
-const isCancelling = ref(false);
-const cancelError = ref(null);
-const route = useRoute();
-const router = useRouter();
+  // --- Get translation function ---
+  const { t } = useI18n();
 
-// --- User Role (Placeholder - Replace with actual logic) ---
-// This needs to be determined based on your authentication system
-// For example, fetch user data or check a store
-const isAdmin = ref(false); // <<-- SET THIS BASED ON ACTUAL USER ROLE
-const isUser = ref(true); // <<-- Assume it's a user by default
+  // --- State ---
+  const order = ref(null);
+  const loading = ref(true);
+  const error = ref(null);
+  const newStatus = ref('');
+  const statusNotes = ref('');
+  const isUpdating = ref(false);
+  const updateError = ref(null);
+  const placeholderImage = `https://via.placeholder.com/100x100/cccccc/FFFFFF?text=N/A`;
+  const showCancelConfirmation = ref(false);
+  const cancelReason = ref('');
+  const isCancelling = ref(false);
+  const cancelError = ref(null);
+  const route = useRoute();
+  const router = useRouter();
 
-// --- Computed ---
-const orderId = computed(() => route.params.id);
-const statusOptions = computed(() => orderService.getStatusOptions());
-const allowedStatusTransitions = computed(() => {
-  if (!order.value) return [];
-  return orderService.getAllowedTransitions(order.value.status);
-});
-const sortedStatusHistory = computed(() => {
-  if (!order.value?.statusHistory) return [];
-  return [...order.value.statusHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-});
-const canCancelOrder = computed(() => {
-  return order.value ? orderService.canBeCancelled(order.value.status) : false;
-});
+  // --- User Role (Placeholder) ---
+  const isAdmin = ref(false); // <<-- SET THIS
+  const isUser = ref(true); // <<-- SET THIS
 
-// --- Methods ---
-const fetchOrderDetails = async () => {
-  loading.value = true;
-  error.value = null;
-  order.value = null; // Reset order on fetch
-  try {
-    order.value = await orderService.getOrderById(orderId.value);
-    newStatus.value = ''; // Reset status dropdown
-    // You might fetch user role here as well
-    // isAdmin.value = await checkUserAdminStatus();
-  } catch (err) {
-    error.value = err.message || 'Failed to load order details. Please try again.';
-    console.error('Error fetching order details:', err);
-  } finally {
-    loading.value = false;
-  }
-};
+  // --- Computed ---
+  const orderId = computed(() => route.params.id);
+  const statusOptions = computed(() => orderService.getStatusOptions());
+  const allowedStatusTransitions = computed(() => {
+    if (!order.value) return [];
+    return orderService.getAllowedTransitions(order.value.status);
+  });
+  const sortedStatusHistory = computed(() => {
+    if (!order.value?.statusHistory) return [];
+    return [...order.value.statusHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+  });
+  const canCancelOrder = computed(() => {
+    return order.value ? orderService.canBeCancelled(order.value.status) : false;
+  });
 
-const formatDate = (dateString, options = { dateStyle: 'medium', timeStyle: 'short' }) => {
+  // --- Methods ---
+  const fetchOrderDetails = async () => {
+    loading.value = true;
+    error.value = null;
+    order.value = null;
+    try {
+      order.value = await orderService.getOrderById(orderId.value);
+      newStatus.value = '';
+      // isAdmin.value = await checkUserAdminStatus(); // Fetch role if needed
+    } catch (err) {
+      // Keep raw error from service
+      error.value = err.message || 'Failed to load order details. Please try again.';
+      console.error('Error fetching order details:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const formatDate = (dateString, options = { dateStyle: 'medium', timeStyle: 'short' }) => {
     if (!dateString) return 'N/A';
     try { return new Intl.DateTimeFormat('en-US', options).format(new Date(dateString)); }
     catch (e) { return 'Invalid Date'; }
-};
+  };
 
-const formatDateRelative = (dateString) => {
+  const formatDateRelative = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     const now = new Date();
@@ -322,119 +320,116 @@ const formatDateRelative = (dateString) => {
     const minutes = Math.round(seconds / 60);
     const hours = Math.round(minutes / 60);
     const days = Math.round(hours / 24);
-    if (seconds < 60) return 'just now';
-    if (minutes < 60) return `${minutes} min ago`;
-    if (hours < 24) return `${hours} hr ago`;
-    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-    return formatDate(dateString, { dateStyle: 'short' }); // Fallback for longer periods
-};
+    if (seconds < 60) return t('dates.relative.justNow') || 'just now';
+    if (minutes < 60) return t('dates.relative.minutesAgo', { count: minutes }) || `${minutes} min ago`;
+    if (hours < 24) return t('dates.relative.hoursAgo', { count: hours }) || `${hours} hr ago`;
+    if (days < 7) return t('dates.relative.daysAgo', { count: days }) || `${days} day${days > 1 ? 's' : ''} ago`;
+    return formatDate(dateString, { dateStyle: 'short' });
+  };
 
-const getStatusLabel = (statusValue) => {
-  const status = statusOptions.value.find(s => s.value === statusValue);
-  return status ? status.label : statusValue;
-};
+  // Modified getStatusLabel to use translations
+  const getStatusLabel = (statusValue) => {
+    // Use the translated status label if available, otherwise fallback to the value itself
+    return t(`orderDetails.statusLabels.${statusValue}`, statusValue);
+  };
 
-const getTotalQuantity = (order) => {
-  return order?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-};
+  const getTotalQuantity = (order) => {
+    return order?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  };
 
-const capitalize = (s) => {
-  if (typeof s !== 'string' || !s) return '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
+  const capitalize = (s) => {
+    if (typeof s !== 'string' || !s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
 
-const formatCurrency = (amount) => {
-  if (typeof amount !== 'number') return '$--.--';
-  return `$${Number(amount).toFixed(2)}`;
-};
+  const formatCurrency = (amount) => {
+    if (typeof amount !== 'number') return '$--.--';
+    return `$${Number(amount).toFixed(2)}`;
+  };
 
-const updateOrderStatus = async () => {
-  if (!newStatus.value) {
-    updateError.value = 'Please select a new status.';
-    return;
-  }
-  isUpdating.value = true;
-  updateError.value = null;
-  try {
-    const updatedOrder = await orderService.updateOrderStatus(orderId.value, newStatus.value, statusNotes.value);
-    order.value = updatedOrder; // Update local order data
-    newStatus.value = '';
-    statusNotes.value = '';
-    // ElMessage.success(`Order status updated to ${getStatusLabel(order.value.status)}`); // Use your notification system
-    alert(`Order status updated to ${getStatusLabel(order.value.status)}`); // Simple alert fallback
-  } catch (err) {
-    updateError.value = err.message || 'Failed to update order status.';
-    console.error('Error updating order status:', err);
-  } finally {
-    isUpdating.value = false;
-  }
-};
+  const updateOrderStatus = async () => {
+    if (!newStatus.value) {
+      updateError.value = t('orderDetails.errors.statusUpdateGeneric'); // Use translated generic error
+      return;
+    }
+    isUpdating.value = true;
+    updateError.value = null;
+    try {
+      const updatedOrder = await orderService.updateOrderStatus(orderId.value, newStatus.value, statusNotes.value);
+      order.value = updatedOrder;
+      newStatus.value = '';
+      statusNotes.value = '';
+      alert(`Order status updated to ${getStatusLabel(order.value.status)}`);
+    } catch (err) {
+      updateError.value = err.message || t('orderDetails.errors.statusUpdateGeneric'); // Keep backend error, fallback to translation
+      console.error('Error updating order status:', err);
+    } finally {
+      isUpdating.value = false;
+    }
+  };
 
-const closeCancelModal = () => {
+  const closeCancelModal = () => {
     showCancelConfirmation.value = false;
-    cancelError.value = null; // Clear any previous errors when closing
-}
-
-const cancelOrder = async () => {
-  isCancelling.value = true;
-  cancelError.value = null;
-  try {
-    const updatedOrder = await orderService.cancelOrder(orderId.value, cancelReason.value);
-    order.value = updatedOrder; // Update local order data
-    showCancelConfirmation.value = false;
-    cancelReason.value = '';
-    // ElMessage.success('Your order has been cancelled successfully');
-    alert('Your order has been cancelled successfully'); // Simple alert fallback
-  } catch (err) {
-    cancelError.value = err.message || 'Failed to cancel order.';
-    console.error('Error cancelling order:', err);
-    // Keep modal open on error? Or close it? For now, keep it open so user sees error.
-    // showCancelConfirmation.value = false;
-  } finally {
-    isCancelling.value = false;
+    cancelError.value = null;
   }
-};
+
+  const cancelOrder = async () => {
+    isCancelling.value = true;
+    cancelError.value = null;
+    try {
+      const updatedOrder = await orderService.cancelOrder(orderId.value, cancelReason.value);
+      order.value = updatedOrder;
+      showCancelConfirmation.value = false;
+      cancelReason.value = '';
+      alert('Your order has been cancelled successfully');
+    } catch (err) {
+      cancelError.value = err.message || t('orderDetails.errors.cancelGeneric'); // Keep backend error, fallback to translation
+      console.error('Error cancelling order:', err);
+    } finally {
+      isCancelling.value = false;
+    }
+  };
 
 
-// --- Lifecycle ---
-onMounted(() => {
-  fetchOrderDetails();
-});
+  // --- Lifecycle ---
+  onMounted(() => {
+    fetchOrderDetails();
+  });
 
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   /* --- Base & Layout --- */
   .order-detail-view {
     padding-bottom: 6rem;
   }
 
   .order-detail-view__header {
-    padding-top: calc(var(--header-height) + 2rem); /* Less top padding than OrdersView */
+    padding-top: calc(var(--header-height) + 2rem);
     padding-bottom: 2rem;
-    text-align: left; /* Align header content left */
+    text-align: left;
     position: relative;
   }
 
     .order-detail-view__header h1 {
-      margin-bottom: 0; /* Remove bottom margin */
+      margin-bottom: 0;
       margin-left: 1rem;
       font-size: clamp(1.8rem, 5vw, 2.5rem);
-      display: inline-block; /* Keep title next to back link */
+      display: inline-block;
     }
 
-
   .order-detail-view__back-link {
-    display: inline-flex; /* Align icon and text */
+    display: inline-flex;
     align-items: center;
     gap: 0.5em;
-    margin-bottom: 1rem; /* Space below back link */
+    margin-bottom: 1rem;
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-muted);
     text-decoration: none;
     transition: color var(--transition-fast);
-    padding: 0.5rem 0; /* Add some padding for easier clicking */
+    padding: 0.5rem 0;
   }
 
     .order-detail-view__back-link:hover {
@@ -449,23 +444,21 @@ onMounted(() => {
       transform: translateX(-3px);
     }
 
-
   .order-detail-view__content {
     max-width: 1200px;
     margin: 0 auto;
     padding: 1.5rem 4%;
   }
 
-  /* --- Grid Layout --- */
   .order-detail-view__grid {
     display: grid;
-    grid-template-columns: 1fr; /* Stack columns by default */
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
   @media (min-width: 992px) {
     .order-detail-view__grid {
-      grid-template-columns: minmax(300px, 1fr) 2fr; /* Sidebar-like layout */
+      grid-template-columns: minmax(300px, 1fr) 2fr;
       gap: 2rem;
     }
   }
@@ -473,7 +466,7 @@ onMounted(() => {
   .order-detail-view__summary-actions {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem; /* Space between summary, user actions, admin actions */
+    gap: 1.5rem;
   }
 
   .order-detail-view__info-items {
@@ -481,14 +474,14 @@ onMounted(() => {
     flex-direction: column;
     gap: 1.5rem;
   }
-
   /* --- Shared Order Card Styles --- */
   .order-card {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--border-color);
-    overflow: hidden; /* Prevents content overflow */
+    overflow: hidden;
+    margin-bottom: 1.5rem;
   }
 
   .order-card__header {
@@ -500,8 +493,7 @@ onMounted(() => {
     align-items: center;
   }
 
-    .order-card__header h2,
-    .order-card__header h3 {
+    .order-card__header h2, .order-card__header h3 {
       font-size: 1.1rem;
       font-weight: 600;
       margin: 0;
@@ -523,7 +515,6 @@ onMounted(() => {
     font-weight: 600;
     color: var(--text-dark);
   }
-
   /* --- Summary Card --- */
   .order-detail-view__summary-card .order-card__identifier {
     flex-grow: 1;
@@ -574,17 +565,13 @@ onMounted(() => {
       font-size: 1.2rem;
       color: var(--primary);
     }
-
   /* --- User/Admin Actions --- */
-  .order-detail-view__user-actions,
-  .order-detail-view__admin-update {
-    /* Uses order-card style */
-  }
-
   .order-detail-view__user-actions {
     padding: 1.2rem;
     background-color: #fff9f9;
     border-color: var(--secondary);
+    border: 1px solid var(--secondary);
+    border-radius: var(--border-radius);
   }
 
     .order-detail-view__user-actions h4 {
@@ -595,7 +582,7 @@ onMounted(() => {
     }
 
   .admin-update__title {
-    font-size: 1rem !important; /* Override h3 */
+    font-size: 1rem !important;
   }
 
   .form-group {
@@ -624,7 +611,7 @@ onMounted(() => {
     background-color: var(--white);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     line-height: 1.5;
-    resize: vertical; /* Allow vertical resize */
+    resize: vertical;
   }
 
     .enhanced-textarea:focus, .enhanced-textarea:focus-visible {
@@ -655,7 +642,6 @@ onMounted(() => {
   .button.full-width {
     width: 100%;
   }
-
   /* --- Shipping & History Cards --- */
   .order-detail-view__info-row {
     display: grid;
@@ -665,7 +651,7 @@ onMounted(() => {
 
   @media(min-width: 768px) {
     .order-detail-view__info-row {
-      grid-template-columns: repeat(2, 1fr); /* Two columns side-by-side */
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 
@@ -679,7 +665,6 @@ onMounted(() => {
     line-height: 1.6;
     color: var(--text-muted);
   }
-
   /* --- Status Timeline --- */
   .status-timeline {
     position: relative;
@@ -688,7 +673,7 @@ onMounted(() => {
   .status-timeline__item {
     display: flex;
     position: relative;
-    padding-bottom: 1.5rem; /* Space below item */
+    padding-bottom: 1.5rem;
   }
 
     .status-timeline__item:last-child {
@@ -696,7 +681,7 @@ onMounted(() => {
     }
 
       .status-timeline__item:last-child .status-timeline__line {
-        display: none; /* No line after the last item */
+        display: none;
       }
 
   .status-timeline__connector {
@@ -712,9 +697,8 @@ onMounted(() => {
     height: 12px;
     border-radius: 50%;
     border: 2px solid var(--white);
-    box-shadow: 0 0 0 1px var(--border-color); /* Thin outline */
+    box-shadow: 0 0 0 1px var(--border-color);
     z-index: 1;
-    /* Background color set by status-badge--* classes */
   }
 
   .status-timeline__line {
@@ -727,7 +711,7 @@ onMounted(() => {
 
   .status-timeline__content {
     flex-grow: 1;
-    padding-top: 0; /* Align text with dot */
+    padding-top: 0;
   }
 
   .status-timeline__header {
@@ -735,7 +719,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 0.2rem;
-    flex-wrap: wrap; /* Allow wrap */
+    flex-wrap: wrap;
   }
 
   .status-timeline__status-label {
@@ -776,19 +760,17 @@ onMounted(() => {
     text-align: center;
     padding: 1rem 0;
   }
-
-
   /* --- Items Card & List --- */
   .order-detail-view__items-list {
     display: flex;
     flex-direction: column;
-    gap: 0; /* Remove gap, use borders */
-    padding: 0; /* Remove padding, item has padding */
+    gap: 0;
+    padding: 0;
   }
 
   .order-item {
     display: flex;
-    align-items: flex-start; /* Align items top */
+    align-items: flex-start;
     gap: 1rem;
     padding: 1rem 1.2rem;
     border-bottom: 1px solid var(--border-color);
@@ -816,7 +798,7 @@ onMounted(() => {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem; /* Space between name, attributes, meta */
+    gap: 0.3rem;
   }
 
   .order-item__name {
@@ -839,15 +821,11 @@ onMounted(() => {
     color: var(--text-muted);
   }
 
-  .order-item__attribute {
-    /* Style each attribute line if needed */
-  }
-
   .order-item__meta {
     font-size: 0.85rem;
     color: var(--text-muted);
     display: flex;
-    gap: 1rem; /* Space between price and quantity */
+    gap: 1rem;
   }
 
   .order-item__subtotal {
@@ -855,7 +833,7 @@ onMounted(() => {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-dark);
-    margin-left: auto; /* Push to right */
+    margin-left: auto;
     flex-shrink: 0;
   }
 
@@ -866,14 +844,12 @@ onMounted(() => {
     .order-detail-view__items-footer strong {
       color: var(--primary);
     }
-
-
   /* --- Cancel Modal --- */
   .modal-overlay {
     position: fixed;
     inset: 0;
     background-color: rgba(30, 30, 30, 0.7);
-    z-index: var(--popup-overlay-z-index); /* Use existing z-index */
+    z-index: var(--popup-overlay-z-index);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -932,7 +908,7 @@ onMounted(() => {
   }
 
     .modal-actions .button {
-      min-width: 120px; /* Ensure buttons have decent width */
+      min-width: 120px;
     }
 
   .modal-close-btn {
@@ -952,13 +928,12 @@ onMounted(() => {
     .modal-close-btn:hover {
       color: var(--secondary);
     }
-
   /* --- Loading/Error States --- */
   .order-detail-view__loading, .order-detail-view__error {
     min-height: 50vh;
   }
 
-    .order-detail-view__loading .spinner::after { /* Reuse spinner styles */
+    .order-detail-view__loading .spinner::after {
       content: '';
       width: 40px;
       height: 40px;
@@ -974,8 +949,6 @@ onMounted(() => {
       transform: rotate(360deg);
     }
   }
-
-
   /* --- Responsive Adjustments --- */
   @media (max-width: 768px) {
     .order-detail-view__content {
@@ -1053,12 +1026,42 @@ onMounted(() => {
     .order-item__details {
       width: calc(100% - 75px - 1rem);
     }
-    /* Adjust if image size changes */
+
     .order-item__subtotal {
       width: 100%;
       text-align: right;
       margin-top: 0.5rem;
       font-size: 1rem;
     }
+  }
+  /* --- Status Badge Colors --- */
+  .status-badge--pending, .status-timeline__dot.status-badge--pending {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-color: #ffe69c;
+  }
+
+  .status-badge--shipped, .status-timeline__dot.status-badge--shipped {
+    background-color: #cfe2ff;
+    color: #0a58ca;
+    border-color: #b6d4fe;
+  }
+
+  .status-badge--delivered, .status-timeline__dot.status-badge--delivered {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border-color: #badbcc;
+  }
+
+  .status-badge--cancelled, .status-timeline__dot.status-badge--cancelled {
+    background-color: #f8d7da;
+    color: #842029;
+    border-color: #f5c2c7;
+  }
+
+  .status-badge--hold, .status-timeline__dot.status-badge--hold {
+    background-color: #e2e3e5;
+    color: #41464b;
+    border-color: #d3d6d8;
   }
 </style>

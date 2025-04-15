@@ -1,23 +1,26 @@
 <template>
   <!-- Link Wrapper -->
-  <router-link v-if="linkTo" :to="linkTo" class="product-card-link" :aria-label="`View details for ${product.name}`">
+  <router-link v-if="linkTo" :to="linkTo" class="product-card-link" :aria-label="t('productCard.viewDetailsAriaLabel', { name: product.name })">
     <!-- Actual Card Content -->
     <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-tilt="tiltOptions">
       <div v-if="applyTilt" class="tilt-shine-overlay"></div>
+      <!-- Background image label usually handled by context, but could add: :aria-label="t('productCard.imageAriaLabel', { name: product.name })" -->
       <div class="product-image" :style="{ backgroundImage: `url('${product.image}')` }" loading="lazy"></div>
       <div class="product-info">
         <h3>{{ product.name }}</h3>
         <!-- Display Rating -->
         <div v-if="product.reviewCount > 0" class="product-card__rating">
           <StarRatingDisplay :rating="product.averageRating" />
-          <span class="product-card__review-count">({{ product.reviewCount }})</span>
+          <!-- Optionally translate count format -->
+          <span class="product-card__review-count">{{ t('productCard.ratingCount', { count: product.reviewCount }) }}</span>
         </div>
         <!-- End Rating Display -->
+        <!-- Use translated default description -->
         <p>{{ product.description || defaultDescription }}</p>
         <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <button class="add-to-cart-btn" @click.prevent="addToCart" :aria-label="`Add ${product.name} to cart`">
+        <button class="add-to-cart-btn" @click.prevent="addToCart" :aria-label="t('productCard.addToCartAriaLabel', { name: product.name })">
           <font-awesome-icon icon="shopping-cart" />
-          <span>Add to Cart</span>
+          <span>{{ t('productCard.addToCart') }}</span>
         </button>
       </div>
     </div>
@@ -27,20 +30,20 @@
   <div v-else>
     <div class="product-card" :class="{ 'has-tilt': applyTilt }" v-tilt="tiltOptions">
       <div v-if="applyTilt" class="tilt-shine-overlay"></div>
-      <div class="product-image" :style="{ backgroundImage: `url('${product.image}')` }" loading="lazy" :aria-label="product.name"></div>
+      <div class="product-image" :style="{ backgroundImage: `url('${product.image}')` }" loading="lazy" :aria-label="product.name"></div> <!-- Dynamic -->
       <div class="product-info">
-        <h3>{{ product.name }}</h3>
+        <h3>{{ product.name }}</h3> <!-- Dynamic -->
         <!-- Display Rating -->
         <div v-if="product.reviewCount > 0" class="product-card__rating">
           <StarRatingDisplay :rating="product.averageRating" />
-          <span class="product-card__review-count">({{ product.reviewCount }})</span>
+          <span class="product-card__review-count">{{ t('productCard.ratingCount', { count: product.reviewCount }) }}</span> <!-- Optional Translation -->
         </div>
         <!-- End Rating Display -->
-        <p>{{ product.description || defaultDescription }}</p>
-        <div class="price-tag">{{ formatCurrency(product.price) }}</div>
-        <button class="add-to-cart-btn" @click="addToCart" :aria-label="`Add ${product.name} to cart`">
+        <p>{{ product.description || defaultDescription }}</p> <!-- Use translated default -->
+        <div class="price-tag">{{ formatCurrency(product.price) }}</div> <!-- Dynamic -->
+        <button class="add-to-cart-btn" @click="addToCart" :aria-label="t('productCard.addToCartAriaLabel', { name: product.name })">
           <font-awesome-icon icon="shopping-cart" />
-          <span>Add to Cart</span>
+          <span>{{ t('productCard.addToCart') }}</span>
         </button>
       </div>
     </div>
@@ -48,49 +51,52 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import StarRatingDisplay from './StarRatingDisplay.vue'; // Import rating display
-// FontAwesomeIcon imported globally
-// v-tilt directive is globally registered in main.js
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import StarRatingDisplay from './StarRatingDisplay.vue';
 
-const props = defineProps({
-  product: {
-    type: Object,
-    required: true,
-    validator: (value) => {
-      // Adjusted validator to accept new rating fields (optional)
-      return value && value.id && value.name && typeof value.price === 'number' && value.image;
-    }
-  },
-  linkTo: { type: [String, Object], default: null },
-  applyTilt: { type: Boolean, default: false }
-});
+  // --- Get translation function ---
+  const { t } = useI18n();
 
-const emit = defineEmits(['add-to-cart']);
-
-const defaultDescription = "High-quality, sustainable furniture piece.";
-const tiltOptions = computed(() => ({ /* Define custom tilt options here if needed */ }));
-
-const formatCurrency = (amount) => `$${Number(amount).toFixed(2)}`;
-
-const addToCart = () => {
-  emit('add-to-cart', {
-    id: props.product.id,
-    name: props.product.name,
-    price: props.product.price,
-    image: props.product.image, // Use the image provided in the prop
-    quantity: 1
+  const props = defineProps({
+    product: {
+      type: Object,
+      required: true,
+      validator: (value) => {
+        return value && value.id && value.name && typeof value.price === 'number' && value.image;
+      }
+    },
+    linkTo: { type: [String, Object], default: null },
+    applyTilt: { type: Boolean, default: false }
   });
-};
+
+  const emit = defineEmits(['add-to-cart']);
+
+  // --- Use translated default description ---
+  const defaultDescription = computed(() => t('productCard.defaultDescription'));
+  const tiltOptions = computed(() => ({}));
+
+  const formatCurrency = (amount) => `$${Number(amount).toFixed(2)}`;
+
+  const addToCart = () => {
+    emit('add-to-cart', {
+      id: props.product.id,
+      name: props.product.name,
+      price: props.product.price,
+      image: props.product.image,
+      quantity: 1
+    });
+  };
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   .product-card__rating {
     display: flex;
     align-items: center;
     gap: 0.4em;
-    margin-bottom: 0.6rem; /* Space below rating */
-    font-size: 0.85rem; /* Smaller size for card */
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
   }
 
   .product-card__review-count {
@@ -98,7 +104,6 @@ const addToCart = () => {
     font-size: 0.9em;
   }
 
-  /* Ensure the rating display doesn't push content too much */
   .product-info {
     display: flex;
     flex-direction: column;
@@ -106,12 +111,12 @@ const addToCart = () => {
   }
 
     .product-info p {
-      flex-grow: 1; /* Allow description to take space */
-      margin-bottom: 0.8rem; /* Adjust spacing */
+      flex-grow: 1;
+      margin-bottom: 0.8rem;
     }
 
     .product-info .price-tag {
-      margin-top: auto; /* Push price/button towards bottom if needed */
+      margin-top: auto;
       margin-bottom: 0.8rem;
     }
 </style>

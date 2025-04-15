@@ -2,30 +2,35 @@
   <div class="rating-summary">
     <StarRatingDisplay :rating="averageRating" />
     <span v-if="reviewCount > 0" class="review-count">
-      ({{ reviewCount }} review{{ reviewCount !== 1 ? 's' : '' }})
+      {{ t('ratingSummary.reviewCount', reviewCount) }}
     </span>
     <span v-else class="no-reviews">
-      (No reviews yet)
+      {{ t('ratingSummary.noReviews') }}
     </span>
   </div>
 </template>
 
 <script setup>
-import StarRatingDisplay from './StarRatingDisplay.vue';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import StarRatingDisplay from './StarRatingDisplay.vue';
 
-defineProps({
-  averageRating: {
-    type: Number,
-    default: 0
-  },
-  reviewCount: {
-    type: Number,
-    default: 0
-  }
-});
+  // Get translation function
+  const { t } = useI18n();
+
+  const props = defineProps({
+    averageRating: {
+      type: Number,
+      default: 0
+    },
+    reviewCount: {
+      type: Number,
+      default: 0
+    }
+  });
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   .rating-summary {
     display: flex;
     align-items: center;

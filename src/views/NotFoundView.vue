@@ -3,23 +3,28 @@
   <main class="not-found-page">
     <div class="message-container empty-container">
       <font-awesome-icon icon="compass" class="message-icon empty-icon" />
-      <h2>Page Not Found (404)</h2>
-      <p>Oops! The page you're looking for seems to have wandered off.</p>
-      <router-link to="/" class="button primary-button">Go Home</router-link>
-      <router-link to="/products" class="button secondary-button">Explore Products</router-link>
+      <h2>{{ t('notFound.title') }}</h2>
+      <p>{{ t('notFound.message') }}</p>
+      <router-link to="/" class="button primary-button">{{ t('notFound.goHomeButton') }}</router-link>
+      <router-link to="/products" class="button secondary-button">{{ t('notFound.exploreProductsButton') }}</router-link>
     </div>
   </main>
 </template>
 
 <script setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faCompass } from '@fortawesome/free-solid-svg-icons';
+  import { useI18n } from 'vue-i18n'; // <-- Import useI18n
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import { faCompass } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faCompass);
+  // --- Get translation function ---
+  const { t } = useI18n();
+
+  library.add(faCompass);
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   .not-found-page {
     display: flex;
     justify-content: center;
@@ -34,7 +39,7 @@ library.add(faCompass);
   }
 
   .message-icon {
-    font-size: 4rem; /* Larger icon */
+    font-size: 4rem;
     color: var(--text-muted);
     margin-bottom: 2rem;
   }

@@ -1,16 +1,15 @@
 <!-- src/components/layout/TheHeader.vue -->
 <template>
   <header id="header" :class="{ scrolled: isScrolled }">
-    <router-link to="/" class="logo">AURORA</router-link>
+    <router-link to="/" class="logo">{{ t('appName') }}</router-link>
 
     <!-- Desktop Navigation -->
     <nav id="main-nav">
       <ul>
-        <li><router-link to="/">Home</router-link></li>
-        <li><router-link to="/products">Products</router-link></li>
-        <!-- **MODIFIED: Conditionally render Admin link** -->
+        <li><router-link to="/">{{ t('header.home') }}</router-link></li>
+        <li><router-link to="/products">{{ t('header.products') }}</router-link></li>
         <li v-if="isAdmin">
-          <router-link to="/admin" class="admin-link">Admin Panel</router-link>
+          <router-link to="/admin" class="admin-link">{{ t('header.adminPanel') }}</router-link>
         </li>
       </ul>
     </nav>
@@ -18,15 +17,14 @@
     <div class="header-actions">
       <!-- Search -->
       <div class="search-container" :class="{ active: isSearchActive }">
-        <button class="search-button" id="search-button" aria-label="Open search" @click.stop="$emit('toggleSearch')">
+        <button class="search-button" id="search-button" :aria-label="t('header.search.openAriaLabel')" @click.stop="$emit('toggleSearch')">
           <font-awesome-icon icon="search" />
         </button>
-        <!-- **MODIFIED: Added v-model and keydown listener for search** -->
         <input type="search"
                id="search-input"
                class="search-input"
-               placeholder="Search products..."
-               aria-label="Search products"
+               :placeholder="t('header.search.placeholder')"
+               :aria-label="t('header.search.inputAriaLabel')"
                :aria-hidden="!isSearchActive"
                @keydown.esc="$emit('toggleSearch', false)"
                @keydown.enter="handleSearch"
@@ -37,7 +35,7 @@
       <!-- Account Dropdown -->
       <div class="account-menu-container">
         <button id="account-dropdown-trigger"
-                aria-label="My Account Menu"
+                :aria-label="t('header.account.menuAriaLabel')"
                 aria-haspopup="true"
                 :aria-expanded="isAccountDropdownActive"
                 @click.stop="$emit('toggleAccountDropdown')">
@@ -47,55 +45,44 @@
           <!-- Logged In State -->
           <template v-if="isLoggedIn && currentUser">
             <div class="dropdown-item user-info" role="menuitem" aria-disabled="true">
-              <span>Hi, {{ currentUser.fullName || currentUser.username }}</span>
+              <!-- Use interpolation for greeting -->
+              <span>{{ t('header.account.greeting', { name: currentUser.fullName || currentUser.username }) }}</span>
             </div>
             <router-link :to="{ name: 'orders-history' }" custom v-slot="{ navigate }">
               <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
                 <font-awesome-icon icon="receipt" fixed-width />
-                <span>My Orders</span>
+                <span>{{ t('header.account.myOrders') }}</span>
               </button>
             </router-link>
-            <!-- Link removed as it's now in the main nav -->
-            <!-- <router-link v-if="isAdmin" to="/admin" custom v-slot="{ navigate }">
-              <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
-                <font-awesome-icon icon="user-shield" fixed-width />
-                <span>Admin Panel</span>
-              </button>
-            </router-link> -->
             <router-link to="/account/profile" custom v-slot="{ navigate }">
               <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
-                <!-- Changed icon to faUserCog for consistency with old code if desired, or keep faUser -->
                 <font-awesome-icon icon="user-cog" fixed-width />
-                <span>My Profile</span>
+                <span>{{ t('header.account.myProfile') }}</span>
               </button>
             </router-link>
             <button class="dropdown-item logout-item" role="menuitem" @click="$emit('logout')">
               <font-awesome-icon icon="sign-out-alt" fixed-width />
-              <span>Logout</span>
+              <span>{{ t('header.account.logout') }}</span>
             </button>
           </template>
           <!-- Logged Out State -->
           <template v-else>
             <button class="dropdown-item" data-action="login" role="menuitem" @click="$emit('openAccountPopup', 'login')">
               <font-awesome-icon icon="sign-in-alt" fixed-width />
-              <span>Login</span>
+              <span>{{ t('header.account.login') }}</span>
             </button>
             <button class="dropdown-item" data-action="register" role="menuitem" @click="$emit('openAccountPopup', 'register')">
               <font-awesome-icon icon="user-plus" fixed-width />
-              <span>Sign Up</span>
+              <span>{{ t('header.account.signUp') }}</span>
             </button>
           </template>
         </div>
       </div>
 
-      <!-- Orders (If keeping separate button, maybe hide when logged in and using dropdown?) -->
-      <!-- <button id="orders-trigger" title="View Your Orders" aria-label="View Your Orders">
-        <font-awesome-icon icon="receipt" />
-      </button> -->
       <!-- Cart -->
       <button id="cart-popup-trigger"
-              title="View Cart"
-              aria-label="Shopping Cart"
+              :title="t('header.cart.title')"
+              :aria-label="t('header.cart.ariaLabel')"
               aria-haspopup="true"
               :aria-expanded="false"
               @click="$emit('toggleCart')">
@@ -106,7 +93,7 @@
       <!-- Mobile Menu Toggle -->
       <button class="menu-toggle"
               id="menu-toggle"
-              aria-label="Toggle Menu"
+              :aria-label="t('header.mobileMenu.toggleAriaLabel')"
               :aria-expanded="isMobileMenuActive"
               @click="$emit('toggleMenu')">
         <span></span> <span></span> <span></span>
@@ -116,126 +103,114 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { useRouter, useRoute } from 'vue-router'; // Import router and route
+  import { ref, watch, nextTick, onMounted } from 'vue';
+  import { useI18n } from 'vue-i18n'; // <-- Import useI18n
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { useRouter, useRoute } from 'vue-router';
 
-const props = defineProps({
-  isScrolled: Boolean,
-  isMobileMenuActive: Boolean,
-  isSearchActive: Boolean,
-  isAccountDropdownActive: Boolean,
-  cartItemCount: {
-    type: Number,
-    default: 0
-  },
-  isLoggedIn: {
-    type: Boolean,
-    required: true
-  },
-  currentUser: {
-    type: Object,
-    default: null
-  }
-});
+  // --- Get the translation function ---
+  const { t } = useI18n();
 
-const emit = defineEmits([
-  'toggleMenu',
-  'toggleSearch',
-  'toggleAccountDropdown',
-  'openAccountPopup',
-  'toggleCart',
-  'logout'
-]);
-
-const searchInputRef = ref(null);
-const searchQuery = ref(''); // **NEW: State for search input**
-const isAdmin = ref(false); // **NEW: State for admin status**
-
-const router = useRouter(); // **NEW: Get router instance**
-const route = useRoute(); // **NEW: Get route instance**
-
-// --- Focus search input when activated ---
-watch(() => props.isSearchActive, (newValue) => {
-  if (newValue) {
-    nextTick(() => {
-      searchInputRef.value?.focus();
-    });
-  }
-});
-
-// --- **NEW: Search Functionality** ---
-const handleSearch = () => {
-  const query = {};
-  const searchTerm = searchQuery.value.trim();
-
-  // Only add q parameter if search query is not empty
-  if (searchTerm) {
-    query.q = searchTerm;
-  }
-
-  console.log(`Navigating to search with query:`, query);
-
-  // Always navigate to products page with the search query
-  // (Adapt '/products/search' if your search route is different)
-  router.push({
-    name: 'products', // **Assuming your products list view handles search**
-    // path: '/products/search', // Use this if you have a dedicated search route name
-    query // Pass the constructed query object
+  // --- Props definition ---
+  const props = defineProps({
+    isScrolled: Boolean,
+    isMobileMenuActive: Boolean,
+    isSearchActive: Boolean,
+    isAccountDropdownActive: Boolean,
+    cartItemCount: {
+      type: Number,
+      default: 0
+    },
+    isLoggedIn: {
+      type: Boolean,
+      required: true
+    },
+    currentUser: {
+      type: Object,
+      default: null
+    }
   });
 
-  // Optionally close the search input after search
-  // emit('toggleSearch', false);
-};
+  // --- Emits definition ---
+  const emit = defineEmits([
+    'toggleMenu',
+    'toggleSearch',
+    'toggleAccountDropdown',
+    'openAccountPopup',
+    'toggleCart',
+    'logout'
+  ]);
 
-// --- **NEW: Admin Status Check** ---
-const checkAdminStatus = async () => {
-  if (props.isLoggedIn) {
-    console.log('Checking admin status...');
-    try {
-      const response = await fetch('/api/users/check-admin', {
-        credentials: 'include'
-      });
+  // --- Reactive state ---
+  const searchInputRef = ref(null);
+  const searchQuery = ref('');
+  const isAdmin = ref(false);
 
-      if (response.ok) {
-        const data = await response.json();
-        isAdmin.value = data.isAdmin;
-        console.log('Admin status:', isAdmin.value);
-      } else {
-        console.warn('Failed to check admin status, assuming not admin.');
+  const router = useRouter();
+  const route = useRoute();
+
+  // --- **MOVE FUNCTION DEFINITION HERE** ---
+  const checkAdminStatus = async () => {
+    if (props.isLoggedIn) {
+      console.log('Checking admin status...');
+      try {
+        const response = await fetch('/api/users/check-admin', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          isAdmin.value = data.isAdmin;
+          console.log('Admin status:', isAdmin.value);
+        } else {
+          console.warn('Failed to check admin status, assuming not admin.');
+          isAdmin.value = false;
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
         isAdmin.value = false;
       }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
+    } else {
       isAdmin.value = false;
     }
-  } else {
-    isAdmin.value = false; // Not admin if not logged in
-  }
-};
+  };
 
-// --- Watch login status to re-check admin status ---
-watch(() => props.isLoggedIn, (newValue) => {
-  checkAdminStatus();
-}, { immediate: true }); // Check immediately on component setup if logged in initially
+  // --- Watchers ---
+  watch(() => props.isSearchActive, (newValue) => {
+    if (newValue) {
+      nextTick(() => {
+        searchInputRef.value?.focus();
+      });
+    }
+  });
 
-// --- Lifecycle Hook ---
-onMounted(() => {
-  // **NEW: Initialize search query from route if applicable**
-  if (route.name === 'products' && route.query.q) {
-     searchQuery.value = route.query.q;
-  }
-  // **NEW: Initial admin check** (also handled by the watcher)
-  // checkAdminStatus(); // Watcher with immediate: true handles this
-});
+  // --- Watch login status to re-check admin status ---
+  // Now this watch can safely call checkAdminStatus
+  watch(() => props.isLoggedIn, (newValue) => {
+    checkAdminStatus();
+  }, { immediate: true });
 
-// **NEW: Watch route changes to update search input if needed**
-watch(() => route.query.q, (newQuery) => {
-  // Only update if on the products page and query actually changed
-  if (route.name === 'products') {
-    searchQuery.value = newQuery || '';
-  }
-});
+  watch(() => route.query.q, (newQuery) => {
+    if (route.name === 'products') {
+      searchQuery.value = newQuery || '';
+    }
+  });
+
+  // --- Methods ---
+  const handleSearch = () => {
+    const query = {};
+    const searchTerm = searchQuery.value.trim();
+    if (searchTerm) {
+      query.q = searchTerm;
+    }
+    console.log(`Navigating to search with query:`, query);
+    router.push({ name: 'products', query });
+  };
+
+  // --- Lifecycle Hooks ---
+  onMounted(() => {
+    if (route.name === 'products' && route.query.q) {
+      searchQuery.value = route.query.q;
+    }
+    // checkAdminStatus() is already called by the immediate watcher
+  });
 
 </script>
 

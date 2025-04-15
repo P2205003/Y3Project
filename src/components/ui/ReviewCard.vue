@@ -3,80 +3,76 @@
     <header class="review-card__header">
       <div class="review-card__author-rating">
         <StarRatingDisplay :rating="review.rating" class="review-card__stars" />
-        <span class="review-card__author">by {{ review.username || 'Anonymous' }}</span>
-        <span v-if="review.isVerifiedPurchase" class="review-card__verified" title="Verified Purchase">
-          <font-awesome-icon icon="check" /> Verified Purchase
+        <span class="review-card__author">{{ t('reviewCard.authorPrefix') }} {{ review.username || t('reviewCard.anonymous') }}</span>
+        <span v-if="review.isVerifiedPurchase" class="review-card__verified" :title="t('reviewCard.verifiedPurchase')">
+          <font-awesome-icon icon="check" /> {{ t('reviewCard.verifiedPurchase') }}
         </span>
       </div>
       <time class="review-card__date" :datetime="review.createdAt">
-        {{ formatDateRelative(review.createdAt) }}
+        {{ formatDateRelative(review.createdAt) }} <!-- Keep relative date logic for now -->
       </time>
     </header>
     <div class="review-card__body">
       <h5 v-if="review.title" class="review-card__title">{{ review.title }}</h5>
-      <p class="review-card__text">{{ review.body }}</p>
+      <p class="review-card__text">{{ review.body }}</p> <!-- Body text is dynamic -->
     </div>
     <footer class="review-card__footer">
       <span class="review-card__helpful-count">
-        <!-- Display updated count dynamically -->
-        {{ currentHelpfulVotes }} people found this helpful
+        {{ t('reviewCard.helpfulCount', currentHelpfulVotes) }}
       </span>
       <button class="review-card__helpful-button"
               :class="{ 'voted': hasVoted }"
               @click="emitToggleHelpful"
               :disabled="voteLoading"
               :aria-pressed="hasVoted"
-              :title="hasVoted ? 'Undo helpful vote' : 'Mark as helpful'">
-        <!-- Icon changes based on hasVoted -->
+              :title="t(hasVoted ? 'reviewCard.helpfulButton.undoHelpfulTitle' : 'reviewCard.helpfulButton.markAsHelpfulTitle')">
         <font-awesome-icon :icon="hasVoted ? ['fas', 'thumbs-up'] : ['far', 'thumbs-up']" />
-        <!-- Text changes based on hasVoted -->
-        <span>{{ hasVoted ? 'Cancel' : 'Helpful' }}</span>
+        <span>{{ t(hasVoted ? 'reviewCard.helpfulButton.cancel' : 'reviewCard.helpfulButton.helpful') }}</span>
       </button>
     </footer>
     <!-- Seller Response (optional) -->
     <div v-if="review.sellerResponse && review.sellerResponse.body" class="review-card__seller-response">
-      <!-- ... seller response content ... -->
-      <h6 class="seller-response__title">Response from Seller:</h6>
-      <p class="seller-response__body">{{ review.sellerResponse.body }}</p>
+      <h6 class="seller-response__title">{{ t('reviewCard.sellerResponse.title') }}</h6>
+      <p class="seller-response__body">{{ review.sellerResponse.body }}</p> <!-- Seller response body is dynamic -->
       <time class="seller-response__date" :datetime="review.sellerResponse.date">
-        {{ formatDateRelative(review.sellerResponse.date) }}
+        {{ formatDateRelative(review.sellerResponse.date) }} <!-- Keep relative date logic -->
       </time>
     </div>
   </article>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'; // Added watch
-import StarRatingDisplay from './StarRatingDisplay.vue';
-// FontAwesomeIcon imported globally
+  import { ref, computed, watch } from 'vue';
+  import { useI18n } from 'vue-i18n'; // Import useI18n
+  import StarRatingDisplay from './StarRatingDisplay.vue';
 
-const props = defineProps({
-  review: {
-    type: Object,
-    required: true
-  },
-  hasVoted: { // If the CURRENT user has voted for THIS review
+  // Get translation function
+  const { t } = useI18n();
+
+  const props = defineProps({
+    review: {
+      type: Object,
+      required: true
+    },
+    hasVoted: {
       type: Boolean,
       default: false
-  }
-});
+    }
+  });
 
-const emit = defineEmits(['toggle-helpful']); // Changed event name
+  const emit = defineEmits(['toggle-helpful']);
 
-const voteLoading = ref(false);
-// --- NEW: Local state for displaying votes, initialized from prop ---
-const currentHelpfulVotes = ref(props.review.helpfulVotes || 0);
+  const voteLoading = ref(false);
+  const currentHelpfulVotes = ref(props.review.helpfulVotes || 0);
 
-// --- Watch for external changes to the review prop (e.g., after list refresh) ---
-watch(() => props.review.helpfulVotes, (newVoteCount) => {
+  watch(() => props.review.helpfulVotes, (newVoteCount) => {
     currentHelpfulVotes.value = newVoteCount || 0;
-});
-// --- Watch for external changes to hasVoted prop ---
-// (No specific action needed here, the template reacts directly to hasVoted)
-// watch(() => props.hasVoted, (newHasVoted) => { ... });
+  });
 
-
-const formatDateRelative = (dateString) => {
+  // --- Relative Date Formatting ---
+  // NOTE: This function is NOT fully internationalized.
+  // A dedicated library or Intl.RelativeTimeFormat is recommended for robust i18n.
+  const formatDateRelative = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     const now = new Date();
@@ -85,40 +81,33 @@ const formatDateRelative = (dateString) => {
     const hours = Math.round(minutes / 60);
     const days = Math.round(hours / 24);
 
-    if (seconds < 60) return 'just now';
-    if (minutes < 60) return `${minutes} min ago`;
-    if (hours < 24) return `${hours} hr ago`;
-    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
-};
+    // Use simplistic translated parts
+    if (seconds < 60) return t('reviewCard.dateRelative.justNow');
+    if (minutes < 60) return t(minutes > 1 ? 'reviewCard.dateRelative.minutesAgo' : 'reviewCard.dateRelative.minuteAgo', { count: minutes });
+    if (hours < 24) return t(hours > 1 ? 'reviewCard.dateRelative.hoursAgo' : 'reviewCard.dateRelative.hourAgo', { count: hours });
+    if (days < 7) return t(days > 1 ? 'reviewCard.dateRelative.daysAgo' : 'reviewCard.dateRelative.dayAgo', { count: days });
 
-const emitToggleHelpful = async () => {
+    // Fallback to default formatted date
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    const formattedDate = date.toLocaleDateString('en-US', options); // Keep locale consistent for fallback format for now
+    return t('reviewCard.dateRelative.default', { date: formattedDate });
+  };
+
+  const emitToggleHelpful = async () => {
     voteLoading.value = true;
     try {
-        // --- Optimistic UI Update ---
-        if (props.hasVoted) {
-            currentHelpfulVotes.value = Math.max(0, currentHelpfulVotes.value - 1);
-        } else {
-            currentHelpfulVotes.value++;
-        }
-        // --- End Optimistic Update ---
-
-        // Emit event for parent (ReviewList) to handle API call
-        emit('toggle-helpful', { reviewId: props.review._id, currentState: props.hasVoted });
-        // Parent will call appropriate service method and update props/state
-
+      if (props.hasVoted) { currentHelpfulVotes.value = Math.max(0, currentHelpfulVotes.value - 1); }
+      else { currentHelpfulVotes.value++; }
+      emit('toggle-helpful', { reviewId: props.review._id, currentState: props.hasVoted });
     } finally {
-         // Parent should ideally signal completion, but we'll use a timeout
-         // to prevent rapid double-clicks during API latency.
-         setTimeout(() => { voteLoading.value = false; }, 700); // Adjust timeout as needed
+      setTimeout(() => { voteLoading.value = false; }, 700);
     }
-};
+  };
 
 </script>
 
 <style scoped>
-  /* --- Keep existing ReviewCard styles --- */
+  /* Styles remain the same */
   .review-card {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
@@ -191,7 +180,6 @@ const emitToggleHelpful = async () => {
     white-space: pre-wrap;
   }
 
-  /* --- Updated Footer Styles --- */
   .review-card__footer {
     display: flex;
     justify-content: space-between;
@@ -218,13 +206,12 @@ const emitToggleHelpful = async () => {
     display: inline-flex;
     align-items: center;
     gap: 0.4em;
-    color: var(--text-muted); /* Default color */
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 0.8rem;
     transition: all var(--transition-fast);
   }
 
-    /* Default Hover (when NOT voted) */
     .review-card__helpful-button:hover:not(:disabled):not(.voted) {
       background-color: var(--bg-off-light);
       color: var(--primary);
@@ -233,7 +220,6 @@ const emitToggleHelpful = async () => {
       box-shadow: var(--shadow-soft);
     }
 
-    /* Focus Visible State */
     .review-card__helpful-button:focus-visible {
       outline: 2px solid var(--primary);
       outline-offset: 2px;
@@ -241,26 +227,22 @@ const emitToggleHelpful = async () => {
       color: var(--primary);
     }
 
-    /* Voted State */
     .review-card__helpful-button.voted {
-      background-color: rgba(78, 205, 196, 0.1); /* Light primary background */
-      color: var(--primary); /* Primary color text/icon */
-      border-color: rgba(78, 205, 196, 0.5); /* Subtler primary border */
+      background-color: rgba(78, 205, 196, 0.1);
+      color: var(--primary);
+      border-color: rgba(78, 205, 196, 0.5);
       box-shadow: none;
       transform: none;
     }
 
-      /* Hover State (when ALREADY voted - indicates cancel) */
       .review-card__helpful-button.voted:hover:not(:disabled) {
-        background-color: rgba(255, 107, 107, 0.1); /* Light secondary (red) background */
-        color: var(--secondary); /* Secondary color text/icon */
-        border-color: rgba(255, 107, 107, 0.5); /* Subtler secondary border */
+        background-color: rgba(255, 107, 107, 0.1);
+        color: var(--secondary);
+        border-color: rgba(255, 107, 107, 0.5);
         transform: translateY(-1px);
         box-shadow: var(--shadow-soft);
       }
 
-
-    /* Disabled State */
     .review-card__helpful-button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -272,7 +254,6 @@ const emitToggleHelpful = async () => {
       vertical-align: middle;
     }
 
-  /* --- Seller Response --- */
   .review-card__seller-response {
     background-color: #f9f9f9;
     border-top: 1px dashed var(--border-color);

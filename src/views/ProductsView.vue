@@ -2,8 +2,8 @@
   <main>
     <!-- Enhanced Page Header -->
     <section class="page-header enhanced-page-header">
-      <h1>Our Collections</h1>
-      <p>Explore consciously crafted furniture designed to bring harmony and style to your everyday living.</p>
+      <h1>{{ t('productsPage.title') }}</h1>
+      <p>{{ t('productsPage.tagline') }}</p>
     </section>
 
     <!-- Product Listing Section -->
@@ -14,56 +14,55 @@
         <!-- Search Input -->
         <div class="filter-group search-group">
           <label for="search-products">
-            <font-awesome-icon icon="search" /> Search
+            <font-awesome-icon icon="search" /> {{ t('productsPage.filters.searchLabel') }}
           </label>
           <!-- Use keyup.enter to trigger search immediately on enter -->
-          <input type="search" id="search-products" name="search" placeholder="e.g., Serene Sofa" v-model="filters.searchQuery" @input="debounceApplyFilters" @keyup.enter="applyFilters">
+          <input type="search" id="search-products" name="search" :placeholder="t('productsPage.filters.searchPlaceholder')" v-model="filters.searchQuery" @input="debounceApplyFilters" @keyup.enter="applyFilters">
         </div>
         <!-- Category Select -->
         <div class="filter-group">
-          <label for="filter-category">Category</label>
+          <label for="filter-category">{{ t('productsPage.filters.categoryLabel') }}</label>
           <select id="filter-category" name="category" v-model="filters.category" @change="applyFilters" :disabled="isLoading || categoriesLoading">
-            <option value="">All Categories</option> <!-- Changed value to empty string -->
+            <option value="">{{ t('productsPage.filters.allCategories') }}</option>
             <option v-for="category in categories" :key="category" :value="category">
-              {{ category }}
+              {{ category }} <!-- Category names are dynamic data -->
             </option>
           </select>
         </div>
         <!-- Price Range -->
         <div class="filter-group price-range-group">
-          <label>Price Range</label>
+          <label>{{ t('productsPage.filters.priceRangeLabel') }}</label>
           <div class="price-inputs">
             <span class="price-prefix">$</span>
-            <input type="number" min="0" placeholder="Min" aria-label="Minimum Price" v-model.number="filters.minPrice" @input="debounceApplyFilters" @change="applyFilters">
+            <input type="number" min="0" placeholder="Min" :aria-label="t('productsPage.filters.minPriceAriaLabel')" v-model.number="filters.minPrice" @input="debounceApplyFilters" @change="applyFilters">
             <span class="price-separator">–</span>
             <span class="price-prefix">$</span>
-            <input type="number" min="0" placeholder="Max" aria-label="Maximum Price" v-model.number="filters.maxPrice" @input="debounceApplyFilters" @change="applyFilters">
+            <input type="number" min="0" placeholder="Max" :aria-label="t('productsPage.filters.maxPriceAriaLabel')" v-model.number="filters.maxPrice" @input="debounceApplyFilters" @change="applyFilters">
           </div>
         </div>
         <!-- Sort Select -->
         <div class="filter-group">
-          <label for="filter-sort">Sort By</label>
+          <label for="filter-sort">{{ t('productsPage.filters.sortLabel') }}</label>
           <select id="filter-sort" name="sort" v-model="filters.sort" @change="applyFilters" :disabled="isLoading">
-            <option value="featured">Featured</option> <!-- Keep or rename based on backend -->
-            <option value="newest">Newest</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="name-asc">Name: A to Z</option>
-            <option value="name-desc">Name: Z to A</option>
+            <option value="featured">{{ t('productsPage.filters.sortOptions.featured') }}</option>
+            <option value="newest">{{ t('productsPage.filters.sortOptions.newest') }}</option>
+            <option value="price-asc">{{ t('productsPage.filters.sortOptions.priceAsc') }}</option>
+            <option value="price-desc">{{ t('productsPage.filters.sortOptions.priceDesc') }}</option>
+            <option value="name-asc">{{ t('productsPage.filters.sortOptions.nameAsc') }}</option>
+            <option value="name-desc">{{ t('productsPage.filters.sortOptions.nameDesc') }}</option>
           </select>
         </div>
         <!-- Action Buttons -->
         <div class="filter-actions">
-          <!-- Apply button removed as filters apply automatically/on enter -->
-          <button @click="resetFilters" class="filter-button secondary" :disabled="isLoading">Reset</button>
+          <button @click="resetFilters" class="filter-button secondary" :disabled="isLoading">{{ t('productsPage.filters.resetButton') }}</button>
         </div>
       </div>
 
       <!-- Results Count -->
       <div class="results-summary" v-if="!isLoading && !errorLoading">
-        Showing {{ products.length }} of {{ totalProducts }} results
-        <span v-if="filters.searchQuery"> for "{{ filters.searchQuery }}"</span>
-        <span v-if="filters.category"> in {{ filters.category }}</span>.
+        {{ t('productsPage.resultsSummary.showing', { count: products.length, total: totalProducts }) }}
+        <span v-if="filters.searchQuery">{{ t('productsPage.resultsSummary.forQuery', { query: filters.searchQuery }) }}</span>
+        <span v-if="filters.category">{{ t('productsPage.resultsSummary.inCategory', { category: filters.category }) }}</span>.
       </div>
 
 
@@ -72,18 +71,20 @@
         <!-- Loading State with Skeletons -->
         <div v-if="isLoading" key="loading" class="product-grid skeleton-grid">
           <SkeletonCard v-for="n in limit" :key="`skel-${n}`" />
+          <!-- Note: Loading text is removed as skeletons provide visual feedback -->
         </div>
 
         <!-- Error State -->
         <div v-else-if="errorLoading" key="error" class="message-container error-container">
           <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon" />
-          <h2>Oops! Something went wrong.</h2>
-          <p>{{ errorLoading }}</p>
-          <button @click="fetchProducts(1)" class="filter-button primary">Try Again</button>
+          <h2>{{ t('productsPage.error.title') }}</h2>
+          <p>{{ errorLoading }}</p> <!-- Keep backend message for specifics -->
+          <button @click="fetchProducts(1)" class="filter-button primary">{{ t('productsPage.error.tryAgain') }}</button>
         </div>
 
         <!-- Product Grid -->
         <div v-else-if="products.length > 0" key="grid" class="product-grid">
+          <!-- ProductCard itself should eventually be translated if its internal text isn't passed via props -->
           <ProductCard v-for="(product, index) in products"
                        :key="product.id"
                        :product="product"
@@ -97,9 +98,9 @@
         <!-- Empty State -->
         <div v-else key="empty" class="message-container empty-container">
           <font-awesome-icon icon="box-open" class="message-icon empty-icon" />
-          <h2>No Matches Found</h2>
-          <p>We couldn't find any products matching your current filters. Try adjusting your search or filters.</p>
-          <button v-if="hasActiveFilters" @click="resetFilters" class="filter-button secondary">Clear Filters</button>
+          <h2>{{ t('productsPage.empty.title') }}</h2>
+          <p>{{ t('productsPage.empty.message') }}</p>
+          <button v-if="hasActiveFilters" @click="resetFilters" class="filter-button secondary">{{ t('productsPage.empty.clearFilters') }}</button>
         </div>
       </transition>
 
@@ -109,13 +110,13 @@
     <nav v-if="!isLoading && !errorLoading && totalPages > 1"
          ref="paginationRef"
          class="pagination-container"
-         aria-label="Product pagination">
+         :aria-label="t('productsPage.pagination.pageAriaLabel')">
       <ul class="pagination">
         <!-- Previous Button -->
         <li class="page-item" :class="{ disabled: currentPage === 1 }">
-          <button class="page-link" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1 || isLoading" aria-label="Previous page">
-            <span aria-hidden="true">«</span>
-            <span class="visually-hidden">Previous</span>
+          <button class="page-link" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1 || isLoading" :aria-label="t('productsPage.pagination.previousAriaLabel')">
+            <span aria-hidden="true">{{ t('productsPage.pagination.previousText') }}</span>
+            <span class="visually-hidden">Previous</span> <!-- Keep for accessibility -->
           </button>
         </li>
         <!-- Page Number Buttons -->
@@ -130,9 +131,9 @@
         </li>
         <!-- Next Button -->
         <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-          <button class="page-link" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages || isLoading" aria-label="Next page">
-            <span aria-hidden="true">»</span>
-            <span class="visually-hidden">Next</span>
+          <button class="page-link" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages || isLoading" :aria-label="t('productsPage.pagination.nextAriaLabel')">
+            <span aria-hidden="true">{{ t('productsPage.pagination.nextText') }}</span>
+            <span class="visually-hidden">Next</span> <!-- Keep for accessibility -->
           </button>
         </li>
       </ul>
@@ -142,23 +143,26 @@
 
 <script setup>
   import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue';
+  import { useI18n } from 'vue-i18n'; // <-- Import useI18n
   import ProductCard from '../components/ui/ProductCard.vue';
   import SkeletonCard from '../components/ui/SkeletonCard.vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { debounce, throttle } from 'lodash-es'; // Import throttle as well
+  import { debounce, throttle } from 'lodash-es';
   import { library } from '@fortawesome/fontawesome-svg-core';
   import { faSearch, faExclamationTriangle, faBoxOpen } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
   library.add(faSearch, faExclamationTriangle, faBoxOpen);
 
+  // --- Get translation function ---
+  const { t } = useI18n();
+
   // --- Constants ---
   const DEFAULT_LIMIT = 12;
-  const DEBOUNCE_DELAY = 400; // ms delay for search/price input
-  // ** CONSTANTS FOR STICKY PAGINATION (Restored) **
-  const GAP_BETWEEN_PAGINATION_AND_FOOTER = 90; // Adjust as needed
-  const THRESHOLD_BUFFER = 90; // How close to footer before switching
-  const THROTTLE_TIME = 50; // Throttle scroll/resize checks
+  const DEBOUNCE_DELAY = 400;
+  const GAP_BETWEEN_PAGINATION_AND_FOOTER = 90;
+  const THRESHOLD_BUFFER = 90;
+  const THROTTLE_TIME = 50;
 
   // --- Emits, Refs, State ---
   const emit = defineEmits(['addToCart']);
@@ -171,14 +175,13 @@
   const totalPages = ref(1);
   const limit = ref(DEFAULT_LIMIT);
   const totalProducts = ref(0);
-  const defaultDescription = "High-quality, sustainable furniture piece.";
-  const paginationRef = ref(null); // Ref for the pagination container element
+  // Use a translated default description if needed, or keep it simple
+  const defaultDescription = t('productCard.defaultDescription') || "High-quality, sustainable furniture piece.";
+  const paginationRef = ref(null);
   const categories = ref([]);
   const categoriesLoading = ref(false);
-
-  // ** STATE FOR STICKY PAGINATION (Restored) **
-  const isPaginationFixed = ref(true); // Assume fixed initially
-  let footerEl = null; // To store the footer element reference
+  const isPaginationFixed = ref(true);
+  let footerEl = null;
 
   const filters = ref({
     searchQuery: '',
@@ -190,12 +193,14 @@
 
   const hasActiveFilters = computed(() => {
     return filters.value.searchQuery ||
-           filters.value.category ||
-           filters.value.minPrice !== null ||
-           filters.value.maxPrice !== null;
+      filters.value.category ||
+      filters.value.minPrice !== null ||
+      filters.value.maxPrice !== null;
   });
 
-  // --- Helper function for truncation ---
+  // --- Methods ---
+  // (Keep fetchProducts, fetchCategories, applyFilters, pagination logic, etc. the same)
+  // ... (all methods like fetchProducts, fetchCategories, applyFilters, etc. remain unchanged) ...
   function truncateText(text, maxLength) {
     if (!text) return '';
     const cleanedText = text.trim();
@@ -210,17 +215,17 @@
 
   // --- Category Fetching ---
   const fetchCategories = async () => {
-      categoriesLoading.value = true;
-      try {
-          const response = await fetch('/api/products/categories');
-          if (!response.ok) throw new Error('Failed to fetch categories');
-          categories.value = await response.json();
-      } catch (error) {
-          console.error("Error fetching categories:", error);
-          categories.value = [];
-      } finally {
-          categoriesLoading.value = false;
-      }
+    categoriesLoading.value = true;
+    try {
+      const response = await fetch('/api/products/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      categories.value = await response.json();
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      categories.value = [];
+    } finally {
+      categoriesLoading.value = false;
+    }
   };
 
   // --- Product Fetching Logic (Backend Powered) ---
@@ -236,8 +241,8 @@
       if (filters.value.category) url += `&category=${encodeURIComponent(filters.value.category)}`;
       if (filters.value.minPrice !== null && filters.value.minPrice >= 0) url += `&minPrice=${filters.value.minPrice}`;
       if (filters.value.maxPrice !== null && filters.value.maxPrice >= 0) {
-          if (filters.value.minPrice === null || filters.value.maxPrice >= filters.value.minPrice) url += `&maxPrice=${filters.value.maxPrice}`;
-          else console.warn("Max price is less than min price, ignoring max price filter.");
+        if (filters.value.minPrice === null || filters.value.maxPrice >= filters.value.minPrice) url += `&maxPrice=${filters.value.maxPrice}`;
+        else console.warn("Max price is less than min price, ignoring max price filter.");
       }
       if (filters.value.sort) url += `&sort=${filters.value.sort}`;
 
@@ -299,26 +304,26 @@
 
   // --- URL Query Parameter Management --- (remains the same)
   const updateURLQueryParams = (page) => {
-      const query = {};
-      if (page > 1) query.page = page;
-      if (filters.value.searchQuery) query.q = filters.value.searchQuery;
-      if (filters.value.category) query.category = filters.value.category;
-      if (filters.value.minPrice !== null) query.minPrice = filters.value.minPrice;
-      if (filters.value.maxPrice !== null) query.maxPrice = filters.value.maxPrice;
-      if (filters.value.sort && filters.value.sort !== 'featured') query.sort = filters.value.sort;
+    const query = {};
+    if (page > 1) query.page = page;
+    if (filters.value.searchQuery) query.q = filters.value.searchQuery;
+    if (filters.value.category) query.category = filters.value.category;
+    if (filters.value.minPrice !== null) query.minPrice = filters.value.minPrice;
+    if (filters.value.maxPrice !== null) query.maxPrice = filters.value.maxPrice;
+    if (filters.value.sort && filters.value.sort !== 'featured') query.sort = filters.value.sort;
 
-      router.replace({ query }).catch(err => {
-        if (err.name !== 'NavigationDuplicated') { console.error('Router replace error:', err); }
-      });
+    router.replace({ query }).catch(err => {
+      if (err.name !== 'NavigationDuplicated') { console.error('Router replace error:', err); }
+    });
   };
 
   const readFiltersFromURL = () => {
-      filters.value.searchQuery = route.query.q || '';
-      filters.value.category = route.query.category || '';
-      filters.value.minPrice = route.query.minPrice ? Number(route.query.minPrice) : null;
-      filters.value.maxPrice = route.query.maxPrice ? Number(route.query.maxPrice) : null;
-      filters.value.sort = route.query.sort || 'featured';
-      return parseInt(route.query.page) || 1;
+    filters.value.searchQuery = route.query.q || '';
+    filters.value.category = route.query.category || '';
+    filters.value.minPrice = route.query.minPrice ? Number(route.query.minPrice) : null;
+    filters.value.maxPrice = route.query.maxPrice ? Number(route.query.maxPrice) : null;
+    filters.value.sort = route.query.sort || 'featured';
+    return parseInt(route.query.page) || 1;
   };
 
   // --- Filter Methods --- (remains the same)
@@ -356,12 +361,12 @@
     // Need paginationRef AND footerEl to calculate
     if (!paginationRef.value || !footerEl || totalPages.value <= 1) {
       // If pagination isn't visible or needed, ensure it's not styled absolutely
-      if(paginationRef.value && paginationRef.value.style.position === 'absolute'){
-         paginationRef.value.style.position = ''; // Reset to default (fixed via CSS)
-         paginationRef.value.style.top = '';
-         paginationRef.value.style.bottom = '';
-         paginationRef.value.style.left = '';
-         paginationRef.value.style.transform = '';
+      if (paginationRef.value && paginationRef.value.style.position === 'absolute') {
+        paginationRef.value.style.position = ''; // Reset to default (fixed via CSS)
+        paginationRef.value.style.top = '';
+        paginationRef.value.style.bottom = '';
+        paginationRef.value.style.left = '';
+        paginationRef.value.style.transform = '';
       }
       isPaginationFixed.value = true; // Assume fixed if not visible/needed
       return;
@@ -392,8 +397,8 @@
         paginationRef.value.style.transform = 'translateX(-50%)';
         isPaginationFixed.value = false;
       } else {
-         // If already absolute, ensure the top position is recalculated (e.g., on resize)
-         paginationRef.value.style.top = `${footerOffsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER}px`;
+        // If already absolute, ensure the top position is recalculated (e.g., on resize)
+        paginationRef.value.style.top = `${footerOffsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER}px`;
       }
     } else {
       // Switch to Fixed
@@ -406,7 +411,7 @@
         paginationRef.value.style.transform = 'translateX(-50%)';
         isPaginationFixed.value = true;
       }
-       // If already fixed, do nothing
+      // If already fixed, do nothing
     }
   };
   // Throttle the handler
@@ -438,24 +443,26 @@
 
   // Watch route changes (remains the same)
   watch(() => route.fullPath, (newPath, oldPath) => {
-      if (newPath !== oldPath && route.name === 'products') {
-          const newPage = readFiltersFromURL();
-          fetchProducts(newPage);
-      }
+    if (newPath !== oldPath && route.name === 'products') {
+      const newPage = readFiltersFromURL();
+      fetchProducts(newPage);
+    }
   });
+
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   /* Add specific styles for enhanced filters */
   .enhanced-filter-controls {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.5rem; /* More gap */
-    align-items: end; /* Align bottom edges */
-    padding: 1.5rem 2rem; /* More padding */
+    gap: 1.5rem;
+    align-items: end;
+    padding: 1.5rem 2rem;
     border-radius: var(--border-radius);
     background-color: var(--bg-off-light);
-    margin-bottom: 3rem; /* More space below filters */
+    margin-bottom: 3rem;
     box-shadow: var(--shadow-soft);
   }
 
@@ -474,17 +481,14 @@
       gap: 0.4em;
     }
 
-  /* Style all inputs/selects consistently */
-  .enhanced-filter-controls input[type="search"],
-  .enhanced-filter-controls input[type="number"],
-  .enhanced-filter-controls select {
+  .enhanced-filter-controls input[type="search"], .enhanced-filter-controls input[type="number"], .enhanced-filter-controls select {
     padding: 0.8rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
     font-size: 0.95rem;
     background-color: var(--white);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    height: 44px; /* Consistent height */
+    height: 44px;
     box-sizing: border-box;
   }
 
@@ -494,18 +498,16 @@
     background-repeat: no-repeat;
     background-position: right 0.9rem center;
     background-size: 16px 12px;
-    padding-right: 2.8rem; /* Space for arrow */
+    padding-right: 2.8rem;
     cursor: pointer;
   }
 
-    .enhanced-filter-controls input:focus,
-    .enhanced-filter-controls select:focus {
+    .enhanced-filter-controls input:focus, .enhanced-filter-controls select:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--glow-primary);
     }
 
-  /* Price Range Specific */
   .price-range-group .price-inputs {
     display: flex;
     align-items: center;
@@ -513,9 +515,9 @@
   }
 
   .price-range-group input[type="number"] {
-    width: 100%; /* Inputs take available space */
+    width: 100%;
     text-align: center;
-    padding-left: 1.5rem; /* Space for $ */
+    padding-left: 1.5rem;
     padding-right: 0.5rem;
   }
 
@@ -529,7 +531,7 @@
   }
 
   .price-range-group .price-inputs > div {
-    position: relative; /* For positioning the $ */
+    position: relative;
     flex: 1;
   }
 
@@ -538,20 +540,13 @@
     font-weight: bold;
   }
 
-
   .filter-actions {
     display: flex;
     gap: 0.75rem;
-    /* Removed border/padding */
-    /* border-top: 1px solid var(--border-color); */
-    /* padding-top: 1rem; */
-    /* margin-top: 1rem; */ /* No margin needed with grid gap */
-    /* justify-content: flex-end; */ /* Align buttons right */
-    /* grid-column: 1 / -1; */ /* Span all columns if needed, but grid auto-fit handles it */
   }
 
   .filter-button {
-    padding: 0.7rem 1.4rem; /* Slightly larger */
+    padding: 0.7rem 1.4rem;
     font-size: 0.9rem;
     font-weight: 600;
     border-radius: var(--border-radius-small);
@@ -589,7 +584,6 @@
       cursor: not-allowed;
     }
 
-  /* Results Summary */
   .results-summary {
     margin-bottom: 2rem;
     text-align: center;
@@ -601,7 +595,7 @@
     opacity: 0;
     transform: translateY(20px);
     animation: card-fade-in 0.5s ease forwards;
-    animation-delay: var(--stagger-delay); /* Apply stagger */
+    animation-delay: var(--stagger-delay);
   }
 
   @keyframes card-fade-in {
@@ -611,7 +605,6 @@
     }
   }
 
-  /* Message Containers */
   .message-container {
     padding: 4rem 1rem;
     text-align: center;
@@ -659,15 +652,14 @@
     margin-top: 0;
   }
 
-  /* Pagination Container - Always Fixed */
   .pagination-container {
-    position: fixed; /* Default to fixed */
+    position: fixed;
     bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(255, 255, 255, 0.9);
     padding: 0.8rem 1.5rem;
-    border-radius: 50px; /* Pill shape */
+    border-radius: 50px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     z-index: 10;
     border: 1px solid var(--border-color);
@@ -675,13 +667,10 @@
     transition: opacity 0.3s ease, transform 0.3s ease, top 0.3s ease, bottom 0.3s ease;
   }
 
-    /* Style for when JS forces absolute (rarely needed now) */
     .pagination-container.is-absolute {
       position: absolute;
-      /* Top position will be set by JS */
-      bottom: auto; /* Remove fixed bottom */
+      bottom: auto;
     }
-
 
   .pagination {
     list-style: none;
@@ -689,16 +678,13 @@
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem; /* Space between buttons/groups */
-  }
-
-  .page-item {
+    gap: 0.5rem;
   }
 
   .page-link {
     display: block;
-    padding: 0.5rem 0.9rem; /* Adjust padding */
-    min-width: 38px; /* Ensure min width */
+    padding: 0.5rem 0.9rem;
+    min-width: 38px;
     text-align: center;
     border: 1px solid var(--border-color);
     background-color: var(--white);
@@ -710,14 +696,13 @@
     font-weight: 500;
   }
 
-  .page-item:not(.disabled) .page-link:hover,
-  .page-item:not(.disabled) .page-link:focus {
+  .page-item:not(.disabled) .page-link:hover, .page-item:not(.disabled) .page-link:focus {
     border-color: var(--primary-light);
     color: var(--primary);
     background-color: var(--bg-off-light);
     outline: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    z-index: 2; /* Bring to front on hover */
+    z-index: 2;
   }
 
   .page-item.active .page-link {
@@ -743,17 +728,16 @@
     box-shadow: none;
   }
 
-  /* Responsive */
   @media (max-width: 768px) {
     .enhanced-filter-controls {
-      grid-template-columns: 1fr 1fr; /* 2 columns on medium screens */
+      grid-template-columns: 1fr 1fr;
       padding: 1rem 1.5rem;
       margin-bottom: 2rem;
     }
 
     .filter-actions {
-      grid-column: 1 / -1; /* Span full width */
-      justify-content: center; /* Center buttons */
+      grid-column: 1 / -1;
+      justify-content: center;
       margin-top: 0.5rem;
     }
 
@@ -786,7 +770,7 @@
 
   @media (max-width: 576px) {
     .enhanced-filter-controls {
-      grid-template-columns: 1fr; /* Stack filters */
+      grid-template-columns: 1fr;
     }
 
     .product-grid {
@@ -796,21 +780,13 @@
     .skeleton-grid {
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
-    /* Hide some page numbers on very small screens */
-    .page-item:not(.active):not(:first-child):not(:last-child) .page-link {
-      /* Example: Hide middle numbers - adjust logic as needed */
-      /* display: none; */
-    }
   }
 
-  /* Fade transition */
-  .fade-enter-active,
-  .fade-leave-active {
+  .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease;
   }
 
-  .fade-enter-from,
-  .fade-leave-to {
+  .fade-enter-from, .fade-leave-to {
     opacity: 0;
   }
 </style>
