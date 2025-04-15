@@ -23,7 +23,7 @@
         <div v-else-if="error" key="error" class="message-container error-container order-detail-view__error">
           <font-awesome-icon icon="exclamation-triangle" class="message-icon error-icon" />
           <h2>{{ t('orderDetails.errorTitle') }}</h2>
-          <p>{{ error }}</p> <!-- Keep error message raw -->
+          <p>{{ error }}</p> <!-- Keep specific error message -->
           <button @click="fetchOrderDetails" class="button enhanced-button primary">{{ t('orderDetails.tryAgainButton') }}</button>
         </div>
 
@@ -40,7 +40,7 @@
                 </div>
                 <div class="order-card__status-area">
                   <span :class="['status-badge', `status-badge--${order.status}`]">
-                    {{ getStatusLabel(order.status) }} <!-- Status labels might come from service or this t() -->
+                    {{ getStatusLabel(order.status) }}
                   </span>
                 </div>
               </div>
@@ -68,7 +68,7 @@
                 <font-awesome-icon icon="spinner" spin v-else />
                 <span>{{ isCancelling ? t('orderDetails.userActions.cancellingButton') : t('orderDetails.userActions.requestCancelButton') }}</span>
               </button>
-              <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Raw error -->
+              <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Keep raw error -->
             </div>
 
             <!-- Admin Actions (Status Update) -->
@@ -105,7 +105,7 @@
                             rows="3"></textarea>
                 </div>
 
-                <p v-if="updateError" class="action-error">{{ updateError }}</p> <!-- Raw error -->
+                <p v-if="updateError" class="action-error">{{ updateError }}</p> <!-- Keep raw error -->
 
                 <button @click="updateOrderStatus"
                         class="button enhanced-button primary full-width"
@@ -143,7 +143,7 @@
                       <div class="status-timeline__content">
                         <div class="status-timeline__header">
                           <span class="status-timeline__status-label">{{ getStatusLabel(record.status) }}</span>
-                          <span class="status-timeline__date">{{ formatDateRelative(record.date) }}</span>
+                          <span class="status-timeline__date">{{ formatDateRelative(record.date) }}</span> <!-- Updated function -->
                         </div>
                         <div v-if="record.changedBy && record.changedBy.username && isAdmin" class="status-timeline__updater">
                           <font-awesome-icon icon="user-shield" /> {{ t('orderDetails.info.historyUpdaterPrefix') }} {{ record.changedBy.username }}
@@ -162,7 +162,6 @@
             <!-- Items Card -->
             <div class="order-card order-detail-view__items-card">
               <div class="order-card__header">
-                <!-- Use interpolation for item count -->
                 <h3>{{ t('orderDetails.items.title', { itemCount: getTotalQuantity(order) }) }}</h3>
               </div>
               <div class="order-card__body order-detail-view__items-list">
@@ -176,7 +175,7 @@
                     </router-link>
                     <div v-if="item.attributes && Object.keys(item.attributes).length > 0" class="order-item__attributes">
                       <span v-for="(value, key) in item.attributes" :key="key" class="order-item__attribute">
-                        {{ capitalize(key) }}: {{ value }} <!-- Attributes are dynamic, keep as is -->
+                        {{ capitalize(key) }}: {{ value }}
                       </span>
                     </div>
                     <div class="order-item__meta">
@@ -224,7 +223,7 @@
               {{ t('orderDetails.cancelModal.keepButton') }}
             </button>
           </div>
-          <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Raw error -->
+          <p v-if="cancelError" class="action-error">{{ cancelError }}</p> <!-- Keep raw error -->
           <button @click="closeCancelModal" class="modal-close-btn" :aria-label="t('orderDetails.cancelModal.closeAriaLabel')">×</button>
         </div>
       </div>
@@ -250,8 +249,8 @@
     faUserShield, faSave
   );
 
-  // --- Get translation function ---
-  const { t } = useI18n();
+  // --- Get translation function and locale ---
+  const { t, locale } = useI18n();
 
   // --- State ---
   const order = ref(null);
@@ -269,9 +268,9 @@
   const route = useRoute();
   const router = useRouter();
 
-  // --- User Role (Placeholder) ---
-  const isAdmin = ref(false); // <<-- SET THIS
-  const isUser = ref(true); // <<-- SET THIS
+  // --- User Role (Placeholder - Update with your actual role logic) ---
+  const isAdmin = ref(false); // Set based on user context
+  const isUser = ref(true); // Set based on user context
 
   // --- Computed ---
   const orderId = computed(() => route.params.id);
@@ -296,22 +295,27 @@
     try {
       order.value = await orderService.getOrderById(orderId.value);
       newStatus.value = '';
-      // isAdmin.value = await checkUserAdminStatus(); // Fetch role if needed
+      // Update isAdmin based on actual user role if needed
+      // isAdmin.value = await checkUserAdminStatus();
     } catch (err) {
-      // Keep raw error from service
-      error.value = err.message || 'Failed to load order details. Please try again.';
+      error.value = err.message || t('orderDetails.errors.loadErrorFallback'); // Use translated fallback
       console.error('Error fetching order details:', err);
     } finally {
       loading.value = false;
     }
   };
 
+  // --- UPDATED formatDate ---
   const formatDate = (dateString, options = { dateStyle: 'medium', timeStyle: 'short' }) => {
     if (!dateString) return 'N/A';
-    try { return new Intl.DateTimeFormat('en-US', options).format(new Date(dateString)); }
+    try {
+      const currentLocaleCode = t('dates.localeCode'); // Get BCP 47 code
+      return new Intl.DateTimeFormat(currentLocaleCode, options).format(new Date(dateString));
+    }
     catch (e) { return 'Invalid Date'; }
   };
 
+  // --- UPDATED formatDateRelative ---
   const formatDateRelative = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -320,16 +324,23 @@
     const minutes = Math.round(seconds / 60);
     const hours = Math.round(minutes / 60);
     const days = Math.round(hours / 24);
-    if (seconds < 60) return t('dates.relative.justNow') || 'just now';
-    if (minutes < 60) return t('dates.relative.minutesAgo', { count: minutes }) || `${minutes} min ago`;
-    if (hours < 24) return t('dates.relative.hoursAgo', { count: hours }) || `${hours} hr ago`;
-    if (days < 7) return t('dates.relative.daysAgo', { count: days }) || `${days} day${days > 1 ? 's' : ''} ago`;
-    return formatDate(dateString, { dateStyle: 'short' });
+    const weeks = Math.round(days / 7);
+    const months = Math.round(days / 30);
+    const years = Math.round(days / 365);
+
+    if (seconds < 60) return t('dates.relative.justNow', 'just now');
+    if (minutes < 60) return t(minutes > 1 ? 'dates.relative.minutesAgo' : 'dates.relative.minuteAgo', { count: minutes }, `${minutes} min ago`);
+    if (hours < 24) return t(hours > 1 ? 'dates.relative.hoursAgo' : 'dates.relative.hourAgo', { count: hours }, `${hours} hr ago`);
+    if (days === 1 && locale.value === 'zh') return t('dates.relative.dayAgo', 'yesterday');
+    if (days < 7) return t(days > 1 ? 'dates.relative.daysAgo' : 'dates.relative.dayAgo', { count: days }, `${days} day${days > 1 ? 's' : ''} ago`);
+    if (weeks < 4) return t(weeks > 1 ? 'dates.relative.weeksAgo' : 'dates.relative.weekAgo', { count: weeks }, `${weeks} week${weeks > 1 ? 's' : ''} ago`);
+    if (months < 12) return t(months > 1 ? 'dates.relative.monthsAgo' : 'dates.relative.monthAgo', { count: months }, `${months} month${months > 1 ? 's' : ''} ago`);
+
+    const formattedDate = formatDate(dateString, { dateStyle: 'short' });
+    return t('dates.relative.default', { date: formattedDate }, `on ${formattedDate}`);
   };
 
-  // Modified getStatusLabel to use translations
   const getStatusLabel = (statusValue) => {
-    // Use the translated status label if available, otherwise fallback to the value itself
     return t(`orderDetails.statusLabels.${statusValue}`, statusValue);
   };
 
@@ -349,19 +360,19 @@
 
   const updateOrderStatus = async () => {
     if (!newStatus.value) {
-      updateError.value = t('orderDetails.errors.statusUpdateGeneric'); // Use translated generic error
+      updateError.value = t('orderDetails.errors.statusUpdateGeneric');
       return;
     }
     isUpdating.value = true;
     updateError.value = null;
     try {
       const updatedOrder = await orderService.updateOrderStatus(orderId.value, newStatus.value, statusNotes.value);
-      order.value = updatedOrder;
+      order.value = updatedOrder; // Update local order data
       newStatus.value = '';
       statusNotes.value = '';
-      alert(`Order status updated to ${getStatusLabel(order.value.status)}`);
+      alert(`Order status updated to ${getStatusLabel(order.value.status)}`); // Use translated label
     } catch (err) {
-      updateError.value = err.message || t('orderDetails.errors.statusUpdateGeneric'); // Keep backend error, fallback to translation
+      updateError.value = err.message || t('orderDetails.errors.statusUpdateGeneric'); // Use translated fallback
       console.error('Error updating order status:', err);
     } finally {
       isUpdating.value = false;
@@ -378,18 +389,17 @@
     cancelError.value = null;
     try {
       const updatedOrder = await orderService.cancelOrder(orderId.value, cancelReason.value);
-      order.value = updatedOrder;
+      order.value = updatedOrder; // Update local order data
       showCancelConfirmation.value = false;
       cancelReason.value = '';
-      alert('Your order has been cancelled successfully');
+      alert('Your order has been cancelled successfully'); // Consider a more integrated notification
     } catch (err) {
-      cancelError.value = err.message || t('orderDetails.errors.cancelGeneric'); // Keep backend error, fallback to translation
+      cancelError.value = err.message || t('orderDetails.errors.cancelGeneric'); // Use translated fallback
       console.error('Error cancelling order:', err);
     } finally {
       isCancelling.value = false;
     }
   };
-
 
   // --- Lifecycle ---
   onMounted(() => {
@@ -399,7 +409,6 @@
 </script>
 
 <style scoped>
-  /* Styles remain the same */
   /* --- Base & Layout --- */
   .order-detail-view {
     padding-bottom: 6rem;
@@ -409,27 +418,33 @@
     padding-top: calc(var(--header-height) + 2rem);
     padding-bottom: 2rem;
     text-align: left;
-    position: relative;
+    position: relative; /* Needed for absolute positioning of back link potentially */
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-light);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 4%;
+    padding-right: 4%;
   }
 
     .order-detail-view__header h1 {
       margin-bottom: 0;
-      margin-left: 1rem;
+      margin-left: 0; /* Reset margin */
       font-size: clamp(1.8rem, 5vw, 2.5rem);
-      display: inline-block;
+      display: block; /* Make it block */
+      margin-top: 0.5rem; /* Space below back link */
     }
 
   .order-detail-view__back-link {
     display: inline-flex;
     align-items: center;
     gap: 0.5em;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem; /* Reduced margin */
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-muted);
     text-decoration: none;
     transition: color var(--transition-fast);
-    padding: 0.5rem 0;
   }
 
     .order-detail-view__back-link:hover {
@@ -447,28 +462,29 @@
   .order-detail-view__content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 1.5rem 4%;
+    padding: 2rem 4% 0; /* Added top padding */
   }
 
   .order-detail-view__grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 2rem;
   }
 
   @media (min-width: 992px) {
     .order-detail-view__grid {
-      grid-template-columns: minmax(300px, 1fr) 2fr;
-      gap: 2rem;
+      grid-template-columns: minmax(300px, 1fr) 2fr; /* Adjust column ratio if needed */
+      gap: 2.5rem;
+    }
+
+    .order-detail-view__summary-actions {
+      position: sticky;
+      top: calc(var(--header-height) + 1.5rem); /* Stick below header */
+      align-self: start;
     }
   }
 
-  .order-detail-view__summary-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
+  .order-detail-view__summary-actions,
   .order-detail-view__info-items {
     display: flex;
     flex-direction: column;
@@ -481,16 +497,18 @@
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--border-color);
     overflow: hidden;
-    margin-bottom: 1.5rem;
+    /* Removed margin-bottom, handled by gap */
   }
 
   .order-card__header {
-    padding: 0.8rem 1.2rem;
+    padding: 1rem 1.2rem;
     background-color: var(--bg-off-light);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 0.5rem;
   }
 
     .order-card__header h2, .order-card__header h3 {
@@ -498,6 +516,7 @@
       font-weight: 600;
       margin: 0;
       color: var(--text-dark);
+      line-height: 1.3;
     }
 
   .order-card__body {
@@ -505,7 +524,7 @@
   }
 
   .order-card__footer {
-    padding: 0.8rem 1.2rem;
+    padding: 1rem 1.2rem;
     background-color: var(--bg-off-light);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -515,6 +534,7 @@
     font-weight: 600;
     color: var(--text-dark);
   }
+
   /* --- Summary Card --- */
   .order-detail-view__summary-card .order-card__identifier {
     flex-grow: 1;
@@ -522,6 +542,7 @@
 
   .order-detail-view__summary-card .status-badge {
     flex-shrink: 0;
+    align-self: flex-start; /* Align badge top */
   }
 
   .order-detail-view__summary-body {
@@ -540,6 +561,8 @@
 
   .summary-item__label {
     color: var(--text-muted);
+    margin-right: 1em;
+    flex-shrink: 0;
   }
 
   .summary-item__value {
@@ -549,7 +572,7 @@
   }
 
   .summary-item--total {
-    margin-top: 0.5rem;
+    margin-top: 0.8rem;
     padding-top: 0.8rem;
     border-top: 1px dashed var(--border-color);
   }
@@ -569,8 +592,7 @@
   .order-detail-view__user-actions {
     padding: 1.2rem;
     background-color: #fff9f9;
-    border-color: var(--secondary);
-    border: 1px solid var(--secondary);
+    border: 1px solid #ffccd0;
     border-radius: var(--border-radius);
   }
 
@@ -581,8 +603,11 @@
       font-size: 1rem;
     }
 
+  .order-detail-view__admin-update { /* Style as a card */
+  }
+
   .admin-update__title {
-    font-size: 1rem !important;
+    font-size: 1rem !important; /* Override generic card header */
   }
 
   .form-group {
@@ -601,30 +626,11 @@
       color: var(--text-dark);
     }
 
-  .enhanced-textarea {
-    width: 100%;
-    padding: 0.7rem 0.9rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    font-size: 0.9rem;
-    font-family: var(--font-body);
-    background-color: var(--white);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    line-height: 1.5;
-    resize: vertical;
+  .enhanced-textarea { /* Use style from main.css */
   }
 
-    .enhanced-textarea:focus, .enhanced-textarea:focus-visible {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px var(--glow-primary);
-    }
-
-    .enhanced-textarea:disabled {
-      background-color: var(--bg-off-light);
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
+  select.enhanced-input { /* Use style from main.css */
+  }
 
   .info-text {
     font-size: 0.8rem;
@@ -642,6 +648,11 @@
   .button.full-width {
     width: 100%;
   }
+
+  .button svg {
+    margin-right: 0.5em;
+  }
+
   /* --- Shipping & History Cards --- */
   .order-detail-view__info-row {
     display: grid;
@@ -656,8 +667,7 @@
   }
 
   .order-detail-view__info-card .order-card__body {
-    padding-top: 0.8rem;
-    padding-bottom: 0.8rem;
+    padding: 1rem 1.2rem;
   }
 
   .order-detail-view__info-card--shipping p {
@@ -665,9 +675,11 @@
     line-height: 1.6;
     color: var(--text-muted);
   }
+
   /* --- Status Timeline --- */
   .status-timeline {
     position: relative;
+    margin-top: 0.5rem;
   }
 
   .status-timeline__item {
@@ -718,8 +730,9 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.3rem;
     flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .status-timeline__status-label {
@@ -744,14 +757,21 @@
     gap: 0.3em;
   }
 
+    .status-timeline__updater svg {
+      font-size: 0.9em;
+    }
+
   .status-timeline__notes {
     font-size: 0.85rem;
-    color: var(--text-muted);
-    margin: 0.3rem 0 0 0;
-    padding: 0.5rem;
-    background-color: var(--bg-off-light);
+    color: var(--text-dark);
+    margin: 0.5rem 0 0 0;
+    padding: 0.6rem 0.8rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
     border-radius: var(--border-radius-small);
     line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .empty-message {
@@ -760,6 +780,7 @@
     text-align: center;
     padding: 1rem 0;
   }
+
   /* --- Items Card & List --- */
   .order-detail-view__items-list {
     display: flex;
@@ -772,7 +793,7 @@
     display: flex;
     align-items: flex-start;
     gap: 1rem;
-    padding: 1rem 1.2rem;
+    padding: 1.2rem;
     border-bottom: 1px solid var(--border-color);
   }
 
@@ -807,6 +828,7 @@
     text-decoration: none;
     font-size: 0.95rem;
     transition: color var(--transition-fast);
+    line-height: 1.3;
   }
 
     .order-item__name:hover {
@@ -826,6 +848,7 @@
     color: var(--text-muted);
     display: flex;
     gap: 1rem;
+    margin-top: 0.2rem;
   }
 
   .order-item__subtotal {
@@ -844,16 +867,9 @@
     .order-detail-view__items-footer strong {
       color: var(--primary);
     }
+
   /* --- Cancel Modal --- */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(30, 30, 30, 0.7);
-    z-index: var(--popup-overlay-z-index);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+  .modal-overlay { /* Use style from main.css */
   }
 
   .modal-fade-enter-active, .modal-fade-leave-active {
@@ -866,7 +882,7 @@
 
   .modal-content {
     background-color: var(--white);
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-strong);
     max-width: 500px;
@@ -900,6 +916,10 @@
     line-height: 1.6;
   }
 
+  .order-detail-view__cancel-modal .form-group {
+    margin-bottom: 1.5rem;
+  }
+  /* Add margin below textarea */
   .modal-actions {
     display: flex;
     gap: 1rem;
@@ -911,44 +931,48 @@
       min-width: 120px;
     }
 
-  .modal-close-btn {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    line-height: 1;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 0.2rem;
-    transition: color var(--transition-fast);
+  .modal-close-btn { /* Use style from main.css */
   }
 
-    .modal-close-btn:hover {
-      color: var(--secondary);
-    }
   /* --- Loading/Error States --- */
   .order-detail-view__loading, .order-detail-view__error {
-    min-height: 50vh;
+    min-height: 60vh;
   }
 
-    .order-detail-view__loading .spinner::after {
-      content: '';
-      width: 40px;
-      height: 40px;
-      border: 4px solid var(--accent);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      display: block;
+    .order-detail-view__loading .spinner::after { /* Use style from main.css */
     }
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+  /* --- Status Badge Colors --- */
+  .status-badge--pending, .status-timeline__dot.status-badge--pending {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-color: #ffe69c;
   }
+
+  .status-badge--shipped, .status-timeline__dot.status-badge--shipped {
+    background-color: #cfe2ff;
+    color: #0a58ca;
+    border-color: #b6d4fe;
+  }
+
+  .status-badge--delivered, .status-timeline__dot.status-badge--delivered {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border-color: #badbcc;
+  }
+
+  .status-badge--cancelled, .status-timeline__dot.status-badge--cancelled {
+    background-color: #f8d7da;
+    color: #842029;
+    border-color: #f5c2c7;
+  }
+
+  .status-badge--hold, .status-timeline__dot.status-badge--hold {
+    background-color: #e2e3e5;
+    color: #41464b;
+    border-color: #d3d6d8;
+  }
+
   /* --- Responsive Adjustments --- */
   @media (max-width: 768px) {
     .order-detail-view__content {
@@ -1017,14 +1041,17 @@
 
     .order-item {
       flex-wrap: wrap;
+      gap: 0.75rem;
     }
 
     .order-item__image-link {
       margin-bottom: 0.5rem;
+      flex-basis: 75px;
     }
 
     .order-item__details {
       width: calc(100% - 75px - 1rem);
+      flex-basis: calc(100% - 75px - 1rem);
     }
 
     .order-item__subtotal {
@@ -1032,36 +1059,7 @@
       text-align: right;
       margin-top: 0.5rem;
       font-size: 1rem;
+      flex-basis: 100%;
     }
-  }
-  /* --- Status Badge Colors --- */
-  .status-badge--pending, .status-timeline__dot.status-badge--pending {
-    background-color: #fff3cd;
-    color: #664d03;
-    border-color: #ffe69c;
-  }
-
-  .status-badge--shipped, .status-timeline__dot.status-badge--shipped {
-    background-color: #cfe2ff;
-    color: #0a58ca;
-    border-color: #b6d4fe;
-  }
-
-  .status-badge--delivered, .status-timeline__dot.status-badge--delivered {
-    background-color: #d1e7dd;
-    color: #0f5132;
-    border-color: #badbcc;
-  }
-
-  .status-badge--cancelled, .status-timeline__dot.status-badge--cancelled {
-    background-color: #f8d7da;
-    color: #842029;
-    border-color: #f5c2c7;
-  }
-
-  .status-badge--hold, .status-timeline__dot.status-badge--hold {
-    background-color: #e2e3e5;
-    color: #41464b;
-    border-color: #d3d6d8;
   }
 </style>

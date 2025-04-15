@@ -48,11 +48,12 @@ import { createI18n } from 'vue-i18n';
 
 // Import locale messages
 import enMessages from './locales/en.json';
+import zhMessages from './locales/zh.json';
 // import frMessages from './locales/fr.json'; // <-- Uncomment and add more languages as needed
 
 // --- Helper Function to Determine Initial Locale ---
 function getDefaultLocale() {
-  const supportedLocales = ['en']; // <-- Add your supported language codes here (e.g., 'fr', 'es')
+  const supportedLocales = ['en', 'zh']; // <-- Add your supported language codes here (e.g., 'fr', 'es')
   const defaultLocale = 'en'; // <-- Your default fallback language
 
   // 1. Check localStorage for saved preference
@@ -86,6 +87,7 @@ const i18n = createI18n({
   fallbackLocale: 'en', // Fallback if a translation key is missing
   messages: {
     en: enMessages,
+    zh: zhMessages,
     // fr: frMessages, // <-- Add other imported messages here
   },
   // Optional: Suppress warnings in production about missing translations or fallbacks

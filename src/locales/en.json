@@ -1,5 +1,24 @@
 ﻿{
   "appName": "AURORA",
+  "dates": {
+    "localeCode": "en-US",
+    "relative": {
+      "justNow": "just now",
+      "minuteAgo": "{count} min ago",
+      "minutesAgo": "{count} mins ago",
+      "hourAgo": "{count} hr ago",
+      "hoursAgo": "{count} hrs ago",
+      "dayAgo": "{count} day ago",
+      "daysAgo": "{count} days ago",
+      "weekAgo": "{count} week ago",
+      "weeksAgo": "{count} weeks ago",
+      "monthAgo": "{count} month ago",
+      "monthsAgo": "{count} months ago",
+      "yearAgo": "{count} year ago",
+      "yearsAgo": "{count} years ago",
+      "default": "on {date}"
+    }
+  },
   "header": {
     "home": "Home",
     "products": "Products",
@@ -110,6 +129,48 @@
       "subtotal": "Subtotal:",
       "viewCart": "View Cart",
       "checkout": "Checkout"
+    }
+  },
+  "homeView": {
+    "hero": {
+      "title": "Sustainable Craftsmanship,<br>Illuminated Design.",
+      "subtitle": "Discover furniture crafted from responsibly sourced materials, blending timeless aesthetics with modern comfort. Elevate your space consciously with AURORA.",
+      "ctaButton": "Explore Collections"
+    },
+    "featured": {
+      "title": "Curated Comfort, Consciously Crafted",
+      "subtitle": "Explore signature pieces designed with sustainable materials to bring harmony and style to your everyday living.",
+      "loading": "Loading featured products...",
+      "empty": "No featured products available at the moment."
+    },
+    "categories": {
+      "newArrivals": "New Arrivals",
+      "livingRoom": "Living Room",
+      "bedroom": "Bedroom",
+      "dining": "Dining",
+      "lighting": "Lighting",
+      "viewAll": "View All"
+    },
+    "philosophy": {
+      "title": "Our Philosophy",
+      "text": "We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out."
+    },
+    "showcase": {
+      "title": "Inspiring Spaces",
+      "text": "See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.",
+      "ctaButton": "View Inspiration"
+    },
+    "testimonials": {
+      "title": "Voices of Delight",
+      "subtitle": "Hear from clients who have transformed their homes with AURORA."
+    },
+    "newsletter": {
+      "title": "Stay Illuminated",
+      "subtitle": "Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.",
+      "placeholder": "Enter your email address",
+      "ctaButton": "Subscribe",
+      "successMessage": "Thank you for subscribing!",
+      "errorMessage": "Subscription failed. Please try again."
     }
   },
   "productsPage": {
@@ -286,6 +347,60 @@
       "writeReviewButton": "Write a Review"
     }
   },
+  "ordersView": {
+    "title": "My Orders",
+    "subtitle": "Review your past purchases and track their status.",
+    "filters": {
+      "title": "Filter by Status",
+      "allOption": "All Orders",
+      "refreshButton": "Refresh",
+      "refreshingButton": "Refreshing..."
+    },
+    "loading": "Loading your order history...",
+    "error": {
+      "title": "Failed to Load Orders",
+      "tryAgain": "Try Again"
+    },
+    "empty": {
+      "title": "No Orders Found",
+      "filteredMessage": "You don't have any orders with the status \"{statusLabel}\".",
+      "defaultMessage": "You haven't placed any orders yet. Let's change that!",
+      "exploreButton": "Explore Products"
+    },
+    "card": {
+      "orderNumberPrefix": "Order #",
+      "placedOn": "Placed on:",
+      "lastUpdated": "Last updated:",
+      "itemCount": "{count} item | {count} items",
+      "totalPrefix": "Total:",
+      "cancelButton": "Cancel Order",
+      "cancellingButton": "Cancelling...",
+      "detailsButton": "View Details",
+      "cancelConfirm": {
+        "prompt": "Are you sure you want to cancel order #{orderNumber}?",
+        "confirmButton": "Yes, Cancel",
+        "keepButton": "No, Keep Order"
+      }
+    },
+    "pagination": {
+      "ariaLabel": "Orders pagination",
+      "previousAriaLabel": "Previous page",
+      "previousText": "«",
+      "nextAriaLabel": "Next page",
+      "nextText": "»"
+    },
+    "statusLabels": {
+      "pending": "Pending",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "hold": "On Hold"
+    },
+    "errors": {
+      "loadErrorFallback": "Could not load your order history. Please try again.",
+      "cancelErrorFallback": "Could not cancel the order. Please try again."
+    }
+  },
   "orderDetails": {
     "backLink": "Back to Orders",
     "pageTitle": "Order Details",
@@ -392,7 +507,13 @@
       "total": "Total",
       "placeOrderButton": "Place Secure Order",
       "processingButton": "Processing..."
+    },
+    "languageSwitcher": {
+      "changeLanguage": "Change language",
+      "currentLanguage": "Current Language: {lang}",
+      "languages": {
+        "en": "English"
+      }
     }
   }
-
 }

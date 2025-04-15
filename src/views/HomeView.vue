@@ -3,16 +3,15 @@
     <!-- Hero Section -->
     <section class="hero" id="hero" ref="heroSectionRef">
       <div class="hero-content">
-        <h1 data-animate-heading>Sustainable Craftsmanship,<br>Illuminated Design.</h1>
-        <p>Discover furniture crafted from responsibly sourced materials, blending timeless aesthetics with modern comfort. Elevate your space consciously with AURORA.</p>
+        <!-- Use v-html for the title because the key contains <br> -->
+        <h1 data-animate-heading v-html="t('homeView.hero.title')"></h1>
+        <p>{{ t('homeView.hero.subtitle') }}</p>
         <div class="cta-button-wrapper">
-          <router-link to="/products" class="cta-button">Explore Collections</router-link>
+          <router-link to="/products" class="cta-button">{{ t('homeView.hero.ctaButton') }}</router-link>
         </div>
       </div>
       <div class="hero-image-container">
-        <div class="hero-image"
-             id="hero-interactive-image"
-             ref="heroImageRef">
+        <div class="hero-image" id="hero-interactive-image" ref="heroImageRef">
           <!-- Hotspots are complex, skipping for initial conversion -->
         </div>
       </div>
@@ -21,25 +20,24 @@
     <!-- Featured Products Section -->
     <section class="products" id="products">
       <div class="section-header">
-        <h2>Curated Comfort, Consciously Crafted</h2>
-        <p>Explore signature pieces designed with sustainable materials to bring harmony and style to your everyday living.</p>
+        <h2>{{ t('homeView.featured.title') }}</h2>
+        <p>{{ t('homeView.featured.subtitle') }}</p>
       </div>
 
       <!-- Category Links -->
       <div class="category-links-container">
         <ul class="category-links-list">
-          <li class="category-link-item"><router-link to="/products?category=new" class="category-link-button">New Arrivals</router-link></li>
-          <li class="category-link-item"><router-link to="/products?category=living-room" class="category-link-button">Living Room</router-link></li>
-          <li class="category-link-item"><router-link to="/products?category=bedroom" class="category-link-button">Bedroom</router-link></li>
-          <li class="category-link-item"><router-link to="/products?category=dining" class="category-link-button">Dining</router-link></li>
-          <li class="category-link-item"><router-link to="/products?category=lighting" class="category-link-button">Lighting</router-link></li>
-          <li class="category-link-item"><router-link to="/products" class="category-link-button all-products">View All</router-link></li>
+          <li class="category-link-item"><router-link to="/products?category=new" class="category-link-button">{{ t('homeView.categories.newArrivals') }}</router-link></li>
+          <li class="category-link-item"><router-link to="/products?category=living-room" class="category-link-button">{{ t('homeView.categories.livingRoom') }}</router-link></li>
+          <li class="category-link-item"><router-link to="/products?category=bedroom" class="category-link-button">{{ t('homeView.categories.bedroom') }}</router-link></li>
+          <li class="category-link-item"><router-link to="/products?category=dining" class="category-link-button">{{ t('homeView.categories.dining') }}</router-link></li>
+          <li class="category-link-item"><router-link to="/products?category=lighting" class="category-link-button">{{ t('homeView.categories.lighting') }}</router-link></li>
+          <li class="category-link-item"><router-link to="/products" class="category-link-button all-products">{{ t('homeView.categories.viewAll') }}</router-link></li>
         </ul>
       </div>
 
       <!-- Featured Product Grid -->
-      <!-- Add loading/error/empty states -->
-      <div v-if="isLoading" class="loading-indicator">Loading featured products...</div>
+      <div v-if="isLoading" class="loading-indicator">{{ t('homeView.featured.loading') }}</div>
       <div v-else-if="errorLoading" class="error-message">{{ errorLoading }}</div>
       <div v-else-if="featuredProducts.length > 0" class="product-grid">
         <ProductCard v-for="product in featuredProducts"
@@ -49,76 +47,76 @@
                      :linkTo="`/product-detail/${product.id}`"
                      :apply-tilt="true" />
       </div>
-      <div v-else class="empty-message">No featured products available at the moment.</div>
+      <div v-else class="empty-message">{{ t('homeView.featured.empty') }}</div>
     </section>
 
     <!-- Showcase Section - COMMENTED OUT -->
     <!--
-  <section class="showcase" id="showcase">
-    <div class="showcase-content">
-      <h2>Inspiring Spaces</h2>
-      <p>See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.</p>
-      <div class="cta-button-wrapper">
-        <router-link to="/products" class="cta-button">View Inspiration</router-link>
+    <section class="showcase" id="showcase">
+      <div class="showcase-content">
+        <h2>{{ t('homeView.showcase.title') }}</h2>
+        <p>{{ t('homeView.showcase.text') }}</p>
+        <div class="cta-button-wrapper">
+          <router-link to="/products" class="cta-button">{{ t('homeView.showcase.ctaButton') }}</router-link>
+        </div>
       </div>
-    </div>
-    <div class="showcase-image-wrapper">
-      <div class="showcase-image" id="parallax-image"></div>
-    </div>
-  </section>
-  -->
+      <div class="showcase-image-wrapper">
+        <div class="showcase-image" id="parallax-image"></div>
+      </div>
+    </section>
+    -->
     <!-- Testimonials Section - COMMENTED OUT -->
     <!--
-  <section class="testimonials" id="testimonials">
-    <div class="section-header">
-      <h2>Voices of Delight</h2>
-      <p>Hear from clients who have transformed their homes with AURORA.</p>
-    </div>
-    <div class="testimonial-grid">
-      <div class="testimonial-card">
-        <p class="quote">"The quality exceeded my expectations. It's beautiful, and knowing it's sustainably made makes it even better. The Serene Sofa is the heart of our living room."</p>
-        <div class="author">
-          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/44.jpg');" loading="lazy" aria-hidden="true"></div>
-          <div class="author-info"><h4>Elena Rodriguez</h4><p>Interior Designer</p></div>
+    <section class="testimonials" id="testimonials">
+      <div class="section-header">
+        <h2>{{ t('homeView.testimonials.title') }}</h2>
+        <p>{{ t('homeView.testimonials.subtitle') }}</p>
+      </div>
+      <div class="testimonial-grid">
+        <! -- Testimonial cards content would need dynamic data binding or translation if static ->
+        <div class="testimonial-card">
+          <p class="quote">"The quality exceeded my expectations. It's beautiful, and knowing it's sustainably made makes it even better. The Serene Sofa is the heart of our living room."</p>
+          <div class="author">
+            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/44.jpg');" loading="lazy" aria-hidden="true"></div>
+            <div class="author-info"><h4>Elena Rodriguez</h4><p>Interior Designer</p></div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <p class="quote">"From browsing online to the white-glove delivery, the experience was seamless. The Aerial Chair is even more stunning in person, amazing craftsmanship."</p>
+          <div class="author">
+            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/men/32.jpg');" loading="lazy" aria-hidden="true"></div>
+            <div class="author-info"><h4>Marcus Chen</h4><p>Software Engineer</p></div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <p class="quote">"AURORA helped me find the perfect balance between style and function for my small apartment. The Horizon Console's sustainable walnut is gorgeous!"</p>
+          <div class="author">
+            <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/68.jpg');" loading="lazy" aria-hidden="true"></div>
+            <div class="author-info"><h4>Aisha Khan</h4><p>Graphic Artist</p></div>
+          </div>
         </div>
       </div>
-      <div class="testimonial-card">
-        <p class="quote">"From browsing online to the white-glove delivery, the experience was seamless. The Aerial Chair is even more stunning in person, amazing craftsmanship."</p>
-        <div class="author">
-          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/men/32.jpg');" loading="lazy" aria-hidden="true"></div>
-          <div class="author-info"><h4>Marcus Chen</h4><p>Software Engineer</p></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <p class="quote">"AURORA helped me find the perfect balance between style and function for my small apartment. The Horizon Console's sustainable walnut is gorgeous!"</p>
-        <div class="author">
-          <div class="author-img" style="background-image: url('https://randomuser.me/api/portraits/women/68.jpg');" loading="lazy" aria-hidden="true"></div>
-          <div class="author-info"><h4>Aisha Khan</h4><p>Graphic Artist</p></div>
-        </div>
-      </div>
-    </div>
-  </section>
-  -->
+    </section>
+    -->
     <!-- Newsletter Section - COMMENTED OUT -->
     <!--
-  <section class="newsletter" id="newsletter">
-    <div class="section-header">
-      <h2>Stay Illuminated</h2>
-      <p>Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.</p>
-    </div>
-    <form class="newsletter-form" @submit.prevent="handleNewsletterSubmit">
-      <input type="email" class="newsletter-input" placeholder="Enter your email address" required aria-label="Email address" v-model="newsletterEmail">
-      <button type="submit" class="cta-button newsletter-button">Subscribe</button>
-    </form>
-    <p v-if="newsletterMessage" :class="newsletterSuccess ? 'success-message' : 'error-message'">{{ newsletterMessage }}</p>
-  </section>
-  -->
-
+    <section class="newsletter" id="newsletter">
+      <div class="section-header">
+        <h2>{{ t('homeView.newsletter.title') }}</h2>
+        <p>{{ t('homeView.newsletter.subtitle') }}</p>
+      </div>
+      <form class="newsletter-form" @submit.prevent="handleNewsletterSubmit">
+        <input type="email" class="newsletter-input" :placeholder="t('homeView.newsletter.placeholder')" required aria-label="Email address" v-model="newsletterEmail">
+        <button type="submit" class="cta-button newsletter-button">{{ t('homeView.newsletter.ctaButton') }}</button>
+      </form>
+      <p v-if="newsletterMessage" :class="newsletterSuccess ? 'success-message' : 'error-message'">{{ t(newsletterSuccess ? 'homeView.newsletter.successMessage' : 'homeView.newsletter.errorMessage') }}</p>
+    </section>
+    -->
     <!-- Philosophy Section -->
     <section class="philosophy" id="philosophy">
       <div class="philosophy-content">
-        <h2>Our Philosophy</h2>
-        <p>We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out.</p>
+        <h2>{{ t('homeView.philosophy.title') }}</h2>
+        <p>{{ t('homeView.philosophy.text') }}</p>
       </div>
     </section>
 
@@ -126,10 +124,15 @@
 </template>
 
 <script setup>
+  // --- Add useI18n ---
   import { ref, onMounted, onUnmounted } from 'vue';
+  import { useI18n } from 'vue-i18n'; // <-- Import useI18n
   import ProductCard from '../components/ui/ProductCard.vue';
 
-  // Define emits to pass event up to App.vue
+  // --- Get translation function ---
+  const { t } = useI18n(); // <-- Get t function
+
+  // --- Define emits to pass event up to App.vue ---
   const emit = defineEmits(['addToCart']);
 
   // --- Constants ---
@@ -146,12 +149,9 @@
   const featuredProducts = ref([]); // Initialize as empty array
   const isLoading = ref(true);
   const errorLoading = ref(null);
-
   const newsletterEmail = ref('');
   const newsletterMessage = ref('');
   const newsletterSuccess = ref(false);
-
-  // Check for reduced motion preference
   const prefersReducedMotion = ref(false);
   if (typeof window !== 'undefined') {
     prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -170,15 +170,18 @@
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
     const success = Math.random() > 0.3;
     if (success) {
-      newsletterMessage.value = 'Thank you for subscribing!';
+      // Set success flag, template will show translated message
       newsletterSuccess.value = true;
       newsletterEmail.value = '';
+      newsletterMessage.value = 'placeholder'; // Need a value to trigger v-if
     } else {
-      newsletterMessage.value = 'Subscription failed. Please try again.';
+      // Set error flag, template will show translated message
       newsletterSuccess.value = false;
+      newsletterMessage.value = 'placeholder'; // Need a value to trigger v-if
     }
     setTimeout(() => { newsletterMessage.value = ''; }, 4000);
   };
+
 
   // --- Hero Image Interaction Logic ---
   const handleHeroMouseMove = (event) => {
@@ -231,25 +234,19 @@
     errorLoading.value = null;
     console.log(`Fetching ${FEATURED_PRODUCT_LIMIT} featured products from backend...`);
     try {
-      // Use the paginated endpoint: fetch page 1 with a limit
       const url = `/api/products?page=1&limit=${FEATURED_PRODUCT_LIMIT}`;
-      // Optional: Add sort parameter if backend supports it e.g., &sort=featured or &sort=newest
-      // const url = `/api/products?page=1&limit=${FEATURED_PRODUCT_LIMIT}&sort=newest`;
-
       const response = await fetch(url);
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
       }
-      // The data now contains { products, currentPage, totalPages, totalProducts }
       const data = await response.json();
+      const maxDescriptionLength = 32;
+      // Use translated default if product.description is missing
+      const defaultDesc = t('productCard.defaultDescription');
 
-      // Define max description length for the home page cards
-      const maxDescriptionLength = 32; // Keep short for home page
-
-      // Map the products array from the response data
       featuredProducts.value = data.products.map(product => {
-        const originalDescription = product.description || "High-quality, sustainable furniture piece.";
+        const originalDescription = product.description || defaultDesc;
         const truncatedDescription = truncateText(originalDescription, maxDescriptionLength);
         return {
           id: product._id,
@@ -263,13 +260,12 @@
           reviewCount: product.reviewCount || 0,
         };
       });
-
       console.log("Featured products loaded:", featuredProducts.value);
-
     } catch (error) {
       console.error("Error fetching featured products:", error);
-      errorLoading.value = "Failed to load featured products. Please try again later.";
-      featuredProducts.value = []; // Ensure empty array on error
+      // Use translated default error message
+      errorLoading.value = error.message || t('productsPage.error.title'); // Or a more specific home view error key
+      featuredProducts.value = [];
     } finally {
       isLoading.value = false;
     }
@@ -308,5 +304,20 @@
 </script>
 
 <style scoped>
+  /* Scoped styles for loading/error messages */
+  .loading-indicator,
+  .error-message,
+  .empty-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
 
+  .error-message {
+    color: var(--secondary);
+    font-weight: 600;
+  }
+  /* Note: Other styles in HomeView are expected to be global (main.css) or part of ProductCard */
 </style>

@@ -90,6 +90,9 @@
         <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
       </button>
 
+      <!-- Language Switcher **** -->
+      <LanguageSwitcher />
+
       <!-- Mobile Menu Toggle -->
       <button class="menu-toggle"
               id="menu-toggle"
@@ -104,6 +107,7 @@
 
 <script setup>
   import { ref, watch, nextTick, onMounted } from 'vue';
+  import LanguageSwitcher from '../ui/LanguageSwitcher.vue';
   import { useI18n } from 'vue-i18n'; // <-- Import useI18n
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
   import { useRouter, useRoute } from 'vue-router';
@@ -215,6 +219,10 @@
 </script>
 
 <style scoped>
+  .header-actions {
+    gap: 0.8rem; /* Maybe increase gap slightly */
+  }
+
   /* Optional: Add specific styles for the logged-in user info or logout item */
   .dropdown-item.user-info {
     font-weight: 600;
