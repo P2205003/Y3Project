@@ -23,7 +23,7 @@
         <div class="filters">
           <div class="filter-group">
             <label for="admin-product-category">Category</label>
-            <select id="admin-product-category" v-model="categoryFilter" @change="filterProducts" class="enhanced-input">
+            <select id="admin-product-category" v-model="categoryFilter" @change="filterProducts" class="enhanced-input" :disabled="categoriesLoading">
               <option value="">All Categories</option>
               <option v-for="category in categories" :key="category" :value="category">
                 {{ category }}
@@ -37,6 +37,11 @@
               <option value="true">Enabled</option>
               <option value="false">Disabled</option>
             </select>
+          </div>
+          <div class="filter-group reset-group">
+            <button @click="resetFilters" class="button enhanced-button secondary reset-btn" :disabled="loading || !hasActiveFilters">
+              <font-awesome-icon icon="times-circle" /> Reset Filters
+            </button>
           </div>
         </div>
       </div>
@@ -54,7 +59,8 @@
       </div>
       <div v-else>
         <div class="table-responsive-wrapper">
-          <table v-if="filteredProducts.length > 0" class="data-table">
+          <table v-if="filteredProducts.length > 0" class="data-table users-data-table">
+            <!-- Use consistent class name -->
             <thead>
               <tr>
                 <th>Product #</th>
@@ -90,14 +96,17 @@
                   </div>
                 </td>
                 <td class="actions-cell">
-                  <button class="action-btn view-btn" @click="viewProduct(product)">
-                    <font-awesome-icon icon="eye" /> View
+                  <button class="action-btn view-btn" @click="viewProduct(product)" title="View Product">
+                    <font-awesome-icon icon="eye" />
+                    <span class="action-label">View</span>
                   </button>
-                  <button class="action-btn edit-btn" @click="editProduct(product)">
-                    <font-awesome-icon icon="edit" /> Edit
+                  <button class="action-btn edit-btn" @click="editProduct(product)" title="Edit Product">
+                    <font-awesome-icon icon="edit" />
+                    <span class="action-label">Edit</span>
                   </button>
-                  <button class="action-btn delete-btn" @click="confirmDeleteProduct(product)">
-                    <font-awesome-icon icon="trash" /> Delete
+                  <button class="action-btn delete-btn" @click="confirmDeleteProduct(product)" title="Delete Product">
+                    <font-awesome-icon icon="trash" />
+                    <span class="action-label">Delete</span>
                   </button>
                 </td>
               </tr>
@@ -107,7 +116,7 @@
 
         <div v-if="filteredProducts.length === 0" class="empty-state">
           <p>No products found.</p>
-          <p v-if="searchQuery || categoryFilter || statusFilter !== ''">Try adjusting your search or filters.</p>
+          <p v-if="hasActiveFilters">Try adjusting your search or filters.</p>
         </div>
 
         <!-- Pagination (based on filteredProducts length) -->
@@ -325,9 +334,7 @@
   import { useRoute, useRouter } from 'vue-router';
   import { debounce } from 'lodash-es';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  // Import SUPPORTED_LOCALES from main.js
-  import { SUPPORTED_LOCALES } from '@/main.js'; // Adjust path if needed
-  // Import icons... (ensure all needed icons are added as in AdminAddItem)
+  import { SUPPORTED_LOCALES } from '@/main.js';
   import { library } from '@fortawesome/fontawesome-svg-core';
   import {
     faPlus, faEye, faEdit, faTrash, faTags, faLanguage, faTrashAlt, faFlagUsa,
@@ -339,16 +346,16 @@
     faSpinner, faCheckCircle, faListAlt, faChevronLeft, faTimesCircle
   );
 
-
   // --- State ---
-  const products = ref([]); // Raw list from API
-  const filteredProducts = ref([]); // List after frontend filtering
+  const products = ref([]);
+  const filteredProducts = ref([]);
   const loading = ref(true);
   const error = ref(null);
   const searchQuery = ref('');
   const categoryFilter = ref('');
-  const statusFilter = ref(''); // '', 'true', 'false'
+  const statusFilter = ref('');
   const categories = ref([]);
+  const categoriesLoading = ref(false); // Added state for category loading
   const currentPage = ref(1);
   const itemsPerPage = ref(10);
   const totalItems = ref(0);
@@ -356,23 +363,20 @@
 
   // Modal States
   const showEditModal = ref(false);
-  const isNewProduct = ref(false); // Always false in this component's context
-  const isEditing = ref(false);    // Flag for modal state
+  const isNewProduct = ref(false);
+  const isEditing = ref(false);
   const isSaving = ref(false);
   const isDeleting = ref(false);
   const modalError = ref(null);
   const activeTranslationTab = ref(SUPPORTED_LOCALES.find(l => l.code !== 'en')?.code || null);
 
-  // Use reactive for the product being edited
   const editingProduct = reactive({
     _id: null, productNumber: '', name: '', price: null, description: '',
     category: '', slug: '', enabled: true,
-    translations: {} // Initialize dynamically in editProduct
+    translations: {}
   });
-  // Separate refs for arrays within the reactive object
-  const editingProductAttributes = ref([]); // Array of { key: string, value: string }
-  const editingProductImages = ref(['']); // Array of strings
-
+  const editingProductAttributes = ref([]);
+  const editingProductImages = ref(['']);
 
   const showDeleteModal = ref(false);
   const productToDelete = ref(null);
@@ -384,9 +388,8 @@
   const supportedLocales = ref(SUPPORTED_LOCALES);
 
   // --- Computed Properties ---
-  const modalTitle = computed(() => 'Edit Product'); // Always Edit in this component
+  const modalTitle = computed(() => 'Edit Product');
 
-  // Compute paginated products based on the filtered list
   const paginatedProducts = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
@@ -398,34 +401,52 @@
   });
 
   // --- Methods ---
-  const isUrlValid = (url) => { // URL validation helper
+  const isUrlValid = (url) => {
     try { new URL(url); return url.startsWith('http'); } catch { return false; }
   };
-  const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`; // Handle potential null/undefined
-  const slugify = (text) => { /* ... (same slugify function) ... */ };
+  const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`;
+  const slugify = (text) => {
+    if (!text) return '';
+    return text.toString().toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  };
+
+  // *** ADDED fetchCategories function ***
+  const fetchCategories = async () => {
+    categoriesLoading.value = true;
+    try {
+      const response = await fetch('/api/products/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      categories.value = await response.json();
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      categories.value = [];
+    } finally {
+      categoriesLoading.value = false;
+    }
+  };
+  // *** END ADDED fetchCategories ***
 
   const fetchProducts = async () => {
     loading.value = true;
     error.value = null;
     try {
-      // Fetch ALL products using the admin endpoint which includes translations
       const response = await fetch('/api/products/admin', { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       const data = await response.json();
-      // Store the raw data (including translations map)
       products.value = data.products || [];
-      // Update categories based on the fetched products
-      const categorySet = new Set(products.value.map(p => p.category).filter(Boolean));
-      categories.value = Array.from(categorySet).sort();
-      // Apply initial filters and pagination
       applyFiltersAndPagination();
     } catch (err) {
       console.error('Error fetching products:', err);
       error.value = 'Failed to load products. Please try again.';
       products.value = [];
-      filteredProducts.value = []; // Ensure filtered is also empty
+      filteredProducts.value = [];
       totalItems.value = 0;
       totalPages.value = 1;
       currentPage.value = 1;
@@ -434,11 +455,9 @@
     }
   };
 
-
   const applyFiltersAndPagination = () => {
     let tempFiltered = [...products.value];
 
-    // Apply search query (case-insensitive on name, productNumber, category)
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim();
       if (query) {
@@ -450,54 +469,50 @@
       }
     }
 
-    // Apply category filter
     if (categoryFilter.value) {
       tempFiltered = tempFiltered.filter(product => product.category === categoryFilter.value);
     }
 
-    // Apply status filter
     if (statusFilter.value !== '') {
       const enabled = statusFilter.value === 'true';
       tempFiltered = tempFiltered.filter(product => product.enabled === enabled);
     }
 
-    // Update filtered list ref
     filteredProducts.value = tempFiltered;
-
-    // Update pagination totals based on the *filtered* results
     totalItems.value = filteredProducts.value.length;
     totalPages.value = Math.ceil(totalItems.value / itemsPerPage.value);
 
-    // Clamp currentPage if it's out of bounds after filtering
     if (currentPage.value > totalPages.value) {
       currentPage.value = totalPages.value || 1;
     }
-
-    // Note: The actual slicing for display happens in the `paginatedProducts` computed property.
-    // We don't slice `filteredProducts` here.
-
     updateURLQueryParams();
   };
 
   const debounceSearch = debounce(() => {
-    currentPage.value = 1; // Reset page on search
+    currentPage.value = 1;
     applyFiltersAndPagination();
   }, 400);
 
   const filterProducts = () => {
-    currentPage.value = 1; // Reset page on filter change
+    currentPage.value = 1;
     applyFiltersAndPagination();
+  };
+
+  const resetFilters = () => {
+    if (loading.value) return;
+    searchQuery.value = '';
+    categoryFilter.value = '';
+    statusFilter.value = '';
+    filterProducts(); // This resets page and applies filters
   };
 
   const changePage = (page) => {
     if (page >= 1 && page <= totalPages.value && !loading.value) {
       currentPage.value = page;
-      updateURLQueryParams(); // Update URL when page changes
-      // No need to call applyFiltersAndPagination, computed property handles slicing
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll top on page change
+      updateURLQueryParams();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
 
   const updateURLQueryParams = () => {
     const query = {};
@@ -506,9 +521,8 @@
     if (categoryFilter.value) query.category = categoryFilter.value;
     if (statusFilter.value !== '') query.status = statusFilter.value;
 
-    // Only push if the query is different from the current route query
     if (JSON.stringify(query) !== JSON.stringify(route.query)) {
-      router.replace({ name: route.name, query }).catch(err => { // Ensure name is included
+      router.replace({ name: route.name, query }).catch(err => {
         if (err.name !== 'NavigationDuplicated') { console.error('Router replace error:', err); }
       });
     }
@@ -518,13 +532,11 @@
     router.push({ name: 'product-detail', params: { id: product._id } });
   };
 
-  // Modal Methods (similar to AdminAddItem)
+  // Modal Methods
   const editProduct = (product) => {
     isNewProduct.value = false;
     isEditing.value = true;
     modalError.value = null;
-
-    // Populate base fields directly into the reactive object
     editingProduct._id = product._id;
     editingProduct.productNumber = product.productNumber;
     editingProduct.name = product.name;
@@ -533,41 +545,35 @@
     editingProduct.category = product.category || '';
     editingProduct.slug = product.slug || '';
     editingProduct.enabled = product.enabled;
-    // Populate array refs
     editingProductImages.value = product.images?.length ? [...product.images] : [''];
 
-    // Populate base attributes ref (convert Map/Object to array)
     editingProductAttributes.value = [];
     if (product.attributes && typeof product.attributes === 'object') {
       const attributesSource = product.attributes instanceof Map ? product.attributes : Object.entries(product.attributes);
       for (const [key, value] of attributesSource) {
-        editingProductAttributes.value.push({ key, value: Array.isArray(value) ? value.join(', ') : String(value) });
+        editingProductAttributes.value.push({ key, value: Array.isArray(value) ? value.join(', ') : String(value || '') });
       }
     }
 
-    // Populate translations into the reactive object
-    editingProduct.translations = {}; // Reset first
+    editingProduct.translations = {};
     supportedLocales.value.forEach(lang => {
       if (lang.code !== 'en') {
         const transData = product.translations?.[lang.code] || product.translations?.get?.(lang.code);
-        // Ensure structure exists within the reactive object
         editingProduct.translations[lang.code] = {
           name: transData?.name || '',
           description: transData?.description || '',
           category: transData?.category || '',
           attributes: { keys: {}, values: {} }
         };
-        // Populate keys
         const transKeys = transData?.attributes?.keys || {};
         const keysSource = transKeys instanceof Map ? transKeys : Object.entries(transKeys);
         for (const [baseKey, translatedKey] of keysSource) {
           editingProduct.translations[lang.code].attributes.keys[baseKey] = translatedKey;
         }
-        // Populate values
         const transValues = transData?.attributes?.values || {};
         const valuesSource = transValues instanceof Map ? transValues : Object.entries(transValues);
         for (const [baseKey, translatedValueArr] of valuesSource) {
-          editingProduct.translations[lang.code].attributes.values[baseKey] = Array.isArray(translatedValueArr) ? translatedValueArr.join(', ') : String(translatedValueArr);
+          editingProduct.translations[lang.code].attributes.values[baseKey] = Array.isArray(translatedValueArr) ? translatedValueArr.join(', ') : String(translatedValueArr || '');
         }
       }
     });
@@ -576,9 +582,9 @@
     showEditModal.value = true;
   };
 
+
   const closeModal = () => {
     showEditModal.value = false;
-    // Reset reactive object and refs
     Object.assign(editingProduct, { _id: null, productNumber: '', name: '', price: null, description: '', category: '', slug: '', enabled: true, translations: {} });
     editingProductAttributes.value = [];
     editingProductImages.value = [''];
@@ -608,14 +614,12 @@
     }
   };
 
-  // Save Product (Handles Edit only in this component)
   const saveProduct = async () => {
-    if (!isEditing.value) return; // Should not happen here, but safeguard
+    if (!isEditing.value) return;
     isSaving.value = true;
     modalError.value = null;
 
     try {
-      // --- Validation ---
       if (!editingProduct.name || editingProduct.price === null || editingProduct.price < 0) {
         throw new Error("Product Name and a valid Price are required.");
       }
@@ -625,40 +629,25 @@
       }
       const baseAttributeKeys = new Set();
       for (const attr of editingProductAttributes.value) {
-        const key = attr.key?.trim();
-        const value = attr.value?.trim();
-        if ((key && !value) || (!key && value)) {
-          throw new Error(`Base attribute '${key || value}' is incomplete.`);
-        }
-        if (key && baseAttributeKeys.has(key)) {
-          throw new Error(`Duplicate base attribute name found: "${key}".`);
-        }
+        const key = attr.key?.trim(); const value = attr.value?.trim();
+        if ((key && !value) || (!key && value)) throw new Error(`Base attribute '${key || value}' is incomplete.`);
+        if (key && baseAttributeKeys.has(key)) throw new Error(`Duplicate base attribute name found: "${key}".`);
         if (key) baseAttributeKeys.add(key);
       }
 
-      // --- Prepare Payload ---
       const payload = {
-        name: editingProduct.name.trim(),
-        price: parseFloat(editingProduct.price),
-        description: editingProduct.description?.trim() || '',
-        category: editingProduct.category?.trim() || '',
-        slug: editingProduct.slug?.trim() || '', // Don't auto-generate slug on edit unless name changed and slug is empty
-        images: validImages,
-        enabled: editingProduct.enabled,
-        attributes: {}, // Base attributes object
-        translations: {} // Translations object
+        name: editingProduct.name.trim(), price: parseFloat(editingProduct.price),
+        description: editingProduct.description?.trim() || '', category: editingProduct.category?.trim() || '',
+        slug: editingProduct.slug?.trim() || slugify(editingProduct.name.trim()), // Generate if empty/changed
+        images: validImages, enabled: editingProduct.enabled,
+        attributes: {}, translations: {}
       };
 
-      // Process Base Attributes
       editingProductAttributes.value.forEach(attr => {
-        const key = attr.key?.trim();
-        const value = attr.value?.trim();
-        if (key && value) {
-          payload.attributes[key] = value.split(',').map(v => v.trim()).filter(Boolean);
-        }
+        const key = attr.key?.trim(); const value = attr.value?.trim();
+        if (key && value) payload.attributes[key] = value.split(',').map(v => v.trim()).filter(Boolean);
       });
 
-      // Process Translations
       for (const langCode in editingProduct.translations) {
         const trans = editingProduct.translations[langCode];
         const payloadTrans = {};
@@ -670,56 +659,36 @@
         if (trans.attributes?.keys) {
           for (const baseKey in trans.attributes.keys) {
             const translatedKey = trans.attributes.keys[baseKey]?.trim();
-            if (payload.attributes[baseKey] && translatedKey) {
-              transAttrPayload.keys[baseKey] = translatedKey;
-            }
+            if (payload.attributes[baseKey] && translatedKey) transAttrPayload.keys[baseKey] = translatedKey;
           }
         }
         if (trans.attributes?.values) {
           for (const baseKey in trans.attributes.values) {
             const translatedValueString = trans.attributes.values[baseKey]?.trim();
-            if (payload.attributes[baseKey] && translatedValueString) {
-              transAttrPayload.values[baseKey] = translatedValueString.split(',').map(v => v.trim()).filter(Boolean);
-            }
+            if (payload.attributes[baseKey] && translatedValueString) transAttrPayload.values[baseKey] = translatedValueString.split(',').map(v => v.trim()).filter(Boolean);
           }
         }
-
         if (Object.keys(transAttrPayload.keys).length > 0 || Object.keys(transAttrPayload.values).length > 0) {
           if (Object.keys(transAttrPayload.keys).length === 0) delete transAttrPayload.keys;
           if (Object.keys(transAttrPayload.values).length === 0) delete transAttrPayload.values;
           payloadTrans.attributes = transAttrPayload;
         }
-
-        if (Object.keys(payloadTrans).length > 0) {
-          payload.translations[langCode] = payloadTrans;
-        }
+        if (Object.keys(payloadTrans).length > 0) payload.translations[langCode] = payloadTrans;
       }
       if (Object.keys(payload.attributes).length === 0) delete payload.attributes;
       if (Object.keys(payload.translations).length === 0) delete payload.translations;
 
-      console.log("Update Payload:", JSON.stringify(payload, null, 2));
-
-      // --- API Call ---
       const url = `/api/products/${editingProduct._id}`;
       const method = 'PUT';
-
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
+      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to update product');
       }
-
-      // Success
-      await fetchProducts(); // Refetch list
+      await fetchProducts();
       closeModal();
       alert('Product updated successfully!');
-
     } catch (err) {
       console.error('Error saving product:', err);
       modalError.value = err.message || 'An error occurred while saving.';
@@ -728,40 +697,82 @@
     }
   };
 
+  // *** IMPLEMENTED toggleProductStatus ***
+  const toggleProductStatus = async (product) => {
+    const originalStatus = product.enabled;
+    const newStatus = !originalStatus;
+    product.enabled = newStatus; // Optimistic update
 
-  const toggleProductStatus = async (product) => { /* ... (same as before) ... */ };
-  const confirmDeleteProduct = (product) => { /* ... (same as before) ... */ };
-  const closeDeleteModal = () => { /* ... (same as before) ... */ };
-  const deleteProductConfirmed = async () => { /* ... (same as before) ... */ };
+    try {
+      const response = await fetch(`/api/products/${product._id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled: newStatus })
+      });
 
+      if (!response.ok) {
+        product.enabled = originalStatus; // Revert on error
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Failed to update status: ${errorData.message || response.statusText}`);
+      } else {
+        // Optionally refetch or confirm update if needed
+        console.log(`Product ${product._id} status updated to ${newStatus}`);
+      }
+    } catch (err) {
+      product.enabled = originalStatus; // Revert on network error
+      console.error(`Error toggling status for product ${product._id}:`, err);
+      alert('An error occurred while updating product status.');
+    }
+  };
+
+  const confirmDeleteProduct = (product) => {
+    productToDelete.value = product;
+    showDeleteModal.value = true;
+  };
+  const closeDeleteModal = () => {
+    showDeleteModal.value = false;
+    productToDelete.value = null;
+  };
+
+  // *** IMPLEMENTED deleteProductConfirmed ***
+  const deleteProductConfirmed = async () => {
+    if (!productToDelete.value) return;
+    isDeleting.value = true;
+    error.value = null; // Clear main page error
+
+    try {
+      const response = await fetch(`/api/products/${productToDelete.value._id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status} - Failed to delete product`);
+      }
+
+      // Success: Remove from local list and refilter/paginate
+      products.value = products.value.filter(p => p._id !== productToDelete.value._id);
+      applyFiltersAndPagination();
+      alert(`Product "${productToDelete.value.name}" deleted successfully.`);
+      closeDeleteModal();
+
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      error.value = err.message; // Show error on main page
+      alert(`Error: ${error.value}`); // Show error to user
+      closeDeleteModal(); // Close modal even on error
+    } finally {
+      isDeleting.value = false;
+    }
+  };
 
   // --- Lifecycle Hooks ---
   onMounted(() => {
-    // Read initial filters from URL (if desired)
-    // const initialPage = readFiltersFromURL(); // You'd need to implement this if needed
-    fetchProducts(currentPage.value); // Fetch initial list
+    fetchProducts(); // Fetch initial list
     fetchCategories(); // Fetch categories for filter dropdown
   });
-
-  // Watch route query changes (e.g., browser back/forward)
-  // Optional: If you want filters to update based on URL changes
-  /*
-  watch(() => route.query, (newQuery) => {
-    const needsRefetch =
-      (newQuery.page || '1') !== String(currentPage.value) ||
-      (newQuery.q || '') !== searchQuery.value ||
-      (newQuery.category || '') !== categoryFilter.value ||
-      (newQuery.status || '') !== statusFilter.value;
-
-    if (needsRefetch) {
-      currentPage.value = parseInt(newQuery.page) || 1;
-      searchQuery.value = newQuery.q || '';
-      categoryFilter.value = newQuery.category || '';
-      statusFilter.value = newQuery.status || '';
-      fetchProducts(currentPage.value); // Fetch with new params
-    }
-  }, { deep: true });
-  */
 
 </script>
 
@@ -781,22 +792,39 @@
   }
 
   .search-box {
-    flex: 1 1 300px;
+    flex: 1 1 300px; /* Allow search box to grow more */
   }
 
   .filters {
     display: flex;
     gap: 1rem;
-    flex: 1 1 auto;
+    flex: 1 1 auto; /* Take remaining space */
     flex-wrap: wrap;
   }
 
   .filter-group {
     display: flex;
     flex-direction: column;
-    flex: 1 1 180px;
+    flex: 1 1 180px; /* Base size for filters */
+    min-width: 150px; /* Prevent too much shrinking */
     gap: 0.5rem;
   }
+
+  .reset-group {
+    flex-basis: auto; /* Allow button to size naturally */
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+
+  .reset-btn {
+    width: auto; /* Fit content */
+    min-width: 120px;
+  }
+
+    .reset-btn svg {
+      margin-right: 0.4em;
+    }
+
 
   .image-cell img {
     width: 50px;
@@ -804,6 +832,7 @@
     object-fit: cover;
     border-radius: var(--border-radius-small);
     border: 1px solid var(--border-color);
+    vertical-align: middle; /* Align image nicely */
   }
 
   .status-cell {
@@ -814,6 +843,7 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    justify-content: center; /* Center toggle in cell */
   }
 
   .toggle-label {
@@ -829,7 +859,58 @@
   .status-inactive {
     color: #d32f2f;
   }
-  /* Toggle switch styles are in main.css */
+
+  /* Toggle switch base styles - assuming these are in main.css */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px; /* Adjust size */
+    height: 24px;
+  }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+  }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+  input:checked + .toggle-slider {
+    background-color: var(--primary);
+  }
+
+  input:focus + .toggle-slider {
+    box-shadow: 0 0 1px var(--primary);
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+
+
   .actions-cell {
     white-space: nowrap;
     text-align: right;
@@ -843,6 +924,18 @@
     margin: 0 0.2rem;
   }
   /* Tighter spacing */
+
+  /* Action Labels (optional, shown on wider screens) */
+  .action-label {
+    display: none; /* Hide by default */
+    margin-left: 0.4em;
+  }
+
+  @media (min-width: 768px) {
+    .action-label {
+      display: inline; /* Show on medium screens and up */
+    }
+  }
 
   /* Table Responsive Wrapper */
   .table-responsive-wrapper {
@@ -939,6 +1032,49 @@
     padding: 0.5rem 1rem;
     color: var(--text-muted);
     font-size: 0.9rem;
+  }
+
+  /* Additional Modal Preview Styles */
+  .image-preview-container {
+    margin-top: 1rem;
+  }
+
+  .previews-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .image-preview {
+    text-align: center;
+    width: 60px;
+  }
+
+  .preview-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+  }
+
+  .preview-placeholder {
+    width: 60px;
+    height: 60px;
+    background: #eee;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    border-radius: 4px;
+  }
+
+  .image-number {
+    font-size: 0.7rem;
+    color: #666;
+    display: block;
+    margin-top: 2px;
   }
 
 
