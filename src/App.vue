@@ -91,52 +91,89 @@
   // Computed Cart Subtotal
   const cartSubtotal = computed(() => cartService.calculateTotal({ items: cartData.value }));
 
-  // Provide Application Context
+  // --- UI Toggles & Helpers (Define before Provide) ---
+  const handleScroll = () => {
+    const scrollY = window.scrollY;
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+    isScrolled.value = scrollY > 50;
+    scrollPercentage.value = scrollHeight > 0 ? Math.min(Math.max((scrollY / scrollHeight) * 100, 0), 100) : 0;
+  };
+
+  const toggleMobileMenu = (forceState = null) => {
+    isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
+    if (isMobileMenuActive.value) { closePopupsAndDropdowns(); }
+  };
+  const closeMobileMenu = () => toggleMobileMenu(false);
+
+  const toggleSearch = (forceState = null) => {
+    isSearchActive.value = typeof forceState === 'boolean' ? forceState : !isSearchActive.value;
+    if (isSearchActive.value) { closePopupsAndDropdowns(true); } // Keep search open
+  };
+  const closeSearch = () => toggleSearch(false);
+
+  const toggleAccountDropdown = (forceState = null) => {
+    isAccountDropdownActive.value = typeof forceState === 'boolean' ? forceState : !isAccountDropdownActive.value;
+    if (isAccountDropdownActive.value) { closePopupsAndDropdowns(false, true); } // Keep dropdown open
+  };
+  const closeAccountDropdown = () => toggleAccountDropdown(false);
+
+  // Definition of openAccountPopup NOW BEFORE provide
+  function openAccountPopup(tab = 'login') {
+    accountPopupTab.value = tab;
+    isAccountPopupActive.value = true;
+    closePopupsAndDropdowns(false, false, true); // Keep account popup open
+  }
+  const closeAccountPopup = () => { isAccountPopupActive.value = false; };
+
+  const toggleCartPopup = (forceState = null) => {
+    isCartPopupActive.value = typeof forceState === 'boolean' ? forceState : !isCartPopupActive.value;
+    if (isCartPopupActive.value) { closePopupsAndDropdowns(false, false, false, true); } // Keep cart open
+  };
+  const closeCartPopup = () => toggleCartPopup(false);
+
+  // Helper to close UI elements
+  const closePopupsAndDropdowns = (keepSearch = false, keepDropdown = false, keepAccountPopup = false, keepCart = false) => {
+    if (!keepSearch) isSearchActive.value = false;
+    if (!keepDropdown) isAccountDropdownActive.value = false;
+    if (!keepAccountPopup) isAccountPopupActive.value = false;
+    if (!keepCart) isCartPopupActive.value = false;
+    isMobileMenuActive.value = false; // Always close mobile menu
+  };
+
+  // --- Authentication & Cart (Define before Provide) ---
+  async function handleLogout() {
+    console.log('Logging out...');
+    try {
+      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' });
+    } catch (error) { console.error('Error during backend logout:', error); }
+    finally {
+      isLoggedIn.value = false;
+      currentUser.value = null;
+      isAccountDropdownActive.value = false; // Ensure dropdown closes on logout
+      await fetchCart(); // Fetch guest cart (local storage)
+      if (route.meta.requiresAuth && !isAdminRoute.value) {
+        router.push('/');
+      }
+    }
+  };
+
+  // --- Provide Application Context (Functions are now defined above) ---
   provide('appContext', {
     isLoggedIn,
     currentUser,
-    openAccountPopup, // Function defined below
-    logout: handleLogout
+    openAccountPopup, // Now defined
+    logout: handleLogout // Now defined
   });
 
   // --- Methods ---
 
-  // Login Status Check
-  const checkLoginStatus = async () => {
-    console.log('Checking login status...');
-    try {
-      const response = await fetch('/api/users/check-login', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        isLoggedIn.value = data.isLoggedIn;
-        currentUser.value = data.isLoggedIn ? data.user : null;
-        console.log('Login status checked:', { isLoggedIn: isLoggedIn.value, user: currentUser.value });
-        await fetchCart(); // Fetch cart after confirming login status
-      } else {
-        console.warn('Failed to check login status, assuming logged out.');
-        isLoggedIn.value = false;
-        currentUser.value = null;
-        await fetchCart(); // Fetch local cart if status check fails
-      }
-    } catch (error) {
-      console.error('Error checking login status:', error);
-      isLoggedIn.value = false;
-      currentUser.value = null;
-      await fetchCart(); // Fetch local cart on error
-    } finally {
-      appReady.value = true;
-      setTimeout(() => { isLoading.value = false; }, 200);
-    }
-  };
-
-  // Cart Management
   const fetchCart = async () => {
     console.log("App.vue: Fetching cart data...");
     try {
       const cart = await cartService.getCart(isLoggedIn.value);
       cartData.value = cart.items || [];
       updateCartCount();
-      console.log("App.vue: Cart data updated:", cartData.value);
+      console.log("App.vue: Cart data AFTER assignment:", JSON.stringify(cartData.value)); // Log the assigned data
     } catch (error) {
       console.error("App.vue: Error fetching cart:", error);
       cartData.value = [];
@@ -150,6 +187,37 @@
 
   // Subscribe to cart service internal updates
   const unsubscribeCartUpdate = cartService.onCartUpdate(fetchCart); // Re-fetch on service notification
+
+
+  // Login Status Check
+  const checkLoginStatus = async () => {
+    console.log('Checking login status...');
+    try {
+      const response = await fetch('/api/users/check-login', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        isLoggedIn.value = data.isLoggedIn;
+        currentUser.value = data.isLoggedIn ? data.user : null;
+        console.log('Login status checked:', { isLoggedIn: isLoggedIn.value, user: currentUser.value });
+        // No need to fetch cart here, finally block handles it
+      } else {
+        console.warn('Failed to check login status, assuming logged out.');
+        isLoggedIn.value = false;
+        currentUser.value = null;
+        // No need to fetch cart here, finally block handles it
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      isLoggedIn.value = false;
+      currentUser.value = null;
+      // No need to fetch cart here, finally block handles it
+    } finally {
+      await fetchCart(); // Fetch cart *after* login status is determined
+      appReady.value = true;
+      setTimeout(() => { isLoading.value = false; }, 200);
+    }
+  };
+
 
   const handleAddToCart = async (itemToAdd) => {
     console.log('Adding to cart (App.vue):', itemToAdd);
@@ -214,75 +282,12 @@
     if (finalCart) {
       cartData.value = finalCart.items || [];
       updateCartCount();
+      console.log("Cart updated after login/merge:", cartData.value);
     } else {
-      await fetchCart(); // Attempt refetch if merge failed
+      await fetchCart(); // Fallback refetch if merge failed
     }
   };
-
-  async function handleLogout() {
-    console.log('Logging out...');
-    try {
-      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' });
-    } catch (error) { console.error('Error during backend logout:', error); }
-    finally {
-      isLoggedIn.value = false;
-      currentUser.value = null;
-      isAccountDropdownActive.value = false;
-      await fetchCart(); // Fetch guest cart (local storage)
-      if (route.meta.requiresAuth && !isAdminRoute.value) {
-        router.push('/');
-      }
-    }
-  };
-
-  // UI Toggles
-  const handleScroll = () => {
-    const scrollY = window.scrollY;
-    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-    isScrolled.value = scrollY > 50;
-    scrollPercentage.value = scrollHeight > 0 ? Math.min(Math.max((scrollY / scrollHeight) * 100, 0), 100) : 0;
-  };
-
-  const toggleMobileMenu = (forceState = null) => {
-    isMobileMenuActive.value = typeof forceState === 'boolean' ? forceState : !isMobileMenuActive.value;
-    if (isMobileMenuActive.value) { closePopupsAndDropdowns(); }
-  };
-  const closeMobileMenu = () => toggleMobileMenu(false);
-
-  const toggleSearch = (forceState = null) => {
-    isSearchActive.value = typeof forceState === 'boolean' ? forceState : !isSearchActive.value;
-    if (isSearchActive.value) { closePopupsAndDropdowns(true); } // Keep search open
-  };
-  const closeSearch = () => toggleSearch(false);
-
-  const toggleAccountDropdown = (forceState = null) => {
-    isAccountDropdownActive.value = typeof forceState === 'boolean' ? forceState : !isAccountDropdownActive.value;
-    if (isAccountDropdownActive.value) { closePopupsAndDropdowns(false, true); } // Keep dropdown open
-  };
-  const closeAccountDropdown = () => toggleAccountDropdown(false);
-
-  // This is the function provided to descendants
-  function openAccountPopup(tab = 'login') {
-    accountPopupTab.value = tab;
-    isAccountPopupActive.value = true;
-    closePopupsAndDropdowns(false, false, true); // Keep account popup open
-  }
-  const closeAccountPopup = () => { isAccountPopupActive.value = false; };
-
-  const toggleCartPopup = (forceState = null) => {
-    isCartPopupActive.value = typeof forceState === 'boolean' ? forceState : !isCartPopupActive.value;
-    if (isCartPopupActive.value) { closePopupsAndDropdowns(false, false, false, true); } // Keep cart open
-  };
-  const closeCartPopup = () => toggleCartPopup(false);
-
-  // Helper to close UI elements
-  const closePopupsAndDropdowns = (keepSearch = false, keepDropdown = false, keepAccountPopup = false, keepCart = false) => {
-    if (!keepSearch) isSearchActive.value = false;
-    if (!keepDropdown) isAccountDropdownActive.value = false;
-    if (!keepAccountPopup) isAccountPopupActive.value = false;
-    if (!keepCart) isCartPopupActive.value = false;
-    isMobileMenuActive.value = false; // Always close mobile menu
-  };
+  // handleLogout moved before provide
 
 
   // Global Click Listener
@@ -301,6 +306,18 @@
     }
   };
 
+  // --- WATCHERS ---
+
+  // Watch locale changes
+  watch(locale, (newLocale, oldLocale) => {
+    if (newLocale !== oldLocale && isLoggedIn.value) { // Only refetch for logged-in users
+      console.log(`App locale changed to ${newLocale}, refetching cart.`);
+      fetchCart();
+    } else if (newLocale !== oldLocale && !isLoggedIn.value) {
+      console.log(`App locale changed to ${newLocale}, guest cart uses local data.`);
+    }
+  });
+
   // Global Body Class Management
   watch([isMobileMenuActive, isAccountPopupActive, isCartPopupActive, isAdminRoute],
     ([mobileActive, accountActive, cartActive, adminActive]) => {
@@ -316,22 +333,12 @@
     }, { immediate: true }
   );
 
-  // --- WATCH locale TO REFETCH CART ---
-  watch(locale, (newLocale, oldLocale) => {
-    if (newLocale !== oldLocale && isLoggedIn.value) { // Only refetch for logged-in users
-      console.log(`App locale changed to ${newLocale}, refetching cart.`);
-      fetchCart(); // Trigger backend fetch which handles translation
-    }
-    // Guest cart uses local storage snapshot, no automatic update on locale change needed
-  });
-  // --- END WATCH ---
-
-  // Lifecycle Hooks
+  // --- Lifecycle Hooks ---
   onMounted(async () => {
     await checkLoginStatus(); // Checks login AND fetches initial cart
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    handleScroll(); // Initial check
     document.addEventListener('click', handleClickOutside);
 
     router.afterEach((to, from) => {
@@ -350,7 +357,6 @@
       unsubscribeCartUpdate();
     }
   });
-
 </script>
 
 <style>

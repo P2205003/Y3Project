@@ -1,3 +1,4 @@
+// src/views/ProductsView.vue
 <template>
   <main>
     <!-- Enhanced Page Header -->
@@ -24,9 +25,9 @@
           <label for="filter-category">{{ t('productsPage.filters.categoryLabel') }}</label>
           <select id="filter-category" name="category" v-model="filters.category" @change="applyFilters" :disabled="isLoading || categoriesLoading" class="enhanced-input">
             <option value="">{{ t('productsPage.filters.allCategories') }}</option>
-            <!-- Categories fetched dynamically -->
-            <option v-for="category in categories" :key="category" :value="category">
-              {{ category }}
+            <!-- MODIFIED v-for loop -->
+            <option v-for="category in categories" :key="category.base" :value="category.base">
+              {{ category.display }} <!-- Display translated name -->
             </option>
           </select>
         </div>
@@ -62,16 +63,13 @@
         </div>
       </div>
 
-      <!-- Results Count -->
+      <!-- Results Count (MODIFIED to show translated category) -->
       <div class="results-summary" v-if="!isLoading && !errorLoading">
-        <!-- Use $t for pluralization. Requires correct setup in locale files -->
-        <!-- Example: "Showing {count} result | Showing {count} results" -->
-        <!-- For simplicity, using standard interpolation here -->
         {{ t('productsPage.resultsSummary.showing', { count: products.length, total: totalProducts }) }}
         <span v-if="filters.searchQuery">{{ t('productsPage.resultsSummary.forQuery', { query: filters.searchQuery }) }}</span>
-        <span v-if="filters.category">{{ t('productsPage.resultsSummary.inCategory', { category: filters.category }) }}</span>.
+        <!-- Find the display name for the selected base category -->
+        <span v-if="filters.category && selectedCategoryDisplayName">{{ t('productsPage.resultsSummary.inCategory', { category: selectedCategoryDisplayName }) }}</span>.
       </div>
-
 
       <!-- Transition Wrapper -->
       <transition name="fade" mode="out-in">
@@ -179,14 +177,14 @@
   const totalProducts = ref(0);
   const defaultDescription = t('productCard.defaultDescription');
   const paginationRef = ref(null);
-  const categories = ref([]);
+  const categories = ref([]); // Now expects array of { base: string, display: string }
   const categoriesLoading = ref(false);
   const isPaginationFixed = ref(true);
   let footerEl = null;
 
   const filters = ref({
     searchQuery: '',
-    category: '',
+    category: '', // This will hold the BASE category name for filtering
     sort: 'featured',
     minPrice: null,
     maxPrice: null,
@@ -200,6 +198,14 @@
       filters.value.sort !== 'featured';
   });
 
+  // --- Computed Property for Selected Category Display Name ---
+  const selectedCategoryDisplayName = computed(() => {
+    if (!filters.value.category) return '';
+    const selectedCat = categories.value.find(cat => cat.base === filters.value.category);
+    // Use the display name if found, otherwise fallback to the base name (which might happen briefly before categories load)
+    return selectedCat ? selectedCat.display : filters.value.category;
+  });
+
   // --- Methods ---
   function truncateText(text, maxLength) {
     if (!text) return '';
@@ -207,23 +213,23 @@
     if (cleanedText.length <= maxLength) return cleanedText;
     let truncated = cleanedText.slice(0, maxLength);
     let lastSpaceIndex = truncated.lastIndexOf(' ');
-    // Ensure last word isn't tiny if we cut at a space
     if (lastSpaceIndex > 0 && lastSpaceIndex > maxLength - 15) {
       truncated = truncated.slice(0, lastSpaceIndex);
     }
     return truncated + "...";
   }
 
-  // --- Category Fetching ---
+  // --- Category Fetching (Using new translated endpoint) ---
   const fetchCategories = async () => {
     categoriesLoading.value = true;
     try {
-      // Fetch base English categories
-      const response = await fetch('/api/products/categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
+      const headers = { 'Accept-Language': locale.value };
+      const response = await fetch('/api/products/categories/translated', { headers });
+      if (!response.ok) throw new Error('Failed to fetch translated categories');
       categories.value = await response.json();
+      console.log("Fetched translated categories:", categories.value);
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("Error fetching translated categories:", error);
       categories.value = [];
     } finally {
       categoriesLoading.value = false;
@@ -234,12 +240,12 @@
   const fetchProducts = async (page = 1) => {
     isLoading.value = true;
     errorLoading.value = null;
-    // *** Log current locale being used for the fetch ***
     console.log(`Fetching products for page ${page}, limit ${limit.value}, filters:`, filters.value, `Lang: ${locale.value}`);
 
     try {
       let url = `/api/products/search?page=${page}&limit=${limit.value}`;
       if (filters.value.searchQuery) url += `&q=${encodeURIComponent(filters.value.searchQuery)}`;
+      // Use the BASE category name (stored in filters.category) for the API call
       if (filters.value.category) url += `&category=${encodeURIComponent(filters.value.category)}`;
       if (filters.value.minPrice !== null && filters.value.minPrice >= 0) url += `&minPrice=${filters.value.minPrice}`;
       if (filters.value.maxPrice !== null && filters.value.maxPrice >= 0) {
@@ -251,10 +257,8 @@
       }
       if (filters.value.sort) url += `&sort=${filters.value.sort}`;
 
-      // *** ADD Accept-Language Header to the fetch call ***
       const headers = { 'Accept-Language': locale.value };
-      const response = await fetch(url, { headers }); // Pass headers here
-      // *** END Add Header ***
+      const response = await fetch(url, { headers });
 
       if (!response.ok) {
         let errorMessage = `HTTP error! Status: ${response.status}`;
@@ -264,13 +268,12 @@
       const data = await response.json();
 
       const maxDescriptionLength = 75;
-      // Backend now sends translated name/description/category directly
       products.value = data.products.map(product => ({
-        id: product.id, // Use the 'id' provided by the backend logic
+        id: product.id,
         name: product.name,
         description: truncateText(product.description || defaultDescription, maxDescriptionLength),
         price: product.price,
-        image: product.image, // Use the 'image' provided by backend logic
+        image: product.image,
         averageRating: product.averageRating || 0,
         reviewCount: product.reviewCount || 0,
       }));
@@ -281,10 +284,9 @@
       isLoading.value = false;
       updateURLQueryParams(page);
       await nextTick();
-      handleScroll(); // Recalculate pagination position
+      handleScroll();
 
-      // Scroll logic - only scroll on page change, not filter/sort change
-      const isFilterChange = route.query.page === undefined || route.query.page === '1'; // Basic check if it was likely a filter/sort change
+      const isFilterChange = route.query.page === undefined || route.query.page === '1';
       const sectionElement = document.querySelector('.product-listing-section');
       if (sectionElement && page !== 1 && !isFilterChange) {
         const sectionTop = sectionElement.getBoundingClientRect().top + window.scrollY;
@@ -310,6 +312,7 @@
     const query = {};
     if (page > 1) query.page = page;
     if (filters.value.searchQuery) query.q = filters.value.searchQuery;
+    // Store the BASE category in the URL
     if (filters.value.category) query.category = filters.value.category;
     if (filters.value.minPrice !== null && filters.value.minPrice >= 0) query.minPrice = filters.value.minPrice;
     if (filters.value.maxPrice !== null && filters.value.maxPrice >= 0 && (filters.value.minPrice === null || filters.value.maxPrice >= filters.value.minPrice)) {
@@ -326,6 +329,7 @@
 
   const readFiltersFromURL = () => {
     filters.value.searchQuery = route.query.q || '';
+    // Read the BASE category name from the URL
     filters.value.category = route.query.category || '';
     filters.value.minPrice = route.query.minPrice ? Number(route.query.minPrice) : null;
     filters.value.maxPrice = route.query.maxPrice ? Number(route.query.maxPrice) : null;
@@ -364,7 +368,6 @@
   });
   const emitAddToCart = (productData) => { emit('addToCart', productData); };
 
-
   // --- Sticky Pagination Logic ---
   const handleScroll = () => {
     if (!paginationRef.value || !footerEl || totalPages.value <= 1) {
@@ -398,26 +401,25 @@
   };
   const throttledScrollHandler = throttle(handleScroll, THROTTLE_TIME);
 
-
-  // --- *** WATCH locale CHANGES *** ---
+  // --- WATCH locale CHANGES ---
   watch(locale, (newLocale, oldLocale) => {
-    console.log(`Locale changed in ProductsView from ${oldLocale} to ${newLocale}. Refetching products.`);
+    console.log(`Locale changed in ProductsView from ${oldLocale} to ${newLocale}. Refetching.`);
     if (newLocale !== oldLocale) {
-      // When language changes, refetch categories AND products for the current page & filters
-      fetchCategories(); // Refetch categories in case they are language-dependent (though currently they aren't fetched translated)
-      fetchProducts(currentPage.value); // Refetch products for the *current* page with current filters
+      // When language changes, refetch BOTH categories and products
+      fetchCategories(); // Refetch translated categories
+      fetchProducts(currentPage.value); // Refetch products for the current page with current filters
     }
   });
-  // --- *** END WATCH *** ---
+  // --- END WATCH ---
 
   // --- Lifecycle Hooks ---
   onMounted(async () => {
     footerEl = document.querySelector('footer');
     if (!footerEl) { console.error("Footer element not found! Sticky pagination may not work."); }
 
-    await fetchCategories();
-    const initialPage = readFiltersFromURL();
-    await fetchProducts(initialPage);
+    await fetchCategories(); // Fetch categories first
+    const initialPage = readFiltersFromURL(); // Read filters after categories might be available
+    await fetchProducts(initialPage); // Fetch products based on URL state
 
     window.addEventListener('scroll', throttledScrollHandler);
     window.addEventListener('resize', throttledScrollHandler);
@@ -431,24 +433,68 @@
     window.removeEventListener('resize', throttledScrollHandler);
   });
 
-  // Watch route changes (remains the same)
+  // Watch route changes
   watch(() => route.fullPath, (newPath, oldPath) => {
-    // Prevent fetching if only the hash changes (or if it's the initial load)
     const newQuery = { ...route.query }; delete newQuery.hash;
-    const oldQuery = { ...router.options.history.location.query }; delete oldQuery.hash; // Get query from previous state
+    const oldQuery = { ...router.options.history.location.query }; delete oldQuery.hash;
 
     if (newPath !== oldPath && route.name === 'products' && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
       console.log('Route query changed, reading filters and re-fetching products...');
-      const newPage = readFiltersFromURL();
-      fetchProducts(newPage); // Refetch based on new URL state
+      const newPage = readFiltersFromURL(); // This will update filters.value
+      // Only refetch products; categories don't depend on query params other than potentially language
+      // which is handled by the locale watcher.
+      fetchProducts(newPage);
     }
   }, { deep: true });
-
 
 </script>
 
 <style scoped>
-  /* Styles remain the same */
+  /* Enhanced Page Header */
+  .enhanced-page-header {
+    padding-top: calc(var(--header-height) + 5rem);
+    padding-bottom: 4rem;
+    background: linear-gradient(to bottom, var(--bg-off-light), var(--bg-light));
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    text-align: center; /* Ensure text is centered */
+  }
+
+    .enhanced-page-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      /* background-image: url('/path/to/subtle-pattern.svg'); Add a background pattern if desired */
+      opacity: 0.03;
+      z-index: 0;
+    }
+
+    .enhanced-page-header h1 {
+      font-size: clamp(2.8rem, 7vw, 4rem);
+      position: relative;
+      z-index: 1;
+      margin-bottom: 0.8rem;
+      color: var(--text-dark); /* Explicit color */
+    }
+
+    .enhanced-page-header p {
+      font-size: 1.15rem;
+      max-width: 65ch;
+      position: relative;
+      z-index: 1;
+      color: var(--text-muted); /* Explicit color */
+      margin-left: auto; /* Center paragraph */
+      margin-right: auto; /* Center paragraph */
+    }
+
+  .product-listing-section {
+    padding: 4rem 8%; /* Standard padding */
+  }
+
   /* Enhanced Filters Styles */
   .enhanced-filter-controls {
     display: grid;
@@ -569,13 +615,14 @@
   }
   /* Target the second prefix based on structure */
   .price-range-group .price-inputs > input:last-of-type ~ .price-prefix {
-    left: calc(50% + 0.8rem); /* Adjust based on layout */
+    /* This might need adjustment based on exact DOM order or use nth-child */
+    left: calc(50% + 0.8rem); /* Rough estimate */
   }
 
 
   .price-range-group .price-separator {
     color: var(--text-muted);
-    font-weight: 500; /* Slightly less bold */
+    font-weight: 500;
     flex: 0 0 auto;
   }
 
@@ -640,9 +687,13 @@
     color: var(--text-muted);
   }
 
+  /* Product Grid & Loading/Error States */
   .product-grid, .skeleton-grid {
-    min-height: 300px;
-    padding-bottom: calc(50px + 16px + 6rem);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
+    gap: 2.5rem;
+    min-height: 300px; /* Ensure some height while loading */
+    padding-bottom: calc(50px + 16px + 6rem); /* Padding for fixed pagination */
   }
 
   .product-card-item {
@@ -706,6 +757,7 @@
     margin-top: 0;
   }
 
+  /* Pagination Styles */
   .pagination-container {
     position: fixed;
     bottom: 1.5rem;
@@ -793,6 +845,20 @@
     transform: none;
   }
 
+  .visually-hidden { /* Accessibility helper */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+
+  /* Responsive Adjustments */
   @media (max-width: 992px) {
     .enhanced-filter-controls {
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -828,10 +894,11 @@
     }
 
     .price-range-group .price-inputs {
-      /* Removed individual input wrappers */
+      /* Style adjustments might be needed if layout breaks */
     }
   }
 
+  /* Fade transition for content switching */
   .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease;
   }

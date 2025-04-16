@@ -404,6 +404,19 @@
   const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`; // Handle potential null/undefined
   const slugify = (text) => { /* ... (same slugify function) ... */ };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/products/categories'); // Use the correct endpoint
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      categories.value = await response.json();
+      console.log("Fetched categories for filter:", categories.value);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      // Optionally set an error state for categories if needed
+      categories.value = []; // Reset categories on error
+    }
+  };
+
   const fetchProducts = async () => {
     loading.value = true;
     error.value = null;

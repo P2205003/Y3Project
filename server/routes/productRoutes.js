@@ -141,16 +141,57 @@ router.get('/admin', isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Get unique categories (fetches base English categories)
+// --- GET /categories (Keep existing - returns BASE categories) ---
 router.get('/categories', async (req, res) => {
   try {
-    // Fetch distinct non-empty category values from ALL products (including disabled)
     const categories = await Product.distinct('category', { category: { $ne: null, $ne: "" } });
-    // Sort alphabetically
     categories.sort((a, b) => a.localeCompare(b));
     res.json(categories);
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    res.status(500).json({ message: "Failed to fetch categories" });
+    console.error("Error fetching base categories:", error);
+    res.status(500).json({ message: "Failed to fetch base categories" });
+  }
+});
+
+// Get Translated Categories ---
+router.get('/categories/translated', async (req, res) => {
+  try {
+    const lang = getPreferredLanguage(req); // Get preferred language from request
+
+    // Use aggregation to get distinct base categories and their translations
+    const categoryPipeline = [
+      // 1. Filter out products without a category
+      { $match: { category: { $ne: null, $ne: "" } } },
+      // 2. Group by the base category name
+      {
+        $group: {
+          _id: '$category', // Group by the base English category
+          // Get the *first* available translation for this category in the requested language
+          translatedName: { $first: `$translations.${lang}.category` },
+          // Optional: Get the first document's createdAt if you really needed 'oldest' logic complexly
+          // firstAdded: { $min: '$createdAt' }
+        }
+      },
+      // 3. Project the desired output format
+      {
+        $project: {
+          _id: 0, // Exclude the default _id
+          base: '$_id', // The original English category name
+          // Use the translated name if available, otherwise fallback to the base name
+          display: { $ifNull: ['$translatedName', '$_id'] }
+        }
+      },
+      // 4. Sort alphabetically by the display name (using default collation)
+      { $sort: { display: 1 } }
+    ];
+
+    const translatedCategories = await Product.aggregate(categoryPipeline);
+
+    res.json(translatedCategories); // Send array of { base: "...", display: "..." }
+
+  } catch (error) {
+    console.error("Error fetching translated categories:", error);
+    res.status(500).json({ message: "Failed to fetch translated categories" });
   }
 });
 
