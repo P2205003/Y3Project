@@ -92,8 +92,12 @@ class CartService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          // Send the full item details received from App.vue
-          body: JSON.stringify(item) // <--- FIX: Send the whole 'item' object
+          // Send ONLY essential data for identification and quantity
+          body: JSON.stringify({
+            productId: item.productId,
+            quantity: item.quantity,
+            attributes: item.attributes || {} // Send base attributes if selected
+          })
         });
 
         if (!response.ok) {
