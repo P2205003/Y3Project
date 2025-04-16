@@ -261,7 +261,8 @@
       "tryAgain": "Try Again",
       "defaultLoadError": "Could not load reviews.",
       "defaultVoteError": "Could not submit your vote.",
-      "loginToVote": "Please log in to vote."
+      "loginToVote": "Please log in to vote.",
+      "deleteError": "Failed to delete review. Please try again."
     },
     "empty": "Be the first to review this product!",
     "pagination": {
@@ -294,6 +295,14 @@
     },
     "sellerResponse": {
       "title": "Response from Seller:"
+    },
+
+    "deleteButton": "Delete",
+    "deleteAriaLabel": "Delete review: {title}",
+    "deleteConfirm": {
+      "prompt": "Are you sure you want to delete this review?",
+      "confirmButton": "Confirm Delete",
+      "cancelButton": "Cancel"
     },
     "dateRelative": {
       "justNow": "just now",
@@ -344,7 +353,8 @@
     },
     "reviews": {
       "title": "Customer Reviews & Ratings",
-      "writeReviewButton": "Write a Review"
+      "writeReviewButton": "Write a Review",
+      "alreadyReviewed": "You've already reviewed this product."
     }
   },
   "ordersView": {
