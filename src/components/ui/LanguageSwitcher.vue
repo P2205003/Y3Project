@@ -11,13 +11,14 @@
       <font-awesome-icon icon="caret-down" class="dropdown-arrow" />
     </button>
     <transition name="fade-fast">
+      <!-- Use SUPPORTED_LOCALES imported from main.js -->
       <ul v-if="isDropdownOpen" class="language-switcher__dropdown" role="menu">
-        <li v-for="lang in availableLanguages" :key="lang.code" role="presentation">
+        <li v-for="lang in supportedLocales" :key="lang.code" role="presentation">
           <button @click="changeLanguage(lang.code)"
                   :class="{ active: lang.code === currentLanguageCode }"
                   role="menuitem"
                   :aria-current="lang.code === currentLanguageCode ? 'true' : null">
-            {{ lang.name }}
+            {{ lang.name }} <!-- Use name from the config -->
           </button>
         </li>
       </ul>
@@ -29,26 +30,20 @@
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  import { library } from '@fortawesome/fontawesome-svg-core';
-  import { faLanguage, faCaretDown } from '@fortawesome/free-solid-svg-icons';
-
-  library.add(faLanguage, faCaretDown);
+  // Import the config from main.js
+  import { SUPPORTED_LOCALES } from '@/main.js'; // Adjust path if necessary
 
   const { t, locale } = useI18n();
   const isDropdownOpen = ref(false);
-  const switcherRef = ref(null); // Ref for click outside detection
+  const switcherRef = ref(null);
 
-  const availableLanguages = ref([
-    { code: 'en', name: 'English' },
-    { code: 'zh', name: '中文 (简体)' },
-    // Add more languages here as needed
-    // { code: 'fr', name: 'Français' },
-  ]);
+  // Use the imported config
+  const supportedLocales = ref(SUPPORTED_LOCALES);
 
   const currentLanguageCode = computed(() => locale.value);
 
   const currentLanguageName = computed(() => {
-    const currentLang = availableLanguages.value.find(lang => lang.code === locale.value);
+    const currentLang = supportedLocales.value.find(lang => lang.code === locale.value);
     return currentLang ? currentLang.name : locale.value.toUpperCase();
   });
 
@@ -57,11 +52,14 @@
   };
 
   const changeLanguage = (newLocale) => {
-    if (availableLanguages.value.some(lang => lang.code === newLocale)) {
-      locale.value = newLocale; // Update vue-i18n's locale
-      localStorage.setItem('user-locale', newLocale); // Persist preference
+    if (supportedLocales.value.some(lang => lang.code === newLocale)) {
+      locale.value = newLocale;
+      localStorage.setItem('user-locale', newLocale);
       console.log(`Language changed to ${newLocale}`);
       isDropdownOpen.value = false;
+      // Optional: Force reload or trigger data refetch if needed globally
+      // Consider emitting an event instead of reload for better UX
+      // emit('language-changed'); // Example event
     } else {
       console.warn(`Attempted to switch to unsupported locale: ${newLocale}`);
     }
@@ -138,6 +136,8 @@
     padding: 0.5rem 0;
     margin: 0;
     border: 1px solid var(--border-color);
+    max-height: 250px; /* Limit height */
+    overflow-y: auto; /* Add scroll if needed */
   }
 
     .language-switcher__dropdown li {
@@ -190,9 +190,7 @@
       font-size: 0.85rem;
     }
 
-      .language-switcher__button .current-lang-code {
-        /* Optionally hide code on mobile if too crowded */
-        /* display: none; */
-      }
+    /* Optionally hide code on mobile if too crowded */
+    /* .language-switcher__button .current-lang-code { display: none; } */
   }
 </style>

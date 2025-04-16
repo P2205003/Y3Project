@@ -14,13 +14,18 @@ import './assets/main.css';
 // 4. Font Awesome Setup
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+// Import ALL necessary icons from across your application
 import {
   faSearch, faUser, faReceipt, faShoppingCart, faSignInAlt, faUserPlus,
   faSignOutAlt, faUserCog, faExclamationTriangle, faBoxOpen, faChevronLeft,
-  faChevronRight, faCheck, faRulerCombined, faGem, faSeedling,
+  faChevronRight, faCheck, faRulerCombined, faGem, faSeedling, faWeightHanging,
   faStar, faStarHalfAlt, faThumbsUp, faUserShield, faSave, faFilter,
-  faRotateRight, faTimesCircle, faLock, faSpinner, faCompass // Added from various components
-} from '@fortawesome/free-solid-svg-icons';
+  faRotateRight, faTimesCircle, faLock, faSpinner, faCompass, faCheckCircle,
+  faPlusCircle, faPlus, faTrashAlt, faImage, faEye, faListAlt, faEdit, faTrash,
+  faHourglassHalf, faTags, faUsers, faDollarSign, faStore, // <<< Added faUsers here
+  faDesktop, faBell, faTools, faSyncAlt, faLanguage, faCaretDown,
+  faUserTag, faUserMinus, faFlagUsa, faTachometerAlt // <<< Added faTachometerAlt here
+} from '@fortawesome/free-solid-svg-icons'; // <<< Ensure faUsers and faTachometerAlt are in this import
 import {
   faStar as faStarRegular,
   faThumbsUp as faThumbsUpRegular
@@ -34,9 +39,13 @@ library.add(
   // Solid
   faSearch, faUser, faReceipt, faShoppingCart, faSignInAlt, faUserPlus,
   faSignOutAlt, faUserCog, faExclamationTriangle, faBoxOpen, faChevronLeft,
-  faChevronRight, faCheck, faRulerCombined, faGem, faSeedling,
+  faChevronRight, faCheck, faRulerCombined, faGem, faSeedling, faWeightHanging,
   faStar, faStarHalfAlt, faThumbsUp, faUserShield, faSave, faFilter,
-  faRotateRight, faTimesCircle, faLock, faSpinner, faCompass,
+  faRotateRight, faTimesCircle, faLock, faSpinner, faCompass, faCheckCircle,
+  faPlusCircle, faPlus, faTrashAlt, faImage, faEye, faListAlt, faEdit, faTrash,
+  faHourglassHalf, faTags, faUsers, faDollarSign, faStore, // <<< faUsers is now correctly imported and added
+  faDesktop, faBell, faTools, faSyncAlt, faLanguage, faCaretDown,
+  faUserTag, faUserMinus, faFlagUsa, faTachometerAlt, // <<< faTachometerAlt is now correctly imported and added
   // Regular
   faStarRegular, faThumbsUpRegular,
   // Brands
@@ -49,48 +58,57 @@ import { createI18n } from 'vue-i18n';
 // Import locale messages
 import enMessages from './locales/en.json';
 import zhMessages from './locales/zh.json';
-// import frMessages from './locales/fr.json'; // <-- Uncomment and add more languages as needed
+// import frMessages from './locales/fr.json'; // Add more languages as needed
+
+// --- Centralized Language Configuration ---
+export const SUPPORTED_LOCALES = [ // Export for use in Admin components
+  { code: 'en', name: 'English' },
+  { code: 'zh', name: '中文 (简体)' },
+  // { code: 'fr', name: 'Français' },
+];
+export const DEFAULT_LOCALE = 'en';
+// --- End Centralized Language Configuration ---
+
 
 // --- Helper Function to Determine Initial Locale ---
 function getDefaultLocale() {
-  const supportedLocales = ['en', 'zh']; // <-- Add your supported language codes here (e.g., 'fr', 'es')
-  const defaultLocale = 'en'; // <-- Your default fallback language
+  const supportedCodes = SUPPORTED_LOCALES.map(l => l.code);
 
-  // 1. Check localStorage for saved preference
+  // 1. Check localStorage
   const savedLocale = localStorage.getItem('user-locale');
-  if (savedLocale && supportedLocales.includes(savedLocale)) {
+  if (savedLocale && supportedCodes.includes(savedLocale)) {
     console.log(`Using saved locale: ${savedLocale}`);
     return savedLocale;
   }
 
-  // 2. Check browser language preference
+  // 2. Check browser preferences
   if (navigator.languages && navigator.languages.length) {
     for (const lang of navigator.languages) {
-      const baseLang = lang.split('-')[0]; // Use base language (e.g., 'en' from 'en-US')
-      if (supportedLocales.includes(baseLang)) {
+      const baseLang = lang.split('-')[0].toLowerCase();
+      if (supportedCodes.includes(baseLang)) {
         console.log(`Using browser locale: ${baseLang}`);
         return baseLang;
       }
     }
   }
 
-  // 3. Fallback to default
-  console.log(`Falling back to default locale: ${defaultLocale}`);
-  return defaultLocale;
+  // 3. Fallback
+  console.log(`Falling back to default locale: ${DEFAULT_LOCALE}`);
+  return DEFAULT_LOCALE;
 }
 // --- End Helper Function ---
 
 // Create i18n instance
 const i18n = createI18n({
-  legacy: false, // Use Composition API mode (important!)
-  locale: getDefaultLocale(), // Set the initial locale
-  fallbackLocale: 'en', // Fallback if a translation key is missing
+  legacy: false,
+  locale: getDefaultLocale(),
+  fallbackLocale: DEFAULT_LOCALE,
   messages: {
     en: enMessages,
     zh: zhMessages,
-    // fr: frMessages, // <-- Add other imported messages here
+    // fr: frMessages,
   },
-  // Optional: Suppress warnings in production about missing translations or fallbacks
+  // Optional: Suppress warnings
   // silentTranslationWarn: process.env.NODE_ENV === 'production',
   // silentFallbackWarn: process.env.NODE_ENV === 'production',
 });
@@ -103,7 +121,7 @@ const app = createApp(App);
 
 // 8. Use Plugins and Router
 app.use(router);
-app.use(i18n); // Use the i18n plugin
+app.use(i18n);
 
 // 9. Register Global Components & Directives
 app.component('font-awesome-icon', FontAwesomeIcon);
