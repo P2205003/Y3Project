@@ -173,30 +173,18 @@
         <div id="reviews-section" class="product-reviews-section">
           <h2 class="reviews-section__title">{{ t('productDetail.reviews.title') }}</h2>
           <RatingDistribution v-if="product.reviewCount > 0" :distribution="product.ratingDistribution" />
-
-          <!-- Write Review Section Container -->
-          <div class="write-review-container">
-            <!-- Case 1: User Logged In & HAS NOT Reviewed -->
-            <div v-if="isUserLoggedIn && !currentUserHasReviewed" class="write-review-section">
+          <div class="write-review-section">
+            <div v-if="isUserLoggedIn">
               <button v-if="!showReviewForm" @click="showReviewForm = true" class="button enhanced-button primary">
                 {{ t('productDetail.reviews.writeReviewButton') }}
               </button>
               <ReviewForm v-else :product-id="product.id" @review-submitted="handleReviewSubmitted" @cancel="showReviewForm = false" />
             </div>
-            <!-- Case 2: User Logged In & HAS Reviewed -->
-            <div v-else-if="isUserLoggedIn && currentUserHasReviewed" class="write-review-section already-reviewed-message">
-              <p><font-awesome-icon icon="check-circle" /> {{ t('productDetail.reviews.alreadyReviewed') }}</p>
-            </div>
-            <!-- Case 3: User Not Logged In -->
-            <div v-else class="write-review-section login-prompt" @click.capture="handleLoginPromptClick">
+            <div v-else class="login-prompt" @click.capture="handleLoginPromptClick">
               <p v-html="t('productDetail.actions.loginToReview')"></p>
             </div>
           </div>
-
-          <ReviewList :product-id="product.id"
-                      :current-user-id="userId"
-                      @review-deleted="handleReviewDeleted"
-                      ref="reviewListRef" />
+          <ReviewList :product-id="product.id" :current-user-id="userId" ref="reviewListRef" />
         </div>
       </div>
     </transition>
@@ -216,28 +204,15 @@
   import { useRoute, useRouter } from 'vue-router';
   import { useI18n } from 'vue-i18n';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  // Ensure all necessary icons are added in main.js or here
-  import { library } from '@fortawesome/fontawesome-svg-core';
-  import {
-    faExclamationTriangle, faBoxOpen, faChevronLeft, faChevronRight, faCheck,
-    faRulerCombined, faGem, faWeightHanging, faShoppingCart, faSpinner,
-    faCheckCircle // Ensure this is added
-  } from '@fortawesome/free-solid-svg-icons';
+  // Icons are added in main.js
   import LightboxModal from '../components/ui/LightboxModal.vue';
   import RatingSummary from '../components/ui/RatingSummary.vue';
   import RatingDistribution from '../components/ui/RatingDistribution.vue';
   import ReviewList from '../components/features/ReviewList.vue';
   import ReviewForm from '../components/features/ReviewForm.vue';
 
-  // Add icons used in this component (ensure they match imports)
-  library.add(
-    faExclamationTriangle, faBoxOpen, faChevronLeft, faChevronRight, faCheck,
-    faRulerCombined, faGem, faWeightHanging, faShoppingCart, faSpinner,
-    faCheckCircle
-  );
-
   // --- Get i18n essentials ---
-  const { t, locale } = useI18n();
+  const { t, locale } = useI18n(); // Get locale ref
 
   const route = useRoute();
   const router = useRouter();
@@ -266,22 +241,22 @@
   const lightboxStartIndex = ref(0);
   const showReviewForm = ref(false);
   const reviewListRef = ref(null);
-  const currentUserHasReviewed = ref(false);
 
   // Computed
   const productId = computed(() => route.params.id);
   const userId = computed(() => appContext?.currentUser?.value?._id ?? null);
   const isUserLoggedIn = computed(() => appContext?.isLoggedIn?.value ?? false);
 
-  // Filtered Specifications
+  // Filtered Specifications (Uses baseAttributes)
   const filteredSpecifications = computed(() => {
     const specs = {};
     const includedKeys = ['dimensions', 'material', 'weight', 'care'];
     if (!baseAttributes.value) return specs;
-    const source = baseAttributes.value instanceof Map ? baseAttributes.value : Object.entries(baseAttributes.value || {});
-    for (const [key, value] of source) {
+
+    for (const key in baseAttributes.value) {
       const lowerKey = key.toLowerCase();
       if (includedKeys.includes(lowerKey)) {
+        const value = baseAttributes.value[key];
         specs[capitalize(key)] = Array.isArray(value) ? value.join(', ') : value;
       }
     }
@@ -290,14 +265,13 @@
 
   // Helper to get base attribute value
   const getBaseAttributeValue = (key, joinArray = false) => {
-    const baseValue = baseAttributes.value instanceof Map
-      ? baseAttributes.value.get(key)
-      : baseAttributes.value?.[key];
+    const baseValue = baseAttributes.value?.[key];
     if (Array.isArray(baseValue)) {
       return joinArray ? baseValue.join(', ') : baseValue;
     }
     return baseValue || '';
   };
+
 
   // Methods
   const formatCurrency = (amount) => `$${Number(amount || 0).toFixed(2)}`;
@@ -309,22 +283,18 @@
 
   const fetchProductDetails = async (id) => {
     isLoading.value = true; errorLoading.value = null; product.value = null;
-    baseAttributes.value = {};
-    selectedAttributes.value = {};
-    currentImageIndex.value = 0;
-    quantity.value = 1;
-    showReviewForm.value = false;
-    currentUserHasReviewed.value = false;
-    console.log(`Fetching product details for ID: ${id} with lang: ${locale.value}`);
+    baseAttributes.value = {}; // Reset base attributes
+    selectedAttributes.value = {}; // Reset selected attributes
+    currentImageIndex.value = 0; // Reset image index
+    quantity.value = 1; // Reset quantity
+    showReviewForm.value = false; // Hide review form
+    console.log(`Fetching product details for ID: ${id} with lang: ${locale.value}`); // Log language
     try {
+      // *** ADD Accept-Language Header ***
       const headers = { 'Accept-Language': locale.value };
-      const fetchOptions = { headers };
-      if (isUserLoggedIn.value) {
-        fetchOptions.credentials = 'include';
-      }
-      const response = await fetch(`/api/products/${id}`, fetchOptions);
+      const response = await fetch(`/api/products/${id}`, { headers }); // Pass headers
+      // *** END Add Header ***
 
-      // *** CORRECTED Error Handling and Data Assignment ***
       if (!response.ok) {
         const status = response.status;
         if (status === 404) throw new Error(t('productDetail.notFound.message'));
@@ -335,7 +305,7 @@
       const data = await response.json();
       if (!data || !data._id) throw new Error('Invalid product data received.');
 
-      // Assign data to product.value
+      // Store the main (potentially translated) data
       product.value = {
         id: data._id,
         name: data.name,
@@ -343,30 +313,34 @@
         price: data.price,
         category: data.category,
         images: data.images?.length ? data.images : [`https://via.placeholder.com/600?text=No+Image`],
-        attributes: data.attributes || {},
+        attributes: data.attributes || {}, // This now holds TRANSLATED key/value pairs
         averageRating: data.averageRating || 0,
         reviewCount: data.reviewCount || 0,
         ratingDistribution: data.ratingDistribution || { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
+        // Expect backend to send baseCategory if different from translated category
         baseCategory: data.baseCategory || data.category,
       };
-      // *** END CORRECTION ***
 
+      // *** Store base attributes if backend sends them ***
+      // Assuming backend adds `baseAttributes` field to the response
       baseAttributes.value = data.baseAttributes || {};
-      currentUserHasReviewed.value = data.currentUserHasReviewed === true;
-      console.log("Current user has reviewed:", currentUserHasReviewed.value);
+      console.log("Base Attributes received:", baseAttributes.value);
 
+      // Initialize selectedAttributes based on the received (translated) attributes
       selectedAttributes.value = {};
       if (product.value.attributes) {
         for (const translatedKey in product.value.attributes) {
           const options = product.value.attributes[translatedKey];
           if (Array.isArray(options) && options.length > 0) {
-            selectedAttributes.value[translatedKey] = options[0];
+            selectedAttributes.value[translatedKey] = options[0]; // Select first translated option
           }
         }
+        console.log("Default (translated) attributes selected:", selectedAttributes.value);
       }
 
-      changeMainImage(0, false);
+      changeMainImage(0, false); // Set initial image
       document.title = `${product.value.name || t('productDetail.notFound.title')} | ${t('appName')}`;
+      // Pulse animation logic
       await nextTick();
       shouldPulseAddBtn.value = true; setTimeout(() => shouldPulseAddBtn.value = false, 1200);
 
@@ -381,92 +355,106 @@
   };
 
   const handleReviewSubmitted = async () => {
-    console.log("Review submitted successfully, refreshing...");
+    console.log("Review submitted successfully, refreshing list and product data...");
     showReviewForm.value = false;
-    currentUserHasReviewed.value = true;
-    await reviewListRef.value?.refreshReviews(1);
-    await fetchProductDetails(productId.value);
+    reviewListRef.value?.refreshReviews(1); // Refresh the list
+    await fetchProductDetails(productId.value); // Refetch product to update rating/count
   };
 
-  const handleReviewDeleted = async () => {
-    console.log("Review deleted, refetching product data for updated ratings...");
-    currentUserHasReviewed.value = false;
-    await fetchProductDetails(productId.value);
+  const requestLogin = () => {
+    appContext?.openAccountPopup?.('login');
+    if (!appContext?.openAccountPopup) {
+      console.warn("App Context or openAccountPopup method not available.");
+    }
   };
 
-  const requestLogin = () => { appContext?.openAccountPopup?.('login'); };
-  const handleLoginPromptClick = (event) => { if (event.target.tagName === 'BUTTON' && event.target.classList.contains('link-button')) { requestLogin(); } };
-  const changeMainImage = (index, openLightboxAfter = false) => { if (!product.value?.images || index < 0 || index >= product.value.images.length) return; transitionName.value = index > currentImageIndex.value ? 'image-slide-next' : 'image-slide-prev'; currentImageIndex.value = index; selectedImage.value = product.value.images[index]; if (openLightboxAfter) openLightbox(index); };
+  const handleLoginPromptClick = (event) => {
+    if (event.target.tagName === 'BUTTON' && event.target.classList.contains('link-button')) {
+      requestLogin();
+    }
+  };
+
+
+  // Gallery & Lightbox Methods
+  const changeMainImage = (index, openLightboxAfter = false) => {
+    if (!product.value?.images || index < 0 || index >= product.value.images.length) return;
+    transitionName.value = index > currentImageIndex.value ? 'image-slide-next' : 'image-slide-prev';
+    currentImageIndex.value = index;
+    selectedImage.value = product.value.images[index];
+    if (openLightboxAfter) openLightbox(index);
+  };
   const nextImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value + 1) % product.value.images.length; changeMainImage(newIndex); };
   const prevImage = () => { if (!product.value?.images?.length) return; const newIndex = (currentImageIndex.value - 1 + product.value.images.length) % product.value.images.length; changeMainImage(newIndex); };
   const handleThumbnailClick = (index) => changeMainImage(index);
   const openLightbox = (index = 0) => { lightboxStartIndex.value = index; isLightboxActive.value = true; document.body.classList.add('lightbox-open'); };
   const closeLightbox = () => { isLightboxActive.value = false; document.body.classList.remove('lightbox-open'); };
+
+  // Attributes & Quantity Methods
   const isSwatchAttribute = (key) => ['color', 'colour', 'material', 'finish', 'wood', '颜色', '材料', '饰面'].includes(key.toLowerCase());
   const isTextureAttribute = (key) => ['material', 'finish', 'wood', '材料', '饰面'].includes(key.toLowerCase());
-  const getSwatchStyle = (key, option) => { /* ... */ };
+  const getSwatchStyle = (key, option) => {
+    const k = key.toLowerCase();
+    if (k === 'color' || k === 'colour' || k === '颜色') {
+      const colors = { black: '#333', white: '#f8f8f8', grey: '#aaa', gray: '#aaa', blue: '#3498db', red: '#e74c3c', green: '#2ecc71', natural: '#f5deb3', oak: '#c19a6b', walnut: '#705446', '红色': '#e74c3c', '白色': '#f8f8f8' };
+      return { backgroundColor: colors[option.toLowerCase()] || option };
+    } return {};
+  };
   const selectAttribute = (key, value) => { selectedAttributes.value[key] = value; };
   const increaseQuantity = () => { quantity.value = Math.min(99, (quantity.value || 0) + 1); };
   const decreaseQuantity = () => { quantity.value = Math.max(1, (quantity.value || 1) - 1); };
   const validateQuantity = () => { quantity.value = Math.max(1, Math.min(99, parseInt(quantity.value) || 1)); };
-  const handleAddToCart = () => { /* ... (existing logic, including potential fallback mapping) ... */
+
+  // Add to Cart
+  const handleAddToCart = () => {
     if (!product.value || justAdded.value) return;
     justAdded.value = true;
-
-    const attributesToSend = {};
-    const baseAttrsSource = baseAttributes.value instanceof Map ? baseAttributes.value : (baseAttributes.value || {});
-
-    for (const translatedKey in selectedAttributes.value) {
-      const selectedTranslatedValue = selectedAttributes.value[translatedKey];
-      let foundBaseKey = null;
-      let foundBaseValue = null;
-
-      for (const [baseKey, baseValues] of Object.entries(baseAttrsSource)) {
-        // --- TEMPORARY FALLBACK: Use translatedKey as baseKey ---
-        if (translatedKey === baseKey) { // This is likely WRONG if keys are translated
-          foundBaseKey = baseKey;
-          // Fallback: Assuming selectedTranslatedValue is the base value
-          foundBaseValue = selectedTranslatedValue;
-          break;
-        }
-        // TODO: Implement proper mapping lookup if backend provides it
-      }
-
-      if (foundBaseKey && foundBaseValue) {
-        attributesToSend[foundBaseKey] = foundBaseValue;
-      } else {
-        console.warn(`Could not map translated attribute: ${translatedKey}:${selectedTranslatedValue} back to base attribute.`);
-        attributesToSend[translatedKey] = selectedTranslatedValue;
-      }
-    }
-    console.log("Attributes prepared for cart:", attributesToSend);
+    const attributesToSend = { ...selectedAttributes.value };
 
     emit('add-to-cart', {
-      productId: product.value.id,
-      name: product.value.name,
+      productId: product.value.id, // Use productId here
+      name: product.value.name, // Send current display name
       price: product.value.price,
       image: product.value.images[0],
       quantity: quantity.value,
-      attributes: attributesToSend,
+      attributes: attributesToSend, // Send the selected (translated) attributes map
     });
     setTimeout(() => { justAdded.value = false; }, 1500);
   };
 
+  // --- *** WATCH locale CHANGES *** ---
+  watch(locale, (newLocale, oldLocale) => {
+    console.log(`Locale changed in ProductDetailView from ${oldLocale} to ${newLocale}. Refetching details.`);
+    if (newLocale !== oldLocale && productId.value) {
+      fetchProductDetails(productId.value); // Re-fetch data for the current product ID
+    }
+  });
+  // --- *** END WATCH *** ---
 
-  watch(locale, (newLocale, oldLocale) => { if (newLocale !== oldLocale && productId.value) { fetchProductDetails(productId.value); } });
-  onMounted(() => { fetchProductDetails(productId.value); });
-  watch(productId, (newId, oldId) => { if (newId && newId !== oldId) { fetchProductDetails(newId); } });
-  watch(route, () => { if (isLightboxActive.value) closeLightbox(); });
-  watch(() => appContext?.isLoggedIn?.value, (newLoginState, oldLoginState) => { if (newLoginState !== oldLoginState && productId.value) { fetchProductDetails(productId.value); } reviewListRef.value?.refreshReviews(); });
+  // --- Lifecycle & Other Watchers ---
+  onMounted(() => {
+    console.log("ProductDetailView Mounted. Injected isLoggedIn:", isUserLoggedIn.value);
+    fetchProductDetails(productId.value); // Initial fetch
+  });
+  // Watch for direct navigation between product pages
+  watch(productId, (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      console.log(`Product ID changed from ${oldId} to ${newId}. Fetching new details.`);
+      fetchProductDetails(newId);
+    }
+  });
+  watch(route, () => { if (isLightboxActive.value) closeLightbox(); }); // Close lightbox on any route change
+  watch(() => appContext?.isLoggedIn?.value, (newLoginState) => {
+    console.log("ProductDetailView detected login state change:", newLoginState);
+    // Refresh reviews when user logs in/out might be useful if reviews have user-specific state
+    reviewListRef.value?.refreshReviews();
+  });
 
 </script>
 
 <style scoped>
+  /* Styles remain the same as previous correct version */
   .product-detail-page {
     padding-bottom: 6rem;
-  }
-
-  .product-content-wrapper {
   }
 
   .product-detail-layout {
@@ -516,43 +504,20 @@
     color: var(--text-dark);
   }
 
-  .write-review-container {
+  .write-review-section {
     margin-bottom: 2.5rem;
+    padding: 1.5rem;
+    background-color: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
   }
 
-  .write-review-section {
-    padding: 1.5rem;
-    background-color: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-  }
-
-    .write-review-section.already-reviewed-message {
-      background-color: var(--bg-light);
-      border-style: dashed;
+    .write-review-section .button {
+      margin-bottom: 1rem;
     }
-
-  .already-reviewed-message p {
-    margin: 0;
-    font-size: 0.95rem;
-    color: var(--text-muted);
-    text-align: center;
-  }
-
-  .already-reviewed-message svg {
-    color: var(--primary);
-    margin-right: 0.5em;
-    vertical-align: middle;
-  }
-
-  .write-review-section.login-prompt {
-    padding: 1rem;
-    background-color: var(--bg-light);
-    border-style: dashed;
-  }
 
   .login-prompt p {
     margin: 0;
@@ -603,15 +568,11 @@
       margin-bottom: 1.5rem;
     }
 
-    .write-review-container {
-      margin-bottom: 2rem;
-    }
-
     .write-review-section {
       padding: 1rem;
     }
   }
-
+  /* Loading/Error States */
   .loading-container, .message-container {
     min-height: 60vh;
     display: flex;
@@ -666,7 +627,7 @@
   .message-container .button {
     margin-top: 1rem;
   }
-
+  /* Info Section Specifics */
   .spec-icon {
     color: var(--primary);
     width: 14px;
@@ -688,13 +649,7 @@
   .spec-item {
     display: flex;
     align-items: center;
-    font-size: 0.85rem;
-    color: var(--text-muted);
   }
-
-    .spec-item span {
-      line-height: 1.4;
-    }
 
   .info-divider.subtle {
     border: none;
@@ -728,15 +683,6 @@
       margin-bottom: 0;
     }
 
-    .product-description :deep(p) {
-      margin-bottom: 1em;
-    }
-
-    .product-description :deep(a) {
-      color: var(--primary);
-      text-decoration: underline;
-    }
-
   .additional-info {
     margin-top: 2rem;
     border-top: 1px solid var(--border-color);
@@ -745,12 +691,8 @@
 
   .info-accordion {
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 0rem;
+    margin-bottom: 1rem;
   }
-
-    .info-accordion:last-of-type {
-      border-bottom: none;
-    }
 
     .info-accordion summary {
       cursor: pointer;
@@ -759,13 +701,7 @@
       list-style: none;
       position: relative;
       padding-right: 1.5rem;
-      transition: background-color var(--transition-fast);
-      display: block;
     }
-
-      .info-accordion summary:hover {
-        background-color: var(--bg-off-light);
-      }
 
       .info-accordion summary::-webkit-details-marker {
         display: none;
@@ -780,16 +716,10 @@
         font-size: 1.4rem;
         color: var(--primary);
         transition: transform 0.2s ease;
-        font-weight: 300;
-        line-height: 1;
       }
 
     .info-accordion[open] summary::after {
-      content: "\2212";
-    }
-
-    .info-accordion[open] summary {
-      background-color: var(--bg-off-light);
+      transform: translateY(-50%) rotate(45deg);
     }
 
     .info-accordion .info-content {
@@ -800,40 +730,28 @@
     }
 
       .info-accordion .info-content ul {
-        list-style: none;
-        padding-left: 0.5rem;
+        list-style: disc;
+        padding-left: 1.5rem;
         margin: 0.5rem 0 0 0;
       }
 
       .info-accordion .info-content li {
-        margin-bottom: 0.5rem;
-        display: flex;
+        margin-bottom: 0.4rem;
       }
 
       .info-accordion .info-content strong {
         color: var(--text-dark);
-        min-width: 100px;
-        display: inline-block;
-        margin-right: 0.5em;
-      }
-
-      .info-accordion .info-content span {
-        flex-grow: 1;
+        margin-right: 0.3em;
       }
 
       .info-accordion .info-content a {
         color: var(--primary);
         text-decoration: none;
-        font-weight: 600;
       }
 
         .info-accordion .info-content a:hover {
           text-decoration: underline;
         }
-
-      .info-accordion .info-content p:last-child {
-        margin-bottom: 0;
-      }
 
   .sr-only {
     position: absolute;
@@ -878,7 +796,7 @@
       color: var(--white);
       border-color: var(--primary);
     }
-
+  /* Gallery Styles */
   .product-gallery-container {
     position: sticky;
     top: calc(var(--header-height) + 1.5rem);
@@ -981,12 +899,6 @@
   }
 
   @media (max-width: 1024px) {
-    .product-gallery-container {
-      position: relative;
-      top: auto;
-      max-height: none;
-    }
-
     .gallery-nav-button {
       opacity: 0.6;
       background-color: rgba(33, 37, 41, 0.4);
@@ -1100,7 +1012,7 @@
     object-fit: cover;
     border-radius: calc(var(--border-radius-small) - 2px);
   }
-
+  /* Info & Actions Styles */
   .product-info-container {
     padding-top: 0;
   }
@@ -1456,13 +1368,14 @@
       transform: scale(1.1);
     }
 
+  /* Handle potential errors in attribute display */
   .attribute-error-text {
     color: var(--secondary);
     font-size: 0.8em;
     font-style: italic;
     margin-top: 0.2em;
   }
-
+  /* Transitions */
   .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease;
   }
