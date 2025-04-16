@@ -191,8 +191,7 @@
         "priceAsc": "Price: Low to High",
         "priceDesc": "Price: High to Low",
         "nameAsc": "Name: A to Z",
-        "nameDesc": "Name: Z to A",
-        "rating": "Rating: High to Low"
+        "nameDesc": "Name: Z to A"
       },
       "resetButton": "Reset"
     },
@@ -295,6 +294,16 @@
     },
     "sellerResponse": {
       "title": "Response from Seller:"
+    },
+    "dateRelative": {
+      "justNow": "just now",
+      "minuteAgo": "{count} min ago",
+      "minutesAgo": "{count} mins ago",
+      "hourAgo": "{count} hr ago",
+      "hoursAgo": "{count} hrs ago",
+      "dayAgo": "{count} day ago",
+      "daysAgo": "{count} days ago",
+      "default": "on {date}"
     }
   },
   "productDetail": {
@@ -321,10 +330,10 @@
       "shippingInfo": "Standard delivery within 5-7 business days. Expedited options available at checkout.",
       "returnsInfo": "We offer a 30-day return policy for items in original condition. See our full <a href=\"/shipping-policy\">Shipping & Returns Policy</a> for details.",
       "careInstructionsTitle": "Care Instructions",
-      "defaultCare": "Please refer to the product tag for specific care instructions. Generally, wipe clean with a soft, damp cloth. Avoid harsh chemicals."
+      "defaultCare": "Please refer to the product tag for specific care instructions. Generally, wipe clean with a soft, damp cloth. Avoid harsh chemicals.",
+      "descriptionTitle": "Description",
+      "noDescription": "No description available."
     },
-    "descriptionTitle": "Description",
-    "noDescription": "No description available.",
     "actions": {
       "quantityAriaLabel": "Product quantity",
       "decreaseQuantityAriaLabel": "Decrease quantity",
@@ -504,102 +513,7 @@
     "changeLanguage": "Change language",
     "currentLanguage": "Current Language: {lang}",
     "languages": {
-      "en": "English",
-      "zh": "中文 (简体)"
-    }
-  },
-  "admin": {
-    "common": {
-      "required": "Required",
-      "optional": "Optional",
-      "save": "Save",
-      "saving": "Saving...",
-      "update": "Update",
-      "updating": "Updating...",
-      "cancel": "Cancel",
-      "delete": "Delete",
-      "deleting": "Deleting...",
-      "edit": "Edit",
-      "view": "View",
-      "add": "Add",
-      "search": "Search",
-      "loading": "Loading...",
-      "error": "Error",
-      "success": "Success",
-      "noData": "No data available.",
-      "confirm": "Confirm",
-      "reset": "Reset"
-    },
-    "addProduct": {
-      "title": "Add New Product",
-      "editTitle": "Edit Product",
-      "backLink": "Back to Products",
-      "successPanel": {
-        "titleAdd": "Product Added Successfully!",
-        "titleEdit": "Product Updated Successfully!",
-        "productNumberLabel": "Product Number:",
-        "productIdLabel": "Product ID:",
-        "message": "Product \"{name}\" has been saved.",
-        "viewButton": "View Product",
-        "addButton": "Add Another Product",
-        "viewAllButton": "View All Products"
-      },
-      "form": {
-        "baseSectionTitle": "Base (English) Details",
-        "nameLabel": "Product Name",
-        "priceLabel": "Price ($)",
-        "categoryLabel": "Category",
-        "productNumberLabel": "Product Number",
-        "productNumberPlaceholder": "Auto-generated on add",
-        "descriptionLabel": "Description",
-        "slugLabel": "URL Slug",
-        "slugPlaceholder": "Auto-generated from name if blank",
-        "enabledLabel": "Product Enabled",
-        "attributesImagesSectionTitle": "Base Attributes & Images",
-        "attributesLabel": "Attributes (English)",
-        "noAttributesMessage": "No base attributes added.",
-        "attributeNamePlaceholder": "Attribute Name (e.g., Color)",
-        "attributeValuePlaceholder": "Value(s), comma-separated (e.g., Red, Blue)",
-        "addAttributeButton": "Add Base Attribute",
-        "imagesLabel": "Product Images",
-        "imageInputPlaceholder": "https://example.com/image.jpg",
-        "removeImageTitle": "Remove Image",
-        "addImageButton": "Add Image URL",
-        "imageHelpText": "First image is the main image. Enter valid URLs.",
-        "translationsSectionTitle": "Translations",
-        "editingLanguage": "Editing: {langName}",
-        "translatedNameLabel": "Translated Name",
-        "translatedCategoryLabel": "Translated Category",
-        "translatedDescriptionLabel": "Translated Description",
-        "translatedAttributesLabel": "Translated Attributes ({langName})",
-        "addBaseAttributesPrompt": "Add base attributes first to translate them.",
-        "translateKeyPlaceholder": "Translate Key: '{baseKey}'",
-        "translateValuePlaceholder": "Translate Values: '{baseValue}' (comma-sep)",
-        "cancelButton": "Cancel",
-        "saveButtonAdd": "Add Product",
-        "saveButtonEdit": "Update Product",
-        "savingButton": "Saving...",
-        "validation": {
-          "namePriceRequired": "Product Name and a valid Price are required.",
-          "imageRequired": "Please provide at least one valid Image URL (starting with http/https).",
-          "attributeIncomplete": "Base attribute '{keyOrValue}' is incomplete. Please provide both name and value(s).",
-          "attributeDuplicate": "Duplicate base attribute name found: \"{key}\"."
-        }
-      },
-      "preview": {
-        "title": "Preview ({langName})",
-        "languageLabel": "Preview Language:",
-        "imagePreviewLabel": "Image Previews",
-        "imagePreviewAlt": "Preview {index}",
-        "mainImageLabel": "Main",
-        "imageNumLabel": "Img {index}",
-        "noImageUrl": "No image URL",
-        "defaultName": "Product Name",
-        "defaultDescription": "Product description will appear here...",
-        "attributesTitle": "Attributes (Preview: {langName}):",
-        "noAttributeName": "(No Name)",
-        "noAttributeValue": "(No Value)"
-      }
+      "en": "English"
     }
   }
 }

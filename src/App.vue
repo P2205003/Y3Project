@@ -6,7 +6,6 @@
   <ScrollProgress :scroll-percentage="scrollPercentage" />
 
   <!-- Header -->
-  <!-- *** Conditionally render TheHeader *** -->
   <TheHeader v-if="!isAdminRoute"
              :is-scrolled="isScrolled"
              @toggle-menu="toggleMobileMenu"
@@ -22,11 +21,10 @@
              :is-logged-in="isLoggedIn"
              :current-user="currentUser" />
 
-  <!-- Mobile Menu Overlay (Keep outside conditional rendering if header handles its toggle) -->
+  <!-- Mobile Menu Overlay -->
   <div id="menu-overlay" @click="closeMobileMenu" :class="{ active: isMobileMenuActive }"></div>
 
   <!-- Main Content Area -->
-  <!-- *** The router-view remains, it will render AdminView for /admin routes *** -->
   <router-view v-slot="{ Component }">
     <transition name="fade" mode="out-in">
       <component :is="Component" @add-to-cart="handleAddToCart" />
@@ -34,14 +32,13 @@
   </router-view>
 
   <!-- Footer -->
-  <!-- *** Conditionally render TheFooter *** -->
   <TheFooter v-if="!isAdminRoute" />
 
-  <!-- Popups (Rendered here to overlay everything) -->
+  <!-- Popups -->
   <AccountPopup :is-active="isAccountPopupActive"
                 :initial-tab="accountPopupTab"
                 @close="closeAccountPopup"
-                @login-success="handleLoginSuccess" /> <!-- Handle login success -->
+                @login-success="handleLoginSuccess" />
   <CartPopup :is-active="isCartPopupActive"
              :cart-items="cartData"
              :subtotal="cartSubtotal"
@@ -52,10 +49,10 @@
 </template>
 
 <script setup>
-  // --- IMPORTANT: Import provide ---
   import { ref, onMounted, onUnmounted, computed, nextTick, watch, provide } from 'vue';
-  import { useRoute, useRouter } from 'vue-router'; // Import useRoute
-  import cartService from '@/services/cartService'; // Import cart service
+  import { useRoute, useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n';
+  import cartService from '@/services/cartService';
 
   // Layout Components
   import TheHeader from './components/layout/TheHeader.vue';
@@ -68,47 +65,43 @@
   import AccountPopup from './components/features/AccountPopup.vue';
   import CartPopup from './components/features/CartPopup.vue';
 
-  // --- State ---
-  const isLoading = ref(true); // Preloader state
-  const appReady = ref(false); // State to track if initial checks are done
+  // Get i18n essentials
+  const { locale } = useI18n();
+
+  // State
+  const isLoading = ref(true);
+  const appReady = ref(false);
   const isScrolled = ref(false);
   const scrollPercentage = ref(0);
   const isMobileMenuActive = ref(false);
   const isSearchActive = ref(false);
   const isAccountDropdownActive = ref(false);
   const isAccountPopupActive = ref(false);
-  const accountPopupTab = ref('login'); // 'login' or 'register'
+  const accountPopupTab = ref('login');
   const isCartPopupActive = ref(false);
-
-  // --- Authentication State ---
   const isLoggedIn = ref(false);
-  const currentUser = ref(null); // Store { username, fullName, _id (optional but useful) }
+  const currentUser = ref(null);
+  const cartData = ref([]); // Holds the items array from the cart response
+  const totalCartItems = ref(0); // Separate count
 
-  // --- Cart State ---
-  const cartData = ref([]); // Now managed by cartService interaction
-  const totalCartItems = ref(0); // Reactive cart item count
-  const cartSubtotal = computed(() => cartService.calculateTotal({ items: cartData.value })); // Use service calculator
-
-  const router = useRouter(); // Get router instance
-  const route = useRoute(); // Get route instance to check path
-
-  // --- *NEW*: Computed property to check if the current route is an admin route ---
+  const router = useRouter();
+  const route = useRoute();
   const isAdminRoute = computed(() => route.path.startsWith('/admin'));
 
-  // --- Provide Application Context ---
-  // Make reactive state and methods available to descendants
-  provide('appContext', {
-    isLoggedIn, // Provide the ref directly for reactivity
-    currentUser, // Provide the ref directly
-    openAccountPopup, // Provide the method
-    logout: handleLogout // Provide logout method
-  });
-  // --- End Provide ---
+  // Computed Cart Subtotal
+  const cartSubtotal = computed(() => cartService.calculateTotal({ items: cartData.value }));
 
+  // Provide Application Context
+  provide('appContext', {
+    isLoggedIn,
+    currentUser,
+    openAccountPopup, // Function defined below
+    logout: handleLogout
+  });
 
   // --- Methods ---
 
-  // --- Login Status Check ---
+  // Login Status Check
   const checkLoginStatus = async () => {
     console.log('Checking login status...');
     try {
@@ -116,7 +109,7 @@
       if (response.ok) {
         const data = await response.json();
         isLoggedIn.value = data.isLoggedIn;
-        currentUser.value = data.isLoggedIn ? data.user : null; // user object now includes shippingAddress
+        currentUser.value = data.isLoggedIn ? data.user : null;
         console.log('Login status checked:', { isLoggedIn: isLoggedIn.value, user: currentUser.value });
         await fetchCart(); // Fetch cart after confirming login status
       } else {
@@ -131,120 +124,118 @@
       currentUser.value = null;
       await fetchCart(); // Fetch local cart on error
     } finally {
-      appReady.value = true; // Indicate app is ready after check
-      setTimeout(() => { isLoading.value = false; }, 200); // Hide preloader slightly after check
+      appReady.value = true;
+      setTimeout(() => { isLoading.value = false; }, 200);
     }
   };
 
-  // --- Cart Management ---
+  // Cart Management
   const fetchCart = async () => {
     console.log("App.vue: Fetching cart data...");
     try {
       const cart = await cartService.getCart(isLoggedIn.value);
       cartData.value = cart.items || [];
-      updateCartCount(); // Update count after fetching
+      updateCartCount();
       console.log("App.vue: Cart data updated:", cartData.value);
     } catch (error) {
       console.error("App.vue: Error fetching cart:", error);
-      cartData.value = []; // Ensure cart is empty on error
+      cartData.value = [];
       updateCartCount();
     }
   };
 
-  // Update cart count separately
   const updateCartCount = () => {
-    totalCartItems.value = cartData.value.reduce((sum, item) => sum + (item.quantity || 0), 0); // Ensure quantity exists
+    totalCartItems.value = cartData.value.reduce((sum, item) => sum + (item.quantity || 0), 0);
   };
 
-  // Call fetchCart whenever cart needs refresh (add, update, remove, login, logout)
-  cartService.onCartUpdate(fetchCart); // Subscribe to cart service updates
+  // Subscribe to cart service internal updates
+  const unsubscribeCartUpdate = cartService.onCartUpdate(fetchCart); // Re-fetch on service notification
 
   const handleAddToCart = async (itemToAdd) => {
     console.log('Adding to cart (App.vue):', itemToAdd);
     const cartItem = {
-      productId: itemToAdd.id,
+      productId: itemToAdd.productId,
       quantity: Math.max(1, itemToAdd.quantity || 1),
+      attributes: itemToAdd.attributes || {},
+      // Pass display details for local storage fallback
       name: itemToAdd.name,
       price: itemToAdd.price,
       image: itemToAdd.image,
-      attributes: itemToAdd.attributes || {}
     };
 
-    await cartService.addItem(cartItem, isLoggedIn.value);
+    const updatedCart = await cartService.addItem(cartItem, isLoggedIn.value);
+    if (updatedCart) {
+      cartData.value = updatedCart.items || [];
+      updateCartCount();
+    }
 
-    const cartOpenDelay = 300; // Shorten delay slightly
-    console.log(`Cart popup will open in ${cartOpenDelay}ms`);
+    const cartOpenDelay = 300;
     setTimeout(() => {
-      // Only open if not on an admin route
       if (!isAdminRoute.value) {
         isCartPopupActive.value = true;
-        console.log("Opening cart popup now.");
       }
     }, cartOpenDelay);
   };
 
-  const updateCartItemQuantity = async ({ productId, change, attributes }) => { // Expect attributes if needed
+  const updateCartItemQuantity = async ({ productId, change, attributes }) => {
     const item = cartData.value.find(item =>
       item.productId === productId &&
       JSON.stringify(item.attributes || {}) === JSON.stringify(attributes || {})
     );
     if (item) {
       const newQuantity = item.quantity + change;
+      let updatedCart;
       if (newQuantity <= 0) {
-        await cartService.removeItem(productId, attributes, isLoggedIn.value);
+        updatedCart = await cartService.removeItem(productId, attributes, isLoggedIn.value);
       } else {
-        await cartService.updateItemQuantity(productId, newQuantity, attributes, isLoggedIn.value);
+        updatedCart = await cartService.updateItemQuantity(productId, newQuantity, attributes, isLoggedIn.value);
       }
-      // fetchCart() triggered by service
+      if (updatedCart) {
+        cartData.value = updatedCart.items || [];
+        updateCartCount();
+      }
     }
   };
 
-  const removeCartItem = async ({ productId, attributes }) => { // Expect attributes
-    await cartService.removeItem(productId, attributes, isLoggedIn.value);
-    // fetchCart() triggered by service
+  const removeCartItem = async ({ productId, attributes }) => {
+    const updatedCart = await cartService.removeItem(productId, attributes, isLoggedIn.value);
+    if (updatedCart) {
+      cartData.value = updatedCart.items || [];
+      updateCartCount();
+    }
   };
 
-
-  // --- Authentication Actions ---
-  const handleLoginSuccess = async (userData) => { // Make async
+  // Authentication Actions
+  const handleLoginSuccess = async (userData) => {
     console.log('Login successful in App.vue, user:', userData);
     isLoggedIn.value = true;
     currentUser.value = userData;
-    // Explicitly fetch cart again AFTER login success event is handled in App.vue
-    await fetchCart();
-  };
-
-  // --- MODIFIED: Make handleLogout function available via provide ---
-  async function handleLogout() {
-    console.log('Logging out...');
-    try {
-      const response = await fetch('/api/users/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (response.ok) {
-        console.log('Logout successful on backend.');
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Logout failed:', errorData.message || response.statusText);
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      // Ensure client-side state is always reset
-      isLoggedIn.value = false;
-      currentUser.value = null;
-      isAccountDropdownActive.value = false; // Close dropdown
-      await fetchCart(); // Fetch local cart
-      // Redirect home only if currently on a protected route *other than* admin
-      if (route.meta.requiresAuth && !isAdminRoute.value) {
-        router.push('/');
-      }
-      // If on admin route, logout stays on admin login or redirects appropriately via guard
+    const finalCart = await cartService.mergeCartsAfterLogin();
+    if (finalCart) {
+      cartData.value = finalCart.items || [];
+      updateCartCount();
+    } else {
+      await fetchCart(); // Attempt refetch if merge failed
     }
   };
 
-  // --- UI Toggles ---
+  async function handleLogout() {
+    console.log('Logging out...');
+    try {
+      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' });
+    } catch (error) { console.error('Error during backend logout:', error); }
+    finally {
+      isLoggedIn.value = false;
+      currentUser.value = null;
+      isAccountDropdownActive.value = false;
+      await fetchCart(); // Fetch guest cart (local storage)
+      if (route.meta.requiresAuth && !isAdminRoute.value) {
+        router.push('/');
+      }
+    }
+  };
+
+  // UI Toggles
   const handleScroll = () => {
     const scrollY = window.scrollY;
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -270,7 +261,7 @@
   };
   const closeAccountDropdown = () => toggleAccountDropdown(false);
 
-  // Updated function signature
+  // This is the function provided to descendants
   function openAccountPopup(tab = 'login') {
     accountPopupTab.value = tab;
     isAccountPopupActive.value = true;
@@ -284,7 +275,7 @@
   };
   const closeCartPopup = () => toggleCartPopup(false);
 
-  // Helper to close things
+  // Helper to close UI elements
   const closePopupsAndDropdowns = (keepSearch = false, keepDropdown = false, keepAccountPopup = false, keepCart = false) => {
     if (!keepSearch) isSearchActive.value = false;
     if (!keepDropdown) isAccountDropdownActive.value = false;
@@ -294,7 +285,7 @@
   };
 
 
-  // --- Global Click Listener ---
+  // Global Click Listener
   const handleClickOutside = (event) => {
     // Close account dropdown
     const accountTrigger = document.getElementById('account-dropdown-trigger');
@@ -304,21 +295,20 @@
     }
     // Close search
     const searchContainer = document.querySelector('.search-container');
-    const searchButton = document.getElementById('search-button'); // Target button too
+    const searchButton = document.getElementById('search-button');
     if (isSearchActive.value && searchContainer && !searchContainer.contains(event.target) && event.target !== searchButton && !searchButton?.contains(event.target)) {
       closeSearch();
     }
   };
 
-  // --- Global Body Class Management ---
-  watch([isMobileMenuActive, isAccountPopupActive, isCartPopupActive],
-    ([mobileActive, accountActive, cartActive]) => {
+  // Global Body Class Management
+  watch([isMobileMenuActive, isAccountPopupActive, isCartPopupActive, isAdminRoute],
+    ([mobileActive, accountActive, cartActive, adminActive]) => {
       const body = document.body;
       if (mobileActive) body.classList.add('mobile-menu-active');
       else body.classList.remove('mobile-menu-active');
 
-      // Only add popup-open if NOT an admin route
-      if (!isAdminRoute.value && (mobileActive || accountActive || cartActive)) {
+      if (!adminActive && (mobileActive || accountActive || cartActive)) {
         body.classList.add('popup-open');
       } else {
         body.classList.remove('popup-open');
@@ -326,18 +316,26 @@
     }, { immediate: true }
   );
 
-  // --- Lifecycle Hooks ---
+  // --- WATCH locale TO REFETCH CART ---
+  watch(locale, (newLocale, oldLocale) => {
+    if (newLocale !== oldLocale && isLoggedIn.value) { // Only refetch for logged-in users
+      console.log(`App locale changed to ${newLocale}, refetching cart.`);
+      fetchCart(); // Trigger backend fetch which handles translation
+    }
+    // Guest cart uses local storage snapshot, no automatic update on locale change needed
+  });
+  // --- END WATCH ---
+
+  // Lifecycle Hooks
   onMounted(async () => {
-    await checkLoginStatus(); // Check login and fetch initial cart
-    // isLoading is now set inside checkLoginStatus's finally block
+    await checkLoginStatus(); // Checks login AND fetches initial cart
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
-
+    handleScroll();
     document.addEventListener('click', handleClickOutside);
 
-    router.afterEach((to, from) => { // Close UI elements on route change
-      // Don't close popups if navigating within admin area
+    router.afterEach((to, from) => {
+      // Close popups on route change, except within admin area
       if (!to.path.startsWith('/admin') || !from.path.startsWith('/admin')) {
         closePopupsAndDropdowns();
       }
@@ -347,14 +345,25 @@
   onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll);
     document.removeEventListener('click', handleClickOutside);
-    // Unsubscribe? cartService cleans up its own listeners usually.
+    // Unsubscribe from cart service updates
+    if (unsubscribeCartUpdate) {
+      unsubscribeCartUpdate();
+    }
   });
 
 </script>
 
 <style>
-  /* Add styles for popup-open if not already present */
+  /* Global styles from main.css */
   body.popup-open {
     overflow: hidden;
+  }
+
+  .fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+
+  .fade-enter-from, .fade-leave-to {
+    opacity: 0;
   }
 </style>

@@ -16,15 +16,17 @@
           <label for="search-products">
             <font-awesome-icon icon="search" /> {{ t('productsPage.filters.searchLabel') }}
           </label>
-          <input type="search" id="search-products" name="search" :placeholder="t('productsPage.filters.searchPlaceholder')" v-model="filters.searchQuery" @input="debounceApplyFilters" @keyup.enter="applyFilters">
+          <!-- Use keyup.enter to trigger search immediately on enter -->
+          <input type="search" id="search-products" name="search" :placeholder="t('productsPage.filters.searchPlaceholder')" v-model="filters.searchQuery" @input="debounceApplyFilters" @keyup.enter="applyFilters" class="enhanced-input">
         </div>
         <!-- Category Select -->
         <div class="filter-group">
           <label for="filter-category">{{ t('productsPage.filters.categoryLabel') }}</label>
-          <select id="filter-category" name="category" v-model="filters.category" @change="applyFilters" :disabled="isLoading || categoriesLoading">
+          <select id="filter-category" name="category" v-model="filters.category" @change="applyFilters" :disabled="isLoading || categoriesLoading" class="enhanced-input">
             <option value="">{{ t('productsPage.filters.allCategories') }}</option>
+            <!-- Categories fetched dynamically -->
             <option v-for="category in categories" :key="category" :value="category">
-              {{ category }} <!-- Category names are dynamic data (base English) -->
+              {{ category }}
             </option>
           </select>
         </div>
@@ -32,23 +34,18 @@
         <div class="filter-group price-range-group">
           <label>{{ t('productsPage.filters.priceRangeLabel') }}</label>
           <div class="price-inputs">
-            <div>
-              <!-- Wrapper for relative positioning -->
-              <span class="price-prefix">$</span>
-              <input type="number" min="0" placeholder="Min" :aria-label="t('productsPage.filters.minPriceAriaLabel')" v-model.number="filters.minPrice" @input="debounceApplyFilters" @change="applyFilters">
-            </div>
+            <!-- Price inputs remain the same -->
+            <span class="price-prefix">$</span>
+            <input type="number" min="0" placeholder="Min" :aria-label="t('productsPage.filters.minPriceAriaLabel')" v-model.number="filters.minPrice" @input="debounceApplyFilters" @change="applyFilters" class="enhanced-input">
             <span class="price-separator">–</span>
-            <div>
-              <!-- Wrapper for relative positioning -->
-              <span class="price-prefix">$</span>
-              <input type="number" min="0" placeholder="Max" :aria-label="t('productsPage.filters.maxPriceAriaLabel')" v-model.number="filters.maxPrice" @input="debounceApplyFilters" @change="applyFilters">
-            </div>
+            <span class="price-prefix">$</span>
+            <input type="number" min="0" placeholder="Max" :aria-label="t('productsPage.filters.maxPriceAriaLabel')" v-model.number="filters.maxPrice" @input="debounceApplyFilters" @change="applyFilters" class="enhanced-input">
           </div>
         </div>
         <!-- Sort Select -->
         <div class="filter-group">
           <label for="filter-sort">{{ t('productsPage.filters.sortLabel') }}</label>
-          <select id="filter-sort" name="sort" v-model="filters.sort" @change="applyFilters" :disabled="isLoading">
+          <select id="filter-sort" name="sort" v-model="filters.sort" @change="applyFilters" :disabled="isLoading" class="enhanced-input">
             <option value="featured">{{ t('productsPage.filters.sortOptions.featured') }}</option>
             <option value="newest">{{ t('productsPage.filters.sortOptions.newest') }}</option>
             <option value="price-asc">{{ t('productsPage.filters.sortOptions.priceAsc') }}</option>
@@ -67,8 +64,10 @@
 
       <!-- Results Count -->
       <div class="results-summary" v-if="!isLoading && !errorLoading">
-        <!-- Use $t for pluralization -->
-        {{ $t('productsPage.resultsSummary.showing', { count: products.length, total: totalProducts }) }}
+        <!-- Use $t for pluralization. Requires correct setup in locale files -->
+        <!-- Example: "Showing {count} result | Showing {count} results" -->
+        <!-- For simplicity, using standard interpolation here -->
+        {{ t('productsPage.resultsSummary.showing', { count: products.length, total: totalProducts }) }}
         <span v-if="filters.searchQuery">{{ t('productsPage.resultsSummary.forQuery', { query: filters.searchQuery }) }}</span>
         <span v-if="filters.category">{{ t('productsPage.resultsSummary.inCategory', { category: filters.category }) }}</span>.
       </div>
@@ -158,13 +157,14 @@
 
   library.add(faSearch, faExclamationTriangle, faBoxOpen);
 
-  const { t } = useI18n();
+  // --- Get i18n essentials ---
+  const { t, locale } = useI18n(); // Get locale ref
 
   // --- Constants ---
   const DEFAULT_LIMIT = 12;
   const DEBOUNCE_DELAY = 400;
-  const GAP_BETWEEN_PAGINATION_AND_FOOTER = 90; // Adjust as needed
-  const THROTTLE_TIME = 100; // Throttle scroll checks
+  const GAP_BETWEEN_PAGINATION_AND_FOOTER = 90;
+  const THROTTLE_TIME = 100;
 
   // --- Emits, Refs, State ---
   const emit = defineEmits(['addToCart']);
@@ -181,8 +181,8 @@
   const paginationRef = ref(null);
   const categories = ref([]);
   const categoriesLoading = ref(false);
-  const isPaginationFixed = ref(true); // Assume fixed initially
-  let footerEl = null; // To store footer element reference
+  const isPaginationFixed = ref(true);
+  let footerEl = null;
 
   const filters = ref({
     searchQuery: '',
@@ -197,7 +197,7 @@
       filters.value.category ||
       filters.value.minPrice !== null ||
       filters.value.maxPrice !== null ||
-      filters.value.sort !== 'featured'; // Include sort if it differs from default
+      filters.value.sort !== 'featured';
   });
 
   // --- Methods ---
@@ -207,7 +207,8 @@
     if (cleanedText.length <= maxLength) return cleanedText;
     let truncated = cleanedText.slice(0, maxLength);
     let lastSpaceIndex = truncated.lastIndexOf(' ');
-    if (lastSpaceIndex > 0 && lastSpaceIndex > maxLength - 15) { // Ensure last word isn't tiny
+    // Ensure last word isn't tiny if we cut at a space
+    if (lastSpaceIndex > 0 && lastSpaceIndex > maxLength - 15) {
       truncated = truncated.slice(0, lastSpaceIndex);
     }
     return truncated + "...";
@@ -217,7 +218,8 @@
   const fetchCategories = async () => {
     categoriesLoading.value = true;
     try {
-      const response = await fetch('/api/products/categories'); // Fetches base English categories
+      // Fetch base English categories
+      const response = await fetch('/api/products/categories');
       if (!response.ok) throw new Error('Failed to fetch categories');
       categories.value = await response.json();
     } catch (error) {
@@ -232,11 +234,11 @@
   const fetchProducts = async (page = 1) => {
     isLoading.value = true;
     errorLoading.value = null;
-    console.log(`Fetching products for page ${page}, limit ${limit.value}, filters:`, filters.value);
+    // *** Log current locale being used for the fetch ***
+    console.log(`Fetching products for page ${page}, limit ${limit.value}, filters:`, filters.value, `Lang: ${locale.value}`);
 
     try {
       let url = `/api/products/search?page=${page}&limit=${limit.value}`;
-      // Add filter parameters
       if (filters.value.searchQuery) url += `&q=${encodeURIComponent(filters.value.searchQuery)}`;
       if (filters.value.category) url += `&category=${encodeURIComponent(filters.value.category)}`;
       if (filters.value.minPrice !== null && filters.value.minPrice >= 0) url += `&minPrice=${filters.value.minPrice}`;
@@ -249,8 +251,11 @@
       }
       if (filters.value.sort) url += `&sort=${filters.value.sort}`;
 
+      // *** ADD Accept-Language Header to the fetch call ***
+      const headers = { 'Accept-Language': locale.value };
+      const response = await fetch(url, { headers }); // Pass headers here
+      // *** END Add Header ***
 
-      const response = await fetch(url); // Backend handles language via header
       if (!response.ok) {
         let errorMessage = `HTTP error! Status: ${response.status}`;
         try { const errorBody = await response.json(); errorMessage = errorBody.message || errorMessage; } catch (e) { /* Ignore */ }
@@ -261,11 +266,11 @@
       const maxDescriptionLength = 75;
       // Backend now sends translated name/description/category directly
       products.value = data.products.map(product => ({
-        id: product.id, // Assuming backend sends 'id' or map from '_id'
-        name: product.name, // Already translated
-        description: truncateText(product.description || defaultDescription, maxDescriptionLength), // Already translated
+        id: product.id, // Use the 'id' provided by the backend logic
+        name: product.name,
+        description: truncateText(product.description || defaultDescription, maxDescriptionLength),
         price: product.price,
-        image: product.image, // Already formatted by backend
+        image: product.image, // Use the 'image' provided by backend logic
         averageRating: product.averageRating || 0,
         reviewCount: product.reviewCount || 0,
       }));
@@ -273,19 +278,15 @@
       currentPage.value = data.currentPage;
       totalPages.value = data.totalPages;
       totalProducts.value = data.totalProducts;
-
       isLoading.value = false;
-
       updateURLQueryParams(page);
-
-      await nextTick(); // Wait for DOM updates
-
-      // ** CALL handleScroll AFTER data is loaded and DOM updated **
+      await nextTick();
       handleScroll(); // Recalculate pagination position
 
-      // Scroll logic
+      // Scroll logic - only scroll on page change, not filter/sort change
+      const isFilterChange = route.query.page === undefined || route.query.page === '1'; // Basic check if it was likely a filter/sort change
       const sectionElement = document.querySelector('.product-listing-section');
-      if (sectionElement && page !== 1 && route.query.q === undefined && route.query.category === undefined) { // Avoid scroll on filter change
+      if (sectionElement && page !== 1 && !isFilterChange) {
         const sectionTop = sectionElement.getBoundingClientRect().top + window.scrollY;
         const headerOffset = document.getElementById('header')?.offsetHeight || 80;
         window.scrollTo({ top: sectionTop - headerOffset - 20, behavior: 'smooth' });
@@ -293,14 +294,14 @@
 
     } catch (error) {
       console.error("Error fetching products:", error);
-      errorLoading.value = error.message || t('productsPage.error.title'); // Use translated fallback
+      errorLoading.value = error.message || t('productsPage.error.title');
       products.value = [];
       currentPage.value = 1;
       totalPages.value = 1;
       totalProducts.value = 0;
       isLoading.value = false;
       await nextTick();
-      handleScroll(); // Still check scroll position
+      handleScroll();
     }
   };
 
@@ -311,13 +312,11 @@
     if (filters.value.searchQuery) query.q = filters.value.searchQuery;
     if (filters.value.category) query.category = filters.value.category;
     if (filters.value.minPrice !== null && filters.value.minPrice >= 0) query.minPrice = filters.value.minPrice;
-    // Ensure maxPrice >= minPrice if both are set
     if (filters.value.maxPrice !== null && filters.value.maxPrice >= 0 && (filters.value.minPrice === null || filters.value.maxPrice >= filters.value.minPrice)) {
       query.maxPrice = filters.value.maxPrice;
     }
     if (filters.value.sort && filters.value.sort !== 'featured') query.sort = filters.value.sort;
 
-    // Only push if the query is different from the current route query
     if (JSON.stringify(query) !== JSON.stringify(route.query)) {
       router.replace({ query }).catch(err => {
         if (err.name !== 'NavigationDuplicated') { console.error('Router replace error:', err); }
@@ -337,11 +336,10 @@
   // --- Filter Methods ---
   const applyFilters = () => {
     if (isLoading.value) return;
-    // Ensure max price >= min price if both exist
     if (filters.value.minPrice !== null && filters.value.maxPrice !== null && filters.value.maxPrice < filters.value.minPrice) {
-      filters.value.maxPrice = filters.value.minPrice; // Adjust max to be at least min
+      filters.value.maxPrice = filters.value.minPrice;
     }
-    fetchProducts(1);
+    fetchProducts(1); // Always go to page 1 on filter change
   };
   const debounceApplyFilters = debounce(applyFilters, DEBOUNCE_DELAY);
   const resetFilters = () => {
@@ -357,7 +355,7 @@
     }
   };
   const paginationRange = computed(() => {
-    const current = currentPage.value; const last = totalPages.value; const delta = 1; // Show 1 page left/right
+    const current = currentPage.value; const last = totalPages.value; const delta = 1;
     const left = current - delta; const right = current + delta + 1;
     const range = []; const rangeWithDots = []; let l;
     for (let i = 1; i <= last; i++) { if (i === 1 || i === last || (i >= left && i < right)) range.push(i); }
@@ -371,12 +369,11 @@
   const handleScroll = () => {
     if (!paginationRef.value || !footerEl || totalPages.value <= 1) {
       if (paginationRef.value) {
-        paginationRef.value.classList.remove('is-absolute'); // Ensure fixed state via CSS
+        paginationRef.value.classList.remove('is-absolute');
         isPaginationFixed.value = true;
       }
       return;
     }
-
     const paginationHeight = paginationRef.value.offsetHeight;
     const scrollY = window.scrollY || window.pageYOffset;
     const footerOffsetTop = footerEl.offsetTop;
@@ -384,26 +381,34 @@
     const collisionPoint = footerOffsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER;
 
     if (scrollY + viewportHeight >= collisionPoint) {
-      // Switch to Absolute
       if (isPaginationFixed.value) {
         paginationRef.value.classList.add('is-absolute');
         paginationRef.value.style.top = `${footerOffsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER}px`;
         isPaginationFixed.value = false;
       } else {
-        // Already absolute, update top position if footer moved (less common but possible)
         paginationRef.value.style.top = `${footerOffsetTop - paginationHeight - GAP_BETWEEN_PAGINATION_AND_FOOTER}px`;
       }
     } else {
-      // Switch to Fixed (by removing absolute class)
       if (!isPaginationFixed.value) {
         paginationRef.value.classList.remove('is-absolute');
-        paginationRef.value.style.top = ''; // Remove inline style
+        paginationRef.value.style.top = '';
         isPaginationFixed.value = true;
       }
     }
   };
   const throttledScrollHandler = throttle(handleScroll, THROTTLE_TIME);
 
+
+  // --- *** WATCH locale CHANGES *** ---
+  watch(locale, (newLocale, oldLocale) => {
+    console.log(`Locale changed in ProductsView from ${oldLocale} to ${newLocale}. Refetching products.`);
+    if (newLocale !== oldLocale) {
+      // When language changes, refetch categories AND products for the current page & filters
+      fetchCategories(); // Refetch categories in case they are language-dependent (though currently they aren't fetched translated)
+      fetchProducts(currentPage.value); // Refetch products for the *current* page with current filters
+    }
+  });
+  // --- *** END WATCH *** ---
 
   // --- Lifecycle Hooks ---
   onMounted(async () => {
@@ -426,30 +431,36 @@
     window.removeEventListener('resize', throttledScrollHandler);
   });
 
-  // Watch route changes to refetch if query params change externally
+  // Watch route changes (remains the same)
   watch(() => route.fullPath, (newPath, oldPath) => {
-    if (newPath !== oldPath && route.name === 'products') {
-      console.log('Route changed, re-fetching products...');
+    // Prevent fetching if only the hash changes (or if it's the initial load)
+    const newQuery = { ...route.query }; delete newQuery.hash;
+    const oldQuery = { ...router.options.history.location.query }; delete oldQuery.hash; // Get query from previous state
+
+    if (newPath !== oldPath && route.name === 'products' && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+      console.log('Route query changed, reading filters and re-fetching products...');
       const newPage = readFiltersFromURL();
-      fetchProducts(newPage);
+      fetchProducts(newPage); // Refetch based on new URL state
     }
-  });
+  }, { deep: true });
+
 
 </script>
 
 <style scoped>
+  /* Styles remain the same */
   /* Enhanced Filters Styles */
   .enhanced-filter-controls {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Flexible columns */
-    gap: 1.5rem 1.2rem; /* Row gap, Column gap */
-    align-items: end; /* Align items to the bottom */
+    grid-template-columns: minmax(250px, 1.5fr) repeat(3, 1fr); /* Search wider */
+    gap: 1.5rem 1.2rem;
+    align-items: end;
     margin-bottom: 3.5rem;
     padding: 1.8rem;
-    background-color: var(--bg-off-light); /* Use off-light background */
+    background-color: var(--bg-off-light);
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-soft); /* Softer shadow */
-    border: none; /* Remove default border */
+    box-shadow: var(--shadow-soft);
+    border: none;
   }
 
   .filter-group {
@@ -472,7 +483,6 @@
         font-size: 0.9em;
       }
 
-  /* Enhanced inputs/selects */
   .enhanced-filter-controls input[type="search"],
   .enhanced-filter-controls input[type="number"],
   .enhanced-filter-controls select {
@@ -482,9 +492,9 @@
     border-radius: var(--border-radius-small);
     font-size: 0.95rem;
     font-family: var(--font-body);
-    background-color: var(--white); /* White background for inputs */
+    background-color: var(--white);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
-    height: 44px; /* Consistent height */
+    height: 44px;
     box-sizing: border-box;
   }
 
@@ -508,34 +518,33 @@
       background-color: var(--white);
     }
 
-  /* Price Range Specifics */
   .price-range-group .price-inputs {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    height: 44px; /* Match height */
-    background-color: var(--white); /* Container background */
-    border: 1px solid var(--border-color);
+    position: relative;
+    height: 44px;
+    border: 1px solid var(--border-color); /* Add border to container */
     border-radius: var(--border-radius-small);
+    background-color: var(--white);
     padding: 0 0.5rem;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   }
-
+    /* Add focus state to the container */
     .price-range-group .price-inputs:focus-within {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--glow-primary);
     }
 
-
   .price-range-group input[type="number"] {
-    width: 100%;
+    flex: 1; /* Allow inputs to share space */
     text-align: center;
     border: none; /* Remove individual input borders */
-    padding: 0.5rem 0.2rem;
-    height: auto; /* Let input size naturally */
+    padding: 0.5rem 0.2rem 0.5rem 1.5rem; /* Adjust padding for prefix */
+    height: auto;
     background: none;
     box-shadow: none;
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
   }
 
     .price-range-group input[type="number"]::-webkit-outer-spin-button,
@@ -546,28 +555,37 @@
 
     .price-range-group input[type="number"]:focus {
       outline: none;
-      box-shadow: none; /* No focus ring on input itself */
+      box-shadow: none;
     }
 
   .price-range-group .price-prefix {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
     color: var(--text-muted);
     pointer-events: none;
-    padding-left: 0.3rem;
+    z-index: 1;
   }
+  /* Target the second prefix based on structure */
+  .price-range-group .price-inputs > input:last-of-type ~ .price-prefix {
+    left: calc(50% + 0.8rem); /* Adjust based on layout */
+  }
+
 
   .price-range-group .price-separator {
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 500; /* Slightly less bold */
+    flex: 0 0 auto;
   }
 
-  /* Filter Actions */
   .filter-actions {
-    grid-column: 1 / -1; /* Span full width */
+    grid-column: 1 / -1;
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 0.8rem;
-    margin-top: 0.5rem; /* Space above actions */
+    margin-top: 0.5rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
   }
@@ -580,7 +598,7 @@
     border: 1px solid transparent;
     transition: all var(--transition-fast);
     cursor: pointer;
-    height: 44px; /* Match input height */
+    height: 44px;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -615,44 +633,170 @@
       cursor: not-allowed;
     }
 
-  .results-summary { /* Styles from main.css */
+  .results-summary {
+    margin-bottom: 2rem;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-muted);
   }
 
-  .product-grid { /* Styles from main.css */
+  .product-grid, .skeleton-grid {
+    min-height: 300px;
+    padding-bottom: calc(50px + 16px + 6rem);
   }
 
-  .skeleton-grid { /* Styles from main.css */
+  .product-card-item {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: card-fade-in 0.5s ease forwards;
+    animation-delay: var(--stagger-delay);
   }
 
-  .product-card-item { /* Styles from main.css */
+  @keyframes card-fade-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  .message-container { /* Styles from main.css */
+  .message-container {
+    padding: 4rem 1rem;
+    text-align: center;
+    border-radius: var(--border-radius);
+    margin: 2rem 0;
   }
 
-  .pagination-container { /* Styles from main.css */
+  .error-container {
+    background-color: #fff3f3;
+    border: 1px solid #ffcccc;
   }
 
-  .pagination { /* Styles from main.css */
-  }
-
-  .page-item { /* Styles from main.css */
-  }
-
-  .page-link { /* Styles from main.css */
-  }
-
-  /* Ensure absolute pagination is correctly positioned */
-  .pagination-container.is-absolute {
-    position: absolute;
-    bottom: auto; /* Remove fixed bottom constraint */
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%); /* Fine-tune centering */
-    /* Styles from main.css for appearance might need adjustment */
+  .empty-container {
     background-color: var(--bg-light);
+    border: 1px solid var(--border-color);
+  }
+
+  .message-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .error-icon {
+    color: var(--secondary);
+  }
+
+  .empty-icon {
+    color: var(--text-muted);
+  }
+
+  .message-container h2 {
+    margin-bottom: 0.75rem;
+    color: var(--text-dark);
+  }
+
+  .message-container p {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .message-container .filter-button {
+    margin-top: 0;
+  }
+
+  .pagination-container {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 900; /* Ensure above content */
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease, transform 0.3s ease, top 0.3s ease, bottom 0.3s ease, position 0s 0.3s;
+    opacity: 1;
+  }
+
+    .pagination-container.is-absolute {
+      position: absolute;
+      bottom: auto;
+      background-color: var(--bg-light);
+      box-shadow: none;
+      border-color: transparent;
+      backdrop-filter: none;
+      transition: top 0.3s ease;
+    }
+
+  .pagination {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-link {
+    display: block;
+    padding: 0.5rem 0.9rem;
+    min-width: 38px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background-color: var(--white);
+    color: var(--text-muted);
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .page-item:not(.disabled) .page-link:hover, .page-item:not(.disabled) .page-link:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: var(--bg-off-light);
+    outline: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+    transform: translateY(-1px);
+  }
+
+  .page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--white);
+    cursor: default;
     box-shadow: none;
+    z-index: 1;
+    transform: none;
+  }
+
+  .page-item.disabled .page-link {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--bg-light);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .page-link.ellipsis {
     border-color: transparent;
-    backdrop-filter: none;
+    background-color: transparent;
+    color: var(--text-muted);
+    cursor: default;
+    box-shadow: none;
+    transform: none;
+  }
+
+  @media (max-width: 992px) {
+    .enhanced-filter-controls {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
   }
 
   @media (max-width: 768px) {
@@ -662,7 +806,19 @@
     }
 
     .filter-actions {
+      grid-column: 1 / -1;
       justify-content: center;
+    }
+
+    .pagination-container {
+      padding: 0.6rem 1rem;
+      bottom: 1rem;
+    }
+
+    .page-link {
+      padding: 0.4rem 0.7rem;
+      min-width: 34px;
+      font-size: 0.85rem;
     }
   }
 
@@ -672,16 +828,10 @@
     }
 
     .price-range-group .price-inputs {
-      padding: 0 0.3rem;
+      /* Removed individual input wrappers */
     }
-    /* Reduce padding */
-    .price-range-group input[type="number"] {
-      font-size: 0.9rem;
-    }
-    /* Smaller font */
   }
 
-  /* Ensure transitions are defined */
   .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease;
   }
