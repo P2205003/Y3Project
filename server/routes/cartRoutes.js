@@ -1,36 +1,27 @@
-// server/routes/cartRoutes.js
+// server/routes/cartRoutes.js - FIXED VERSION
 import express from 'express';
 import Cart from '../models/Cart.js';
-import Product from '../models/Product.js'; // Still needed for validation & fetching details
+import Product from '../models/Product.js';
 import { isAuthenticated } from '../middleware/auth.js';
-// *** Import helpers from the utility file ***
 import { applyTranslations, getPreferredLanguage } from '../utils/languageHelper.js';
 
 const router = express.Router();
 
-// --- Test Route ---
-router.get('/test', (req, res) => {
-  res.json({ message: 'Cart API is working!' });
-});
-
-// --- Get User's Cart (Dynamically Translated) ---
-router.get('/', isAuthenticated, async (req, res) => {
+// --- Helper function to get translated cart ---
+async function getTranslatedCart(userId, lang) {
   try {
-    const userId = req.session.userId;
-    const lang = getPreferredLanguage(req); // Get preferred language
-
     // Fetch the basic cart containing only IDs, quantity, attributes
-    const basicCart = await Cart.findOne({ userId }).lean(); // Use lean
+    const basicCart = await Cart.findOne({ userId }).lean();
 
     if (!basicCart || !basicCart.items || basicCart.items.length === 0) {
-      return res.json({
+      return {
         _id: basicCart?._id,
         userId: userId,
         items: [],
         createdAt: basicCart?.createdAt || new Date(),
         updatedAt: basicCart?.updatedAt || new Date(),
         totalAmount: 0
-      });
+      };
     }
 
     // Get all unique product IDs from the cart
@@ -40,7 +31,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     const products = await Product.find({
       _id: { $in: productIds }
     }).select('name description price images slug category averageRating reviewCount translations attributes')
-      .lean(); // Fetch needed fields + translations + base attributes
+      .lean();
 
     // Create a map for quick product lookup
     const productMap = new Map(products.map(p => [p._id.toString(), p]));
@@ -55,42 +46,55 @@ router.get('/', isAuthenticated, async (req, res) => {
       }
 
       // Apply translation logic to the fetched product details
-      // Pass the original (base) attributes from the product model for translation context
       const translatedProduct = applyTranslations(productDetails, lang);
 
       // Ensure the attributes stored in the cart (cartItem.attributes) are considered
-      // for the final display if needed, but primary translation comes from applyTranslations
-      // For simplicity here, we rely on applyTranslations handling the attributes correctly
-      const finalAttributes = translatedProduct.attributes; // Use the translated attributes
+      const finalAttributes = translatedProduct.attributes;
 
       // Calculate subtotal for this item using the product's current price
-      const itemSubtotal = (productDetails.price || 0) * cartItem.quantity; // Use base price for calculation consistency
+      const itemSubtotal = (productDetails.price || 0) * cartItem.quantity;
       calculatedTotalAmount += itemSubtotal;
 
       // Return the combined item structure for the response
       return {
         productId: cartItem.productId,
         quantity: cartItem.quantity,
-        name: translatedProduct.name, // Use translated name
-        price: productDetails.price, // Use base price from product DB
-        image: translatedProduct.image, // Use image from translated (usually same as base)
-        attributes: finalAttributes, // Use the translated attributes map
-        subtotal: itemSubtotal // Optional: Add subtotal
+        name: translatedProduct.name,
+        price: productDetails.price,
+        image: translatedProduct.image,
+        attributes: finalAttributes,
+        subtotal: itemSubtotal
       };
-    }).filter(item => item !== null); // Filter out items whose product wasn't found
+    }).filter(item => item !== null);
 
     // Construct the final response object
-    const finalCart = {
+    return {
       _id: basicCart._id,
       userId: basicCart.userId,
       items: populatedItems,
       createdAt: basicCart.createdAt,
       updatedAt: basicCart.updatedAt,
-      totalAmount: calculatedTotalAmount // Include calculated total
+      totalAmount: calculatedTotalAmount
     };
+  } catch (error) {
+    console.error('Error in getTranslatedCart helper:', error);
+    throw error; // Re-throw to be handled by route handler
+  }
+}
 
+// --- Test Route ---
+router.get('/test', (req, res) => {
+  res.json({ message: 'Cart API is working!' });
+});
+
+// --- Get User's Cart (Dynamically Translated) ---
+router.get('/', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const lang = getPreferredLanguage(req);
+    
+    const finalCart = await getTranslatedCart(userId, lang);
     res.json(finalCart);
-
   } catch (error) {
     console.error('Error fetching cart:', error);
     res.status(500).json({ message: error.message || 'Failed to fetch cart' });
@@ -98,21 +102,19 @@ router.get('/', isAuthenticated, async (req, res) => {
 });
 
 // --- Add Item to Cart (Stores Minimal Data) ---
-router.post('/items', isAuthenticated, async (req, res, next) => { // Added next for potential reuse
+router.post('/items', isAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;
-    // *** Only get essential data from request ***
     const { productId, quantity, attributes } = req.body;
 
     // Basic Validation
     if (!productId || !quantity || quantity < 1) {
       return res.status(400).json({ message: 'Missing or invalid product ID or quantity' });
     }
-    // Validate attributes format if necessary (e.g., ensure it's an object)
+    // Validate attributes format if necessary
     if (attributes && typeof attributes !== 'object') {
       return res.status(400).json({ message: 'Invalid attributes format. Must be an object.' });
     }
-
 
     // Find or create user's cart
     let cart = await Cart.findOne({ userId });
@@ -120,90 +122,41 @@ router.post('/items', isAuthenticated, async (req, res, next) => { // Added next
       cart = new Cart({ userId, items: [] });
     }
 
-    // *** Verify Product Exists ***
+    // Verify Product Exists
     const productExists = await Product.findById(productId).select('_id');
     if (!productExists) {
       return res.status(404).json({ message: 'Product not found' });
     }
-    // *** End Verification ***
 
     // Check if product with the exact same attributes is already in cart
     const existingItemIndex = cart.items.findIndex(item =>
       item.productId.toString() === productId &&
-      JSON.stringify(item.attributes || {}) === JSON.stringify(attributes || {}) // Compare attributes too
+      JSON.stringify(item.attributes || {}) === JSON.stringify(attributes || {})
     );
 
+    // Define a reasonable upper limit for item quantity
+    const MAX_QUANTITY = 99;
+
     if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += parseInt(quantity);
+      // Add to existing item quantity with upper limit check
+      const newQuantity = cart.items[existingItemIndex].quantity + parseInt(quantity);
+      cart.items[existingItemIndex].quantity = Math.min(newQuantity, MAX_QUANTITY);
     } else {
-      // *** Add MINIMAL item data to cart ***
+      // Add MINIMAL item data to cart
       cart.items.push({
         productId,
-        quantity: parseInt(quantity),
-        attributes: attributes || {} // Store base attributes received
+        quantity: Math.min(parseInt(quantity), MAX_QUANTITY),
+        attributes: attributes || {}
       });
     }
 
     await cart.save();
 
-    // *** Fetch and return the fully translated cart ***
-    // Re-use the GET '/' logic by calling its handler
-    // We need to ensure the handler has access to req, res, next
-    return router.get('/', isAuthenticated, async (innerReq, innerRes) => {
-      // The actual GET handler logic is called here
-      // Need to make sure the response status is correct (201)
-      try {
-        const userId = innerReq.session.userId;
-        const lang = getPreferredLanguage(innerReq);
-
-        const basicCart = await Cart.findOne({ userId }).lean();
-
-        if (!basicCart || !basicCart.items || basicCart.items.length === 0) {
-          return innerRes.status(201).json({ /* ... empty cart structure ... */ });
-        }
-
-        const productIds = basicCart.items.map(item => item.productId);
-        const products = await Product.find({ _id: { $in: productIds } })
-          .select('name description price images slug category averageRating reviewCount translations attributes')
-          .lean();
-        const productMap = new Map(products.map(p => [p._id.toString(), p]));
-
-        let calculatedTotalAmount = 0;
-        const populatedItems = basicCart.items.map(cartItem => {
-          const productDetails = productMap.get(cartItem.productId.toString());
-          if (!productDetails) return null;
-          const translatedProduct = applyTranslations(productDetails, lang);
-          const itemSubtotal = (productDetails.price || 0) * cartItem.quantity;
-          calculatedTotalAmount += itemSubtotal;
-          return {
-            productId: cartItem.productId,
-            quantity: cartItem.quantity,
-            name: translatedProduct.name,
-            price: productDetails.price,
-            image: translatedProduct.image,
-            attributes: translatedProduct.attributes,
-            subtotal: itemSubtotal
-          };
-        }).filter(item => item !== null);
-
-        const finalCart = {
-          _id: basicCart._id,
-          userId: basicCart.userId,
-          items: populatedItems,
-          createdAt: basicCart.createdAt,
-          updatedAt: basicCart.updatedAt,
-          totalAmount: calculatedTotalAmount
-        };
-
-        innerRes.status(201).json(finalCart); // Set status to 201 for item added
-
-      } catch (getCartError) {
-        console.error("Error fetching translated cart after add:", getCartError);
-        // Fallback: return the saved cart (minimal data) if fetching translated fails
-        innerRes.status(201).json(cart.toObject()); // Convert Mongoose doc to plain object
-      }
-    })(req, res, next); // Pass the original request/response objects
-
+    // Get translated cart after save (using helper function)
+    const lang = getPreferredLanguage(req);
+    const translatedCart = await getTranslatedCart(userId, lang);
+    
+    res.status(201).json(translatedCart);
   } catch (error) {
     console.error('Error adding item to cart:', error);
     res.status(500).json({ message: error.message || 'Server error adding item to cart' });
@@ -211,14 +164,17 @@ router.post('/items', isAuthenticated, async (req, res, next) => { // Added next
 });
 
 // --- Update Cart Item Quantity ---
-router.put('/items/:productId', isAuthenticated, async (req, res, next) => {
+router.put('/items/:productId', isAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;
     const { productId } = req.params;
     const { quantity, attributes } = req.body;
 
-    if (!quantity || quantity < 1) {
-      return res.status(400).json({ message: 'Quantity must be at least 1' });
+    // Define a reasonable upper limit for item quantity
+    const MAX_QUANTITY = 99;
+
+    if (!quantity || quantity < 1 || quantity > MAX_QUANTITY) {
+      return res.status(400).json({ message: `Quantity must be between 1 and ${MAX_QUANTITY}` });
     }
     if (attributes && typeof attributes !== 'object') {
       return res.status(400).json({ message: 'Invalid attributes format.' });
@@ -241,54 +197,11 @@ router.put('/items/:productId', isAuthenticated, async (req, res, next) => {
     cart.items[itemIndex].quantity = parseInt(quantity);
     await cart.save();
 
-    // Fetch and return the fully translated cart
-    return router.get('/', isAuthenticated, async (innerReq, innerRes) => {
-      try {
-        // (Same GET logic as above)
-        const userId = innerReq.session.userId;
-        const lang = getPreferredLanguage(innerReq);
-        const basicCart = await Cart.findOne({ userId }).lean();
-        // ... (rest of the GET logic to fetch products and translate) ...
-        if (!basicCart || !basicCart.items || basicCart.items.length === 0) {
-          return innerRes.json({ /* ... empty cart ... */ });
-        }
-        const productIds = basicCart.items.map(item => item.productId);
-        const products = await Product.find({ _id: { $in: productIds } })
-          .select('name description price images slug category averageRating reviewCount translations attributes')
-          .lean();
-        const productMap = new Map(products.map(p => [p._id.toString(), p]));
-        let calculatedTotalAmount = 0;
-        const populatedItems = basicCart.items.map(cartItem => {
-          const productDetails = productMap.get(cartItem.productId.toString());
-          if (!productDetails) return null;
-          const translatedProduct = applyTranslations(productDetails, lang);
-          const itemSubtotal = (productDetails.price || 0) * cartItem.quantity;
-          calculatedTotalAmount += itemSubtotal;
-          return {
-            productId: cartItem.productId,
-            quantity: cartItem.quantity,
-            name: translatedProduct.name,
-            price: productDetails.price,
-            image: translatedProduct.image,
-            attributes: translatedProduct.attributes,
-            subtotal: itemSubtotal
-          };
-        }).filter(item => item !== null);
-        const finalCart = {
-          _id: basicCart._id,
-          userId: basicCart.userId,
-          items: populatedItems,
-          createdAt: basicCart.createdAt,
-          updatedAt: basicCart.updatedAt,
-          totalAmount: calculatedTotalAmount
-        };
-        innerRes.json(finalCart); // Default 200 OK for update
-      } catch (getCartError) {
-        console.error("Error fetching translated cart after update:", getCartError);
-        innerRes.status(500).json({ message: 'Failed to retrieve updated cart details.' });
-      }
-    })(req, res, next);
-
+    // Get translated cart after save (using helper function)
+    const lang = getPreferredLanguage(req);
+    const translatedCart = await getTranslatedCart(userId, lang);
+    
+    res.json(translatedCart);
   } catch (error) {
     console.error('Error updating item quantity:', error);
     res.status(500).json({ message: error.message || 'Server error updating quantity' });
@@ -296,7 +209,7 @@ router.put('/items/:productId', isAuthenticated, async (req, res, next) => {
 });
 
 // --- Remove Item from Cart ---
-router.delete('/items/:productId', isAuthenticated, async (req, res, next) => {
+router.delete('/items/:productId', isAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;
     const { productId } = req.params;
@@ -323,54 +236,11 @@ router.delete('/items/:productId', isAuthenticated, async (req, res, next) => {
 
     await cart.save();
 
-    // Fetch and return the fully translated cart
-    return router.get('/', isAuthenticated, async (innerReq, innerRes) => {
-      try {
-        // (Same GET logic as above)
-        const userId = innerReq.session.userId;
-        const lang = getPreferredLanguage(innerReq);
-        const basicCart = await Cart.findOne({ userId }).lean();
-        // ... (rest of the GET logic to fetch products and translate) ...
-        if (!basicCart || !basicCart.items || basicCart.items.length === 0) {
-          return innerRes.json({ /* ... empty cart ... */ });
-        }
-        const productIds = basicCart.items.map(item => item.productId);
-        const products = await Product.find({ _id: { $in: productIds } })
-          .select('name description price images slug category averageRating reviewCount translations attributes')
-          .lean();
-        const productMap = new Map(products.map(p => [p._id.toString(), p]));
-        let calculatedTotalAmount = 0;
-        const populatedItems = basicCart.items.map(cartItem => {
-          const productDetails = productMap.get(cartItem.productId.toString());
-          if (!productDetails) return null;
-          const translatedProduct = applyTranslations(productDetails, lang);
-          const itemSubtotal = (productDetails.price || 0) * cartItem.quantity;
-          calculatedTotalAmount += itemSubtotal;
-          return {
-            productId: cartItem.productId,
-            quantity: cartItem.quantity,
-            name: translatedProduct.name,
-            price: productDetails.price,
-            image: translatedProduct.image,
-            attributes: translatedProduct.attributes,
-            subtotal: itemSubtotal
-          };
-        }).filter(item => item !== null);
-        const finalCart = {
-          _id: basicCart._id,
-          userId: basicCart.userId,
-          items: populatedItems,
-          createdAt: basicCart.createdAt,
-          updatedAt: basicCart.updatedAt,
-          totalAmount: calculatedTotalAmount
-        };
-        innerRes.json(finalCart); // Default 200 OK for delete
-      } catch (getCartError) {
-        console.error("Error fetching translated cart after delete:", getCartError);
-        innerRes.status(500).json({ message: 'Failed to retrieve updated cart details.' });
-      }
-    })(req, res, next);
-
+    // Get translated cart after save (using helper function)
+    const lang = getPreferredLanguage(req);
+    const translatedCart = await getTranslatedCart(userId, lang);
+    
+    res.json(translatedCart);
   } catch (error) {
     console.error('Error removing item from cart:', error);
     res.status(500).json({ message: error.message || 'Server error removing item' });
@@ -382,7 +252,7 @@ router.delete('/', isAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;
     await Cart.updateOne({ userId }, { $set: { items: [] } }); // More efficient way to clear
-    res.json({ message: 'Cart cleared successfully', items: [], totalAmount: 0 }); // Return empty structure
+    res.json({ message: 'Cart cleared successfully', items: [], totalAmount: 0 });
   } catch (error) {
     console.error('Error clearing cart:', error);
     res.status(500).json({ message: error.message || 'Server error clearing cart' });
@@ -390,7 +260,7 @@ router.delete('/', isAuthenticated, async (req, res) => {
 });
 
 // --- Merge Guest Cart ---
-router.post('/merge', isAuthenticated, async (req, res, next) => {
+router.post('/merge', isAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;
     const { items } = req.body; // Expect array of local storage items (minimal data needed)
@@ -417,6 +287,8 @@ router.post('/merge', isAuthenticated, async (req, res, next) => {
       });
     }
 
+    // Define a reasonable upper limit for item quantity
+    const MAX_QUANTITY = 99;
 
     for (const guestItem of items) {
       // Skip if product ID is missing or product doesn't exist
@@ -434,12 +306,14 @@ router.post('/merge', isAuthenticated, async (req, res, next) => {
       );
 
       if (existingItemIndex > -1) {
-        cart.items[existingItemIndex].quantity += quantity;
+        // Add to existing with upper limit check
+        const newQuantity = cart.items[existingItemIndex].quantity + quantity;
+        cart.items[existingItemIndex].quantity = Math.min(newQuantity, MAX_QUANTITY);
       } else {
         cart.items.push({
           productId: guestItem.productId,
-          quantity: quantity,
-          attributes: attributes // Store base attributes
+          quantity: Math.min(quantity, MAX_QUANTITY),
+          attributes: attributes
         });
       }
     }
@@ -447,59 +321,15 @@ router.post('/merge', isAuthenticated, async (req, res, next) => {
     await cart.save();
     console.log('Local cart merged into server cart.');
 
-    // Fetch and return the fully translated cart
-    return router.get('/', isAuthenticated, async (innerReq, innerRes) => {
-      try {
-        // (Same GET logic as above)
-        const userId = innerReq.session.userId;
-        const lang = getPreferredLanguage(innerReq);
-        const basicCart = await Cart.findOne({ userId }).lean();
-        // ... (rest of the GET logic to fetch products and translate) ...
-        if (!basicCart || !basicCart.items || basicCart.items.length === 0) {
-          return innerRes.json({ /* ... empty cart ... */ });
-        }
-        const productIds = basicCart.items.map(item => item.productId);
-        const products = await Product.find({ _id: { $in: productIds } })
-          .select('name description price images slug category averageRating reviewCount translations attributes')
-          .lean();
-        const productMap = new Map(products.map(p => [p._id.toString(), p]));
-        let calculatedTotalAmount = 0;
-        const populatedItems = basicCart.items.map(cartItem => {
-          const productDetails = productMap.get(cartItem.productId.toString());
-          if (!productDetails) return null;
-          const translatedProduct = applyTranslations(productDetails, lang);
-          const itemSubtotal = (productDetails.price || 0) * cartItem.quantity;
-          calculatedTotalAmount += itemSubtotal;
-          return {
-            productId: cartItem.productId,
-            quantity: cartItem.quantity,
-            name: translatedProduct.name,
-            price: productDetails.price,
-            image: translatedProduct.image,
-            attributes: translatedProduct.attributes,
-            subtotal: itemSubtotal
-          };
-        }).filter(item => item !== null);
-        const finalCart = {
-          _id: basicCart._id,
-          userId: basicCart.userId,
-          items: populatedItems,
-          createdAt: basicCart.createdAt,
-          updatedAt: basicCart.updatedAt,
-          totalAmount: calculatedTotalAmount
-        };
-        innerRes.json(finalCart); // Default 200 OK for merge
-      } catch (getCartError) {
-        console.error("Error fetching translated cart after merge:", getCartError);
-        innerRes.status(500).json({ message: 'Failed to retrieve updated cart details after merge.' });
-      }
-    })(req, res, next);
-
+    // Get translated cart after save (using helper function)
+    const lang = getPreferredLanguage(req);
+    const translatedCart = await getTranslatedCart(userId, lang);
+    
+    res.json(translatedCart);
   } catch (error) {
     console.error('Error merging carts:', error);
     res.status(500).json({ message: error.message || 'Server error during cart merge' });
   }
 });
-
 
 export default router;

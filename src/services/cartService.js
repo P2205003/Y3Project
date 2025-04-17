@@ -187,11 +187,12 @@ class CartService {
   async removeItem(productId, attributes, isLoggedIn) {
     if (isLoggedIn) {
       try {
+        // Make sure the URL is correct - add a leading slash if using relative URLs
         const response = await fetch(`/api/cart/items/${productId}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ attributes }) // Send attributes in body
+          body: JSON.stringify({ attributes })
         });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
