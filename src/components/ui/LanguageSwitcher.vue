@@ -26,19 +26,19 @@
   </div>
 </template>
 
+// src/components/ui/LanguageSwitcher.vue
 <script setup>
-  import { ref, computed, onMounted, onUnmounted } from 'vue';
-  import { useI18n } from 'vue-i18n';
-  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  // Import the config from main.js
-  import { SUPPORTED_LOCALES } from '@/main.js'; // Adjust path if necessary
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+// Import the config from the new location
+import { SUPPORTED_LOCALES } from '@/config/i18n.js';
 
-  const { t, locale } = useI18n();
-  const isDropdownOpen = ref(false);
-  const switcherRef = ref(null);
+const { t, locale } = useI18n();
+const isDropdownOpen = ref(false);
+const switcherRef = ref(null);
 
-  // Use the imported config
-  const supportedLocales = ref(SUPPORTED_LOCALES);
+const supportedLocales = ref(SUPPORTED_LOCALES);
 
   const currentLanguageCode = computed(() => locale.value);
 

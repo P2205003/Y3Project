@@ -60,15 +60,8 @@ import enMessages from './locales/en.json';
 import zhMessages from './locales/zh.json';
 // import frMessages from './locales/fr.json'; // Add more languages as needed
 
-// --- Centralized Language Configuration ---
-export const SUPPORTED_LOCALES = [ // Export for use in Admin components
-  { code: 'en', name: 'English' },
-  { code: 'zh', name: '中文 (简体)' },
-  // { code: 'fr', name: 'Français' },
-];
-export const DEFAULT_LOCALE = 'en';
-// --- End Centralized Language Configuration ---
-
+// --- Import Centralized Language Configuration ---
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from './config/i18n';
 
 // --- Helper Function to Determine Initial Locale ---
 function getDefaultLocale() {
@@ -102,15 +95,12 @@ function getDefaultLocale() {
 const i18n = createI18n({
   legacy: false,
   locale: getDefaultLocale(),
-  fallbackLocale: DEFAULT_LOCALE,
+  fallbackLocale: DEFAULT_LOCALE, // Uses the imported constant
   messages: {
     en: enMessages,
     zh: zhMessages,
     // fr: frMessages,
   },
-  // Optional: Suppress warnings
-  // silentTranslationWarn: process.env.NODE_ENV === 'production',
-  // silentFallbackWarn: process.env.NODE_ENV === 'production',
 });
 
 // 6. Custom Directives

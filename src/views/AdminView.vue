@@ -44,14 +44,14 @@
             <font-awesome-icon icon="receipt" class="nav-icon" />
             <span>Orders</span>
           </router-link>
-          <router-link to="/admin/users" class="nav-item" active-class="active">
+          <!-- router-link to="/admin/users" class="nav-item" active-class="active">
             <font-awesome-icon icon="users" class="nav-icon" />
             <span>Users</span>
           </router-link>
           <router-link to="/admin/settings" class="nav-item" active-class="active">
             <font-awesome-icon icon="cog" class="nav-icon" />
             <span>Settings</span>
-          </router-link>
+          </router-link -->
         </div>
       </div>
 

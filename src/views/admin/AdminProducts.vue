@@ -334,7 +334,7 @@
   import { useRoute, useRouter } from 'vue-router';
   import { debounce } from 'lodash-es';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  import { SUPPORTED_LOCALES } from '@/main.js';
+  import { SUPPORTED_LOCALES } from '@/config/i18n.js';
   import { library } from '@fortawesome/fontawesome-svg-core';
   import {
     faPlus, faEye, faEdit, faTrash, faTags, faLanguage, faTrashAlt, faFlagUsa,

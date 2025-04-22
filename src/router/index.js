@@ -111,16 +111,16 @@ const router = createRouter({
           name: 'AdminAddItem',
           component: AdminAddItem
         },
-        {
-          path: 'users',
-          name: 'AdminUsers',
-          component: AdminUsers
-        },
-        {
-          path: 'settings',
-          name: 'AdminSettings',
-          component: AdminSettings
-        }
+        //{
+        //  path: 'users',
+        //  name: 'AdminUsers',
+        //  component: AdminUsers
+        //},
+        //{
+        //  path: 'settings',
+        //  name: 'AdminSettings',
+        //  component: AdminSettings
+        //}
       ]
     },
   ],

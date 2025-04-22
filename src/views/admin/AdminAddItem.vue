@@ -255,8 +255,7 @@
   import { ref, onMounted, computed, reactive, watch } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-  // Import SUPPORTED_LOCALES from main.js
-  import { SUPPORTED_LOCALES } from '@/main.js'; // Adjust path if necessary
+  import { SUPPORTED_LOCALES } from '@/config/i18n.js';
   import { library } from '@fortawesome/fontawesome-svg-core';
   import {
     faPlusCircle, faPlus, faTrashAlt, faImage, faSave, faSpinner,

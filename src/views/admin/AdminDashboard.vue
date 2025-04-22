@@ -33,13 +33,13 @@
           <p class="action-description">Edit existing product details and status.</p>
         </router-link>
 
-        <router-link to="/admin/users" class="action-card">
+        <!-- router-link to="/admin/users" class="action-card">
           <div class="action-icon">
             <font-awesome-icon icon="users-cog" />
           </div>
           <div class="action-title">Manage Users</div>
           <p class="action-description">View and manage user accounts.</p>
-        </router-link>
+        </router-link -->
 
       </div>
     </div>
