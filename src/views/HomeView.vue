@@ -109,10 +109,68 @@
     emit('addToCart', productData);
   };
 
-  const handleNewsletterSubmit = async () => { /* ... */ };
-  const handleHeroMouseMove = (event) => { /* ... */ };
-  const handleHeroMouseLeave = () => { /* ... */ };
-  function truncateText(text, maxLength) { /* ... */ }
+  const handleNewsletterSubmit = async () => {
+    newsletterMessage.value = '';
+    newsletterSuccess.value = false;
+    if (!newsletterEmail.value) return;
+    console.log('Submitting newsletter:', newsletterEmail.value);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+    const success = Math.random() > 0.3;
+    if (success) {
+      newsletterMessage.value = 'Thank you for subscribing!';
+      newsletterSuccess.value = true;
+      newsletterEmail.value = '';
+    } else {
+      newsletterMessage.value = 'Subscription failed. Please try again.';
+      newsletterSuccess.value = false;
+    }
+    setTimeout(() => { newsletterMessage.value = ''; }, 4000);
+  };
+
+  // --- Hero Image Interaction Logic ---
+  const handleHeroMouseMove = (event) => {
+    if (!heroSectionRef.value || !heroImageRef.value || prefersReducedMotion.value) return;
+    const heroRect = heroSectionRef.value.getBoundingClientRect();
+    const mouseX = event.clientX - heroRect.left;
+    const mouseY = event.clientY - heroRect.top;
+    if (mouseX < 0 || mouseX > heroRect.width || mouseY < 0 || mouseY > heroRect.height) {
+      handleHeroMouseLeave();
+      return;
+    }
+    const centerX = heroRect.width / 2;
+    const centerY = heroRect.height / 2;
+    const rotateY = -5 - ((mouseX - centerX) / centerX) * HERO_MAX_ROTATE;
+    const rotateX = 3 + ((mouseY - centerY) / centerY) * HERO_MAX_ROTATE;
+    requestAnimationFrame(() => {
+      if (heroImageRef.value) {
+        heroImageRef.value.style.transition = 'transform 0.05s linear';
+        heroImageRef.value.style.transform = `perspective(${HERO_PERSPECTIVE}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      }
+    });
+  };
+
+  const handleHeroMouseLeave = () => {
+    if (!heroImageRef.value || prefersReducedMotion.value) return;
+    requestAnimationFrame(() => {
+      if (heroImageRef.value) {
+        heroImageRef.value.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+        heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
+      }
+    });
+  };
+
+  function truncateText(text, maxLength) {
+    if (!text) return '';
+    const cleanedText = text.trim();
+    if (cleanedText.length <= maxLength) return cleanedText;
+    let truncated = cleanedText.slice(0, maxLength);
+    let lastSpaceIndex = truncated.lastIndexOf(' ');
+    // Ensure last word isn't tiny if we cut at a space
+    if (lastSpaceIndex > 0 && lastSpaceIndex > maxLength - 15) {
+      truncated = truncated.slice(0, lastSpaceIndex);
+    }
+    return truncated + "...";
+  }
 
   // --- Fetch Featured Products (remains the same, uses reactive locale) ---
   const fetchFeaturedProducts = async () => {
@@ -131,7 +189,7 @@
       featuredProducts.value = data.products.map(product => ({
         id: product.id, // Use the 'id' from translated backend response
         name: product.name,
-        description: truncateText(product.description || defaultDesc, maxDescriptionLength),
+        description: truncateText(product.description || defaultDescription, maxDescriptionLength),
         price: product.price,
         image: product.image,
         averageRating: product.averageRating || 0,
@@ -156,15 +214,32 @@
 
   // --- Lifecycle Hooks ---
   onMounted(() => {
-    fetchFeaturedProducts(); // Initial fetch
-    // ... (hero interaction setup remains the same) ...
-    if (heroSectionRef.value && heroImageRef.value && !prefersReducedMotion.value) { /* ... */ }
-    else if (prefersReducedMotion.value) { /* ... */ }
+    // Fetch featured product data efficiently
+    fetchFeaturedProducts();
+
+    // Setup Hero Interaction Listeners
+    if (heroSectionRef.value && heroImageRef.value && !prefersReducedMotion.value) {
+      heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
+      heroImageRef.value.style.willChange = 'transform';
+      heroSectionRef.value.addEventListener('mousemove', handleHeroMouseMove, { passive: true });
+      heroSectionRef.value.addEventListener('mouseleave', handleHeroMouseLeave, { passive: true });
+      console.log("Hero interaction listeners added.");
+    } else if (prefersReducedMotion.value) {
+      if (heroImageRef.value) heroImageRef.value.style.transform = HERO_DEFAULT_TRANSFORM;
+      console.log("Hero interaction skipped due to reduced motion preference.");
+    }
+    // TODO: Add IntersectionObserver logic for reveal animations if needed
+    // TODO: Add Parallax logic for showcase section if needed
   });
 
   onUnmounted(() => {
-    // ... (hero interaction cleanup remains the same) ...
-    if (heroSectionRef.value) { /* ... */ }
+    // Cleanup Hero Interaction Listeners
+    if (heroSectionRef.value) {
+      heroSectionRef.value.removeEventListener('mousemove', handleHeroMouseMove);
+      heroSectionRef.value.removeEventListener('mouseleave', handleHeroMouseLeave);
+      console.log("Hero interaction listeners removed.");
+    }
+    // TODO: Disconnect IntersectionObservers if used
   });
 
 </script>
