@@ -1,17 +1,25 @@
-// src/services/cartService.js
-// No direct use of useI18n here, relies on passed locale or localStorage fallback
-
+/**
+ * Cart Service
+ * Handles cart operations with localStorage for guest users
+ * and API calls for authenticated users
+ */
 class CartService {
+  // Key for localStorage
   STORAGE_KEY = 'shopping-cart';
+
+  // Event listeners for cart updates
   eventListeners = [];
 
+  // Register a callback for cart updates
   onCartUpdate(callback) {
     this.eventListeners.push(callback);
     return () => {
+      // Return unsubscribe function
       this.eventListeners = this.eventListeners.filter(cb => cb !== callback);
     };
   }
 
+  // Notify all listeners of cart update
   notifyCartUpdated() {
     this.eventListeners.forEach(callback => {
       try {
@@ -22,121 +30,96 @@ class CartService {
     });
   }
 
+  // Get cart from localStorage
   getLocalCart() {
-    try {
-      const cartJson = localStorage.getItem(this.STORAGE_KEY);
-      const cart = cartJson ? JSON.parse(cartJson) : { items: [] };
-      // Ensure items is always an array
-      if (!Array.isArray(cart.items)) {
-        cart.items = [];
-      }
-      return cart;
-    } catch (e) {
-      console.error("Error reading local cart:", e);
-      return { items: [] }; // Return empty on error
-    }
+    const cartJson = localStorage.getItem(this.STORAGE_KEY);
+    return cartJson ? JSON.parse(cartJson) : { items: [] };
   }
 
+  // Save cart to localStorage
   saveLocalCart(cart) {
-    try {
-      // Ensure items is an array before saving
-      const cartToSave = { ...cart, items: Array.isArray(cart.items) ? cart.items : [] };
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cartToSave));
-      this.notifyCartUpdated();
-    } catch (e) {
-      console.error("Error saving local cart:", e);
-    }
-  }
-
-  clearLocalCart() {
-    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+    // Notify listeners when cart is updated
     this.notifyCartUpdated();
   }
 
-  // Get cart (Sends Accept-Language Header)
-  async getCart(isLoggedIn) {
-    // Use localStorage as primary source for locale preference
-    const currentLocale = localStorage.getItem('user-locale') || navigator.language.split('-')[0] || 'en';
-    console.log("CartService getCart using locale:", currentLocale);
+  // Clear localStorage cart
+  clearLocalCart() {
+    localStorage.removeItem(this.STORAGE_KEY);
+    // Notify listeners when cart is cleared
+    this.notifyCartUpdated();
+  }
 
+  // Get cart (from API if authenticated, localStorage if guest)
+  async getCart(isLoggedIn) {
     if (isLoggedIn) {
       try {
         const response = await fetch('/api/cart', {
-          credentials: 'include',
-          headers: {
-            'Accept-Language': currentLocale // Send current locale preference
-          }
+          credentials: 'include'
         });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status} - Failed to fetch server cart`);
-        }
+
+        if (!response.ok) throw new Error('Failed to fetch cart');
         return await response.json();
       } catch (error) {
-        console.error('Error fetching server cart:', error);
-        // Don't fallback to local cart here, as it might be out of sync
-        // Return an empty cart structure on error
-        return { items: [], totalAmount: 0 };
+        console.error('Error fetching cart:', error);
+        return this.getLocalCart(); // Fallback to local cart
       }
     } else {
-      // Guest cart is always the local snapshot
       return this.getLocalCart();
     }
   }
 
-  // Add item to cart (Sends minimal data to backend)
-  async addItem(item, isLoggedIn) { // item contains full details from UI emit
+  // Add item to cart
+  async addItem(item, isLoggedIn) {
     if (isLoggedIn) {
       try {
         const response = await fetch('/api/cart/items', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json'
+          },
           credentials: 'include',
-          // Send ONLY essential data for identification and quantity
           body: JSON.stringify({
             productId: item.productId,
             quantity: item.quantity,
-            attributes: item.attributes || {} // Send base attributes if selected
+            attributes: item.attributes
           })
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status} - Failed to add item`);
-        }
-        const updatedCart = await response.json(); // Backend returns translated cart
-        // No need to call notifyCartUpdated here, backend response implies update
-        return updatedCart; // Return the fresh, translated cart state
+        if (!response.ok) throw new Error('Failed to add item to cart');
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
+        return updatedCart;
       } catch (error) {
-        console.error('Error adding item to server cart:', error);
-        // Fallback: Add full details to local storage (snapshot)
+        console.error('Error adding item to cart:', error);
+
+        // Fallback to local storage if API fails
         const cart = this.getLocalCart();
-        this.addToLocalCart(cart, item); // Uses full item details locally
-        return cart; // Return the updated local cart
+        this.addToLocalCart(cart, item);
+        return cart;
       }
     } else {
-      // Guest user: Add full details to local storage (snapshot)
+      // Guest user - use localStorage
       const cart = this.getLocalCart();
       this.addToLocalCart(cart, item);
       return cart;
     }
   }
 
-  // Helper to add item to local cart (stores snapshot)
+  // Helper to add item to local cart
   addToLocalCart(cart, newItem) {
-    if (!newItem || !newItem.productId) {
-      console.warn("Attempted to add invalid item to local cart:", newItem);
-      return cart;
-    }
+    // Find if item with same product ID and attributes exists
     const existingItemIndex = cart.items.findIndex(item =>
       item.productId === newItem.productId &&
       JSON.stringify(item.attributes || {}) === JSON.stringify(newItem.attributes || {})
     );
 
     if (existingItemIndex > -1) {
+      // Add the new quantity to existing quantity
       cart.items[existingItemIndex].quantity += newItem.quantity;
     } else {
-      // Store the full item details available at time of adding
+      // Add new item
       cart.items.push({ ...newItem });
     }
 
@@ -150,40 +133,49 @@ class CartService {
       try {
         const response = await fetch(`/api/cart/items/${productId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json'
+          },
           credentials: 'include',
-          body: JSON.stringify({ quantity, attributes })
+          body: JSON.stringify({
+            quantity,
+            attributes
+          })
         });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status} - Failed to update quantity`);
-        }
-        const updatedCart = await response.json(); // Backend returns translated cart
-        // No need to notify, backend response implies update
+
+        if (!response.ok) throw new Error('Failed to update item quantity');
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
         return updatedCart;
       } catch (error) {
-        console.error('Error updating item quantity on server:', error);
-        // Fallback: Update local cart quantity
+        console.error('Error updating item quantity:', error);
+
+        // Fallback to local storage
         const cart = this.getLocalCart();
         this.updateLocalItemQuantity(cart, productId, quantity, attributes);
         return cart;
       }
     } else {
+      // Guest user - use localStorage
       const cart = this.getLocalCart();
       this.updateLocalItemQuantity(cart, productId, quantity, attributes);
       return cart;
     }
   }
 
+  // Helper to update item quantity in local cart
   updateLocalItemQuantity(cart, productId, quantity, attributes) {
     const itemIndex = cart.items.findIndex(item =>
       item.productId === productId &&
       JSON.stringify(item.attributes || {}) === JSON.stringify(attributes || {})
     );
+
     if (itemIndex > -1) {
       cart.items[itemIndex].quantity = quantity;
       this.saveLocalCart(cart);
     }
+
     return cart;
   }
 
@@ -193,36 +185,41 @@ class CartService {
       try {
         const response = await fetch(`/api/cart/items/${productId}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json'
+          },
           credentials: 'include',
-          body: JSON.stringify({ attributes }) // Send attributes in body
+          body: JSON.stringify({ attributes })
         });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status} - Failed to remove item`);
-        }
-        const updatedCart = await response.json(); // Backend returns translated cart
-        // No need to notify, backend response implies update
+
+        if (!response.ok) throw new Error('Failed to remove item from cart');
+        const updatedCart = await response.json();
+        // Notify listeners when cart is updated via API
+        this.notifyCartUpdated();
         return updatedCart;
       } catch (error) {
-        console.error('Error removing item from server cart:', error);
-        // Fallback: Remove from local cart
+        console.error('Error removing item from cart:', error);
+
+        // Fallback to local storage
         const cart = this.getLocalCart();
         this.removeLocalItem(cart, productId, attributes);
         return cart;
       }
     } else {
+      // Guest user - use localStorage
       const cart = this.getLocalCart();
       this.removeLocalItem(cart, productId, attributes);
       return cart;
     }
   }
 
+  // Helper to remove item from local cart
   removeLocalItem(cart, productId, attributes) {
     cart.items = cart.items.filter(item =>
       !(item.productId === productId &&
         JSON.stringify(item.attributes || {}) === JSON.stringify(attributes || {}))
     );
+
     this.saveLocalCart(cart);
     return cart;
   }
@@ -235,75 +232,84 @@ class CartService {
           method: 'DELETE',
           credentials: 'include'
         });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status} - Failed to clear server cart`);
-        }
-        this.clearLocalCart(); // Also clear local just in case
-        this.notifyCartUpdated(); // Notify UI
-        return { items: [], totalAmount: 0 }; // Return empty structure
+
+        if (!response.ok) throw new Error('Failed to clear cart');
+
+        // Also clear local cart
+        this.clearLocalCart();
+        // Notify listeners when cart is cleared via API
+        this.notifyCartUpdated();
+        return { items: [] };
       } catch (error) {
         console.error('Error clearing cart:', error);
-        return { items: [], totalAmount: 0 }; // Return empty on error
+        return { items: [] };
       }
     } else {
+      // Guest user - just clear localStorage
       this.clearLocalCart();
-      return { items: [], totalAmount: 0 };
+      return { items: [] };
     }
   }
 
   // Merge local cart with server cart after login
   async mergeCartsAfterLogin() {
     try {
+      // Get local cart
       const localCart = this.getLocalCart();
+
+      // If no items, no need to merge
       if (!localCart.items || localCart.items.length === 0) {
         console.log('No local items to merge');
-        // Fetch initial server cart state (will be translated)
-        return await this.getCart(true);
+        return { items: [] };
       }
 
-      console.log(`Attempting to merge ${localCart.items.length} local items`);
-      // Send minimal data needed for merge identification
-      const itemsToMerge = localCart.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        attributes: item.attributes || {}
-      }));
+      console.log(`Attempting to merge ${localCart.items.length} local items with server cart`);
 
+      // IMPORTANT: Ensure we're using POST method, not GET
       const response = await fetch('/api/cart/merge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',  // Make sure this is POST
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include',
-        body: JSON.stringify({ items: itemsToMerge })
+        body: JSON.stringify({
+          items: localCart.items
+        })
       });
 
-      if (!response.ok) { /* ... error handling ... */ }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Merge cart error:', response.status, errorData.message || response.statusText);
+        throw new Error(`Failed to merge carts: ${response.status} ${errorData.message || response.statusText}`);
+      }
 
+      // Clear local cart after successful merge
       console.log('Cart merge successful, clearing local cart');
       this.clearLocalCart();
-      const mergedCart = await response.json(); // Backend returns translated cart
-      this.notifyCartUpdated(); // Notify UI of the final state
+      const mergedCart = await response.json();
+      // Notify listeners when cart is updated via merging
+      this.notifyCartUpdated();
       return mergedCart;
-    } catch (error) { /* ... error handling including fallback fetch ... */ }
+    } catch (error) {
+      console.error('Error merging carts:', error);
+      return null;
+    }
   }
 
   // Get cart item count
   async getCartItemCount(isLoggedIn) {
-    // Fetch the latest cart data to get accurate count
     const cart = await this.getCart(isLoggedIn);
-    return cart.items.reduce((total, item) => total + (item.quantity || 0), 0);
+    return cart.items.reduce((total, item) => total + item.quantity, 0);
   }
 
-  // Calculate cart total (uses prices fetched dynamically)
+  // Calculate cart total
   calculateTotal(cart) {
-    if (!cart || !cart.items) return 0;
     return cart.items.reduce((total, item) => {
-      const price = Number(item.price) || 0;
-      const quantity = Number(item.quantity) || 0;
-      return total + (price * quantity);
+      return total + (item.price * item.quantity);
     }, 0);
   }
 }
 
+// Create singleton instance
 const cartService = new CartService();
 export default cartService;

@@ -1,7 +1,6 @@
 // server/models/Cart.js
 import mongoose from 'mongoose';
 
-// --- Cart Item Schema (Minimal) ---
 const cartItemSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -13,13 +12,14 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
-  // Store base attributes (assuming English keys from frontend)
+  name: String,
+  price: Number,
+  image: String,
   attributes: {
     type: Map,
-    of: mongoose.Schema.Types.Mixed // Store selected value (e.g., "Oak", "Large")
+    of: mongoose.Schema.Types.Mixed
   }
 }, { _id: false });
-// --- End Cart Item Schema ---
 
 const cartSchema = new mongoose.Schema({
   userId: {
@@ -28,7 +28,7 @@ const cartSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  items: [cartItemSchema], // Use the minimal schema
+  items: [cartItemSchema],
   createdAt: {
     type: Date,
     default: Date.now
@@ -39,8 +39,12 @@ const cartSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Remove the calculateTotal method here, as price needs to be fetched dynamically
-// cartSchema.methods.calculateTotal = function () { ... };
+// Calculate total price of cart
+cartSchema.methods.calculateTotal = function () {
+  return this.items.reduce((total, item) => {
+    return total + (item.price * item.quantity);
+  }, 0);
+};
 
 const Cart = mongoose.model('Cart', cartSchema);
 
