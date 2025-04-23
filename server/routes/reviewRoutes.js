@@ -11,30 +11,102 @@ const router = express.Router();
 
 // --- POST /api/products/:productId/reviews --- (Keep as is)
 // ...
-router.post('/products/:productId/reviews', isAuthenticated, async (req, res) => { /* ... no change ... */
-    const { productId } = req.params;
-    const userId = req.session.userId;
-    const { rating, title, body } = req.body;
-    if (!rating || !body) return res.status(400).json({ message: 'Rating and review body are required.' });
-    if (rating < 1 || rating > 5) return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
-    try {
-        const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ message: 'Product not found.' });
-        const user = await User.findById(userId).select('username');
-        if (!user) return res.status(404).json({ message: 'User not found.' });
-        const existingReview = await Review.findOne({ productId, userId });
-        if (existingReview) return res.status(409).json({ message: 'You have already reviewed this product.' });
-        const purchaseRecord = await Order.findOne({ userId: userId, 'items.productId': productId, status: { $in: ['delivered', 'shipped'] } });
-        const isVerifiedPurchase = !!purchaseRecord;
-        const newReview = new Review({ productId, userId, username: user.username, rating, title, body, isVerifiedPurchase });
-        await newReview.save();
-        await Product.recalculateRating(productId);
-        res.status(201).json(newReview);
-    } catch (error) {
-        console.error('Error creating review:', error);
-        if (error.code === 11000) return res.status(409).json({ message: 'You have already reviewed this product.' });
-        res.status(500).json({ message: 'Server error while creating review.' });
+router.post('/products/:productId/reviews', isAuthenticated, async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.session.userId; // Get user ID from session
+  const { rating, title, body } = req.body;
+
+  // Basic validation
+  if (!rating || !body) {
+    return res.status(400).json({ message: 'Rating and review body are required.' });
+  }
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+  }
+
+  // Validate productId format
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return res.status(400).json({ message: 'Invalid Product ID format.' });
+  }
+
+  try {
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found.' });
     }
+
+    // Get username (denormalized for easier display on review)
+    const user = await User.findById(userId).select('username');
+    if (!user) {
+      // Should not happen if isAuthenticated middleware works, but good check
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Check if user already reviewed this product
+    const existingReview = await Review.findOne({ productId, userId });
+    if (existingReview) {
+      return res.status(409).json({ message: 'You have already reviewed this product.' });
+    }
+
+    // *** START: VERIFIED PURCHASE CHECK ***
+    let isVerifiedPurchase = false;
+    try {
+      // Find an order by this user, containing this product, with status 'delivered' or 'shipped'
+      const purchaseRecord = await Order.findOne({
+        userId: userId,
+        'items.productId': productId,
+        // Check if status is 'delivered' or 'shipped' (adjust if your statuses differ)
+        status: { $in: ['delivered'] }
+      });
+
+      // If a record is found, mark as verified
+      if (purchaseRecord) {
+        isVerifiedPurchase = true;
+        console.log(`Verified purchase found for user ${userId} and product ${productId}`);
+      } else {
+        console.log(`No verified purchase found for user ${userId} and product ${productId}`);
+      }
+    } catch (orderError) {
+      // Log error but don't block review submission, just mark as not verified
+      console.error(`Error checking purchase history for user ${userId}, product ${productId}:`, orderError);
+      isVerifiedPurchase = false; // Ensure it's false on error
+    }
+    // *** END: VERIFIED PURCHASE CHECK ***
+
+    // Create new review instance, including the verified status
+    const newReview = new Review({
+      productId,
+      userId,
+      username: user.username, // Store username with review
+      rating,
+      title,
+      body,
+      isVerifiedPurchase // <--- Set the flag here
+    });
+
+    // Save the review
+    await newReview.save();
+
+    // Recalculate product's average rating (important!)
+    await Product.recalculateRating(productId); // Make sure this method exists and works
+
+    // Respond with the created review (exclude votedBy if needed)
+    // Using .lean() or toObject() can help before sending the response
+    const reviewResponse = newReview.toObject();
+    delete reviewResponse.votedBy; // Ensure votedBy isn't sent on creation response
+
+    res.status(201).json(reviewResponse);
+
+  } catch (error) {
+    console.error('Error creating review:', error);
+    // Handle potential duplicate key error (user/product index)
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'You have already reviewed this product.' });
+    }
+    // Generic server error
+    res.status(500).json({ message: 'Server error while creating review.' });
+  }
 });
 
 // --- GET /api/products/:productId/reviews --- (*** MODIFY THIS ***)

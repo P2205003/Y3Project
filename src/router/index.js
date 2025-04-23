@@ -104,7 +104,8 @@ const router = createRouter({
         {
           path: 'orders/:id',
           name: 'AdminOrderDetails',
-          component: AdminOrderDetails
+          component: AdminOrderDetails,
+          props: true
         },
         {
           path: 'products/add',

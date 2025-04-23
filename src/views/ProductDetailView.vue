@@ -77,8 +77,11 @@
               <!-- Rating Summary -->
               <div class="product-detail__rating-summary">
                 <RatingSummary :average-rating="product.averageRating" :review-count="product.reviewCount" />
-                <a v-if="product.reviewCount > 0" href="#reviews-section" class="scroll-to-reviews">
-                  {{ t('ratingSummary.reviewCount', product.reviewCount) }}
+                <!-- Make the link accessible, but don't repeat the text -->
+                <a v-if="product.reviewCount > 0"
+                   href="#reviews-section"
+                   class="scroll-to-reviews"
+                   :aria-label="t('productDetail.reviews.scrollToReviewsAriaLabel')">
                 </a>
               </div>
               <p class="product-price">{{ formatCurrency(product.price) }}</p>
