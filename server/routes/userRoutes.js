@@ -43,49 +43,97 @@ router.post('/register', async (req, res) => {
 });
 
 // --- Login Route ---
+// --- Login Route --- (MODIFY THIS)
 router.post('/login', async (req, res) => {
   try {
     // Check if the user is ALREADY logged in
     if (req.session && req.session.userId) {
-      // User is already logged in.  Return user info.
       const user = await User.findById(req.session.userId);
       if (user) {
         return res.status(200).json({
           message: 'Already logged in',
-          user: { username: user.username, fullName: user.fullName },
+          user: {
+            // --- ADD _id HERE ---
+            _id: user._id,
+            // --- END ADD ---
+            username: user.username,
+            fullName: user.fullName,
+            shippingAddress: user.shippingAddress // Keep this if needed by App.vue/Header
+          },
         });
       } else {
-        // This shouldn't happen, but handle it gracefully
-        return res.status(401).json({ message: 'Invalid session' });
+        req.session.destroy(); // Clean up invalid session
+        return res.status(401).json({ message: 'Invalid session data.' });
       }
     }
 
     // If not already logged in, proceed with normal login
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
+
+    // --- INPUT VALIDATION ---
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required.' });
+    }
+
+    // Find user by username (case-insensitive for login convenience)
+    const user = await User.findOne({ username: username.toLowerCase() });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      // Use generic message for security
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      // Use generic message
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    req.session.userId = user._id;
-    await new Promise((resolve, reject) => {
-      req.session.save((err) => {
+    // Regenerate session for security (optional but good practice)
+    /*
+    req.session.regenerate(async (err) => {
         if (err) {
-          reject(err);
-        } else {
-          resolve();
+            console.error("Session regeneration error:", err);
+            return res.status(500).json({ message: 'Server error during login session.', error: err.message });
         }
-      });
+        // Store user ID in the new session
+        req.session.userId = user._id;
+        // Send response AFTER session is saved
+         res.status(200).json({
+             message: 'Login successful',
+             user: {
+                 // --- INCLUDE _id IN RESPONSE ---
+                 _id: user._id,
+                 // --- END INCLUDE ---
+                 username: user.username,
+                 fullName: user.fullName,
+                 shippingAddress: user.shippingAddress // Include if needed
+             }
+         });
     });
-
-    res.status(200).json({ message: 'Login successful', user: { username: user.username, fullName: user.fullName } });
+    */
+    // --- Simpler session setup (without regenerate) ---
+    req.session.userId = user._id;
+    req.session.save(err => { // Ensure session is saved before responding
+        if(err){
+             console.error("Session save error:", err);
+             return res.status(500).json({ message: 'Server error during login session save.', error: err.message });
+        }
+        // Send response AFTER session is saved
+        res.status(200).json({
+            message: 'Login successful',
+            user: {
+                // --- INCLUDE _id IN RESPONSE ---
+                _id: user._id,
+                // --- END INCLUDE ---
+                username: user.username,
+                fullName: user.fullName,
+                shippingAddress: user.shippingAddress // Include if needed
+            }
+        });
+    });
+    // --- End Simpler session setup ---
 
   } catch (error) {
     console.error("Login error:", error);
@@ -113,29 +161,32 @@ router.post('/logout', (req, res) => {
 // --- Check Login Status Route ---
 router.get('/check-login', (req, res) => {
   if (req.session && req.session.userId) {
-    // User is logged in, send back user info
     User.findById(req.session.userId)
+      .select('_id username fullName shippingAddress') // Explicitly select fields needed
       .then(user => {
         if (user) {
           res.json({
             isLoggedIn: true,
             user: {
+              // --- INCLUDE _id ---
+              _id: user._id,
+              // --- END INCLUDE ---
               username: user.username,
               fullName: user.fullName,
-              shippingAddress: user.shippingAddress  // Add this line
+              shippingAddress: user.shippingAddress
             }
           });
         } else {
-          // Session exists, but user not found (shouldn't happen normally)
+          // Session exists, but user not found
+          req.session.destroy(); // Clean up invalid session
           res.status(401).json({ isLoggedIn: false });
         }
       })
       .catch(err => {
-        console.error("Error finding user:", err);
-        res.status(500).json({ message: 'server error' })
+        console.error("Error finding user during check-login:", err);
+        res.status(500).json({ message: 'Server error checking login status' })
       });
   } else {
-    // User is not logged in
     res.json({ isLoggedIn: false });
   }
 });

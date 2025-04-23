@@ -1,0 +1,522 @@
+﻿{
+  "appName": "AURORA",
+  "dates": {
+    "localeCode": "zh-CN",
+    "relative": {
+      "justNow": "刚刚",
+      "minuteAgo": "{count} 分钟前",
+      "minutesAgo": "{count} 分钟前",
+      "hourAgo": "{count} 小时前",
+      "hoursAgo": "{count} 小时前",
+      "dayAgo": "昨天",
+      "daysAgo": "{count} 天前",
+      "weekAgo": "{count} 周前",
+      "weeksAgo": "{count} 周前",
+      "monthAgo": "{count} 个月前",
+      "monthsAgo": "{count} 个月前",
+      "yearAgo": "{count} 年前",
+      "yearsAgo": "{count} 年前",
+      "default": "于 {date}"
+    }
+  },
+  "header": {
+    "home": "首页",
+    "products": "产品系列",
+    "adminPanel": "管理后台",
+    "search": {
+      "openAriaLabel": "打开搜索",
+      "placeholder": "搜索产品...",
+      "inputAriaLabel": "搜索产品"
+    },
+    "account": {
+      "menuAriaLabel": "我的账户菜单",
+      "greeting": "您好, {name}",
+      "myOrders": "我的订单",
+      "myProfile": "我的资料",
+      "logout": "登出",
+      "login": "登录",
+      "signUp": "注册"
+    },
+    "cart": {
+      "title": "查看购物车",
+      "ariaLabel": "购物车"
+    },
+    "mobileMenu": {
+      "toggleAriaLabel": "切换菜单"
+    }
+  },
+  "footer": {
+    "tagline": "匠心打造可持续家具，启迪生活灵感，点亮每日时光。",
+    "social": {
+      "instagram": "Instagram",
+      "pinterest": "Pinterest",
+      "twitter": "Twitter",
+      "facebook": "Facebook"
+    },
+    "about": {
+      "title": "关于我们",
+      "ourStory": "品牌故事",
+      "sustainability": "可持续发展",
+      "designProcess": "设计理念",
+      "careers": "加入我们",
+      "press": "媒体报道"
+    },
+    "support": {
+      "title": "客户支持",
+      "contactUs": "联系我们",
+      "faqs": "常见问题",
+      "shippingReturns": "配送与退货",
+      "warranty": "产品保修",
+      "tradeProgram": "商业合作"
+    },
+    "bottom": {
+      "contactLabel": "联系我们:",
+      "copyright": "© {currentYear} {appName} 版权所有。",
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款"
+    }
+  },
+  "accountPopup": {
+    "tabs": {
+      "login": "登录",
+      "register": "注册"
+    },
+    "closeAriaLabel": "关闭账户面板",
+    "loginForm": {
+      "usernameLabel": "用户名",
+      "passwordLabel": "密码",
+      "forgotPassword": "忘记密码？",
+      "submitButton": "登录",
+      "submittingButton": "正在登录...",
+      "genericError": "登录失败，请检查您的凭据。",
+      "networkError": "登录时发生错误，请重试。"
+    },
+    "registerForm": {
+      "fullNameLabel": "全名",
+      "usernameLabel": "用户名",
+      "emailLabel": "邮箱地址",
+      "passwordLabel": "密码 (至少8位)",
+      "confirmPasswordLabel": "确认密码",
+      "shippingAddressLabel": "收货地址",
+      "submitButton": "注册",
+      "submittingButton": "正在注册...",
+      "successMessage": "注册成功！请登录。",
+      "error": {
+        "passwordsDoNotMatch": "两次输入的密码不一致。",
+        "passwordTooShort": "密码长度至少需要8位。",
+        "invalidEmail": "请输入有效的邮箱地址。",
+        "fieldRequired": "请填写 {fieldName} 字段。",
+        "genericError": "注册失败，请稍后重试。",
+        "networkError": "注册时发生网络错误，请重试。",
+        "duplicateAttribute": "发现重复的属性名称：“{key}”。"
+      }
+    }
+  },
+  "cartPopup": {
+    "title": "您的购物车",
+    "closeAriaLabel": "关闭购物车面板",
+    "item": {
+      "decreaseQuantityAriaLabel": "减少 {name} 的数量",
+      "increaseQuantityAriaLabel": "增加 {name} 的数量",
+      "removeAriaLabel": "移除 {name}",
+      "confirmRemoveAriaLabel": "确认移除",
+      "cancelRemoveAriaLabel": "取消移除",
+      "confirmRemoveYes": "移除",
+      "confirmRemoveNo": "取消"
+    },
+    "emptyMessage": "您的购物车当前是空的。",
+    "summary": {
+      "subtotal": "小计:",
+      "viewCart": "查看购物车",
+      "checkout": "去结算",
+      "loginToCheckout": "请登录以结账"
+    }
+  },
+  "homeView": {
+    "hero": {
+      "title": "可持续匠艺,<br>光耀设计。",
+      "subtitle": "探索采用负责任来源材料精心打造的家具，融合永恒美学与现代舒适。与AURORA一同，有意识地提升您的空间格调。",
+      "ctaButton": "探索系列"
+    },
+    "featured": {
+      "title": "匠心舒适，环保甄选",
+      "subtitle": "探索采用可持续材料设计的标志性作品，为您的日常生活带来和谐与格调。",
+      "loading": "正在加载推荐产品...",
+      "empty": "当前暂无推荐产品。"
+    },
+    "categories": {
+      "loading": "加载分类中...",
+      "error": "无法加载分类。",
+      "noneFound": "未找到指定的产品分类。",
+      "viewAll": "查看全部"
+    },
+    "philosophy": {
+      "title": "我们的理念",
+      "text": "我们相信卓越设计应与自然和谐共存。AURORA 致力于可持续实践，采用负责任来源的材料和永恒的设计原则，创造风格与内涵兼具、经久耐用的家具。用内外皆美的作品点亮您的家。"
+    },
+    "showcase": {
+      "title": "灵感空间",
+      "text": "了解我们精心制作的作品如何营造温馨时尚的环境。为您自己的明亮空间寻找灵感。",
+      "ctaButton": "查看灵感"
+    },
+    "testimonials": {
+      "title": "赞誉之声",
+      "subtitle": "听听那些通过 AURORA 改变了家的客户怎么说。"
+    },
+    "newsletter": {
+      "title": "保持光芒",
+      "subtitle": "订阅我们的简报，获取新品独家资讯、可持续设计技巧和特别优惠。",
+      "placeholder": "输入您的邮箱地址",
+      "ctaButton": "订阅",
+      "successMessage": "感谢您的订阅！",
+      "errorMessage": "订阅失败，请稍后重试。"
+    }
+  },
+  "productsPage": {
+    "title": "甄选系列",
+    "tagline": "探索精心制作的环保家具，为您的日常生活带来和谐与格调。",
+    "filters": {
+      "searchLabel": "搜索",
+      "searchPlaceholder": "例如：静谧沙发",
+      "categoryLabel": "分类",
+      "allCategories": "所有分类",
+      "priceRangeLabel": "价格范围",
+      "minPriceAriaLabel": "最低价格",
+      "maxPriceAriaLabel": "最高价格",
+      "sortLabel": "排序方式",
+      "sortOptions": {
+        "featured": "推荐",
+        "newest": "最新上架",
+        "priceAsc": "价格：从低到高",
+        "priceDesc": "价格：从高到低",
+        "nameAsc": "名称：A到Z",
+        "nameDesc": "名称：Z到A"
+      },
+      "resetButton": "重置"
+    },
+    "resultsSummary": {
+      "showing": "显示 {count} / {total} 个结果",
+      "forQuery": " 搜索 \"{query}\"",
+      "inCategory": " 分类 {category}"
+    },
+    "loading": "正在加载产品...",
+    "error": {
+      "title": "哎呀！加载出错了。",
+      "tryAgain": "重试"
+    },
+    "empty": {
+      "title": "未找到匹配产品",
+      "message": "未能找到符合您筛选条件的产品。请尝试调整搜索词或筛选选项。",
+      "clearFilters": "清空筛选条件"
+    },
+    "pagination": {
+      "pageAriaLabel": "产品分页",
+      "previousAriaLabel": "上一页",
+      "previousText": "«",
+      "nextAriaLabel": "下一页",
+      "nextText": "»"
+    }
+  },
+  "productCard": {
+    "viewDetailsAriaLabel": "查看 {name} 详情",
+    "addToCart": "加入购物车",
+    "addToCartAriaLabel": "将 {name} 加入购物车",
+    "defaultDescription": "高品质、可持续的精选家具。",
+    "ratingCount": "({count} 条评价)",
+    "imageAriaLabel": "{name}"
+  },
+  "lightbox": {
+    "closeAriaLabel": "关闭灯箱",
+    "imageLabel": "图片 {current} / {total}",
+    "previousAriaLabel": "上一张图片",
+    "nextAriaLabel": "下一张图片",
+    "defaultAltText": "产品放大图"
+  },
+  "reviewForm": {
+    "title": "撰写您的评价",
+    "ratingLabel": "您的评分*",
+    "rateAriaLabel": "评 {n} 星（共5星）",
+    "reviewTitleLabel": "评价标题 (选填)",
+    "reviewTitlePlaceholder": "一句话总结您的体验",
+    "reviewBodyLabel": "您的评价*",
+    "reviewBodyPlaceholder": "分享更多您的想法...",
+    "submitButton": "提交评价",
+    "submittingButton": "正在提交...",
+    "validationError": "请提供评分和评价内容。",
+    "submitError": "评价提交失败，请稍后重试。"
+  },
+  "reviewList": {
+    "heading": "用户评价 ({count})",
+    "sortLabel": "排序：",
+    "sortOptions": {
+      "helpful": "最有帮助",
+      "newest": "最新",
+      "oldest": "最早",
+      "ratingHigh": "最高评分",
+      "ratingLow": "最低评分"
+    },
+    "loading": "正在加载评价...",
+    "error": {
+      "tryAgain": "重试",
+      "defaultLoadError": "无法加载评价。",
+      "defaultVoteError": "无法提交您的投票。",
+      "loginToVote": "请登录后投票。"
+    },
+    "empty": "快来成为第一个评价此产品的人吧！",
+    "pagination": {
+      "ariaLabel": "评价分页",
+      "previousAriaLabel": "上一页评价",
+      "nextAriaLabel": "下一页评价",
+      "previousText": "上一页",
+      "nextText": "下一页"
+    }
+  },
+  "ratingDistribution": {
+    "title": "评分分布",
+    "starLabel": "{n} 星",
+    "emptyMessage": "暂无评分可供分布显示。"
+  },
+  "ratingSummary": {
+    "reviewCount": "({count} 条评价)",
+    "noReviews": "(暂无评价)"
+  },
+  "reviewCard": {
+    "authorPrefix": "来自",
+    "anonymous": "匿名用户",
+    "verifiedPurchase": "已验证购买",
+    "helpfulCount": "{count} 人觉得有帮助",
+    "helpfulButton": {
+      "helpful": "有帮助",
+      "cancel": "取消",
+      "markAsHelpfulTitle": "标记为有帮助",
+      "undoHelpfulTitle": "撤销“有帮助”"
+    },
+    "deleteButton": {
+      "confirmText": "删除",
+      "cancelText": "取消"
+    },
+    "sellerResponse": {
+      "title": "卖家回复："
+    },
+    "dateRelative": {
+      "justNow": "刚刚",
+      "minuteAgo": "{count} 分钟前",
+      "minutesAgo": "{count} 分钟前",
+      "hourAgo": "{count} 小时前",
+      "hoursAgo": "{count} 小时前",
+      "dayAgo": "{count} 天前",
+      "daysAgo": "{count} 天前",
+      "default": "于 {date}"
+    }
+  },
+  "productDetail": {
+    "loading": "正在加载产品详情...",
+    "error": {
+      "title": "产品加载失败",
+      "backToProducts": "返回产品列表"
+    },
+    "notFound": {
+      "title": "未找到产品",
+      "message": "抱歉，我们未能找到您想查看的产品。"
+    },
+    "gallery": {
+      "imageAlt": "{name} 的图片",
+      "imageCountIndicator": "{current} / {total}",
+      "previousAriaLabel": "上一张",
+      "nextAriaLabel": "下一张",
+      "thumbnailAriaLabel": "查看图片 {index}"
+    },
+    "info": {
+      "specificationsTitle": "规格参数",
+      "noSpecifications": "暂未提供规格参数。",
+      "shippingReturnsTitle": "配送与退货",
+      "shippingInfo": "标准配送通常在5-7个工作日内送达。结算时可选加急配送。",
+      "returnsInfo": "我们为保持原始状态的商品提供30天退货政策。详情请参阅我们的<a href=\"/shipping-policy\">配送与退货政策</a>。",
+      "careInstructionsTitle": "保养说明",
+      "defaultCare": "请参考产品标签获取具体保养说明。通常建议使用柔软湿布擦拭，避免使用刺激性化学品。",
+      "descriptionTitle": "产品描述",
+      "noDescription": "暂无描述信息。"
+    },
+    "actions": {
+      "quantityAriaLabel": "产品数量",
+      "decreaseQuantityAriaLabel": "减少数量",
+      "increaseQuantityAriaLabel": "增加数量",
+      "addToCart": "加入购物车",
+      "addedToCart": "已添加！",
+      "loginToReview": "请 <button class=\"link-button\">登录</button> 后撰写评价。"
+    },
+    "reviews": {
+      "title": "用户评价与评分",
+      "writeReviewButton": "撰写评价"
+    }
+  },
+  "ordersView": {
+    "title": "我的订单",
+    "subtitle": "查看您过去的购买记录并跟踪订单状态。",
+    "filters": {
+      "title": "按状态筛选",
+      "allOption": "所有订单",
+      "refreshButton": "刷新",
+      "refreshingButton": "正在刷新..."
+    },
+    "loading": "正在加载您的订单历史...",
+    "error": {
+      "title": "订单加载失败",
+      "tryAgain": "重试"
+    },
+    "empty": {
+      "title": "未找到订单",
+      "filteredMessage": "您没有状态为“{statusLabel}”的订单。",
+      "defaultMessage": "您还没有下过订单。开始购物吧！",
+      "exploreButton": "浏览产品"
+    },
+    "card": {
+      "orderNumberPrefix": "订单号 #",
+      "placedOn": "下单于:",
+      "lastUpdated": "最后更新:",
+      "itemCount": "{count} 件商品",
+      "totalPrefix": "总计:",
+      "cancelButton": "取消订单",
+      "cancellingButton": "正在取消...",
+      "detailsButton": "查看详情",
+      "cancelConfirm": {
+        "prompt": "您确定要取消订单 #{orderNumber} 吗？",
+        "confirmButton": "是的, 取消",
+        "keepButton": "不, 保留订单"
+      }
+    },
+    "pagination": {
+      "ariaLabel": "订单分页",
+      "previousAriaLabel": "上一页",
+      "previousText": "«",
+      "nextAriaLabel": "下一页",
+      "nextText": "»"
+    },
+    "statusLabels": {
+      "pending": "待处理",
+      "shipped": "已发货",
+      "delivered": "已送达",
+      "cancelled": "已取消",
+      "hold": "已保留"
+    },
+    "errors": {
+      "loadErrorFallback": "无法加载您的订单历史，请重试。",
+      "cancelErrorFallback": "无法取消订单，请重试。"
+    }
+  },
+  "orderDetails": {
+    "backLink": "返回订单列表",
+    "pageTitle": "订单详情",
+    "loading": "正在加载您的订单详情...",
+    "errorTitle": "订单加载失败",
+    "tryAgainButton": "重试",
+    "orderNumberPrefix": "订单号 #",
+    "summary": {
+      "orderDate": "下单日期:",
+      "statusUpdated": "状态更新:",
+      "orderTotal": "订单总额:"
+    },
+    "userActions": {
+      "cancelPrompt": "需要取消订单吗？",
+      "requestCancelButton": "申请取消订单",
+      "cancellingButton": "正在取消..."
+    },
+    "adminActions": {
+      "updateStatusTitle": "更新订单状态",
+      "newStatusLabel": "新状态:",
+      "selectStatusPlaceholder": "选择新状态",
+      "notesLabel": "备注 (选填):",
+      "notesPlaceholder": "添加内部备注...",
+      "saveButton": "保存状态更新",
+      "savingButton": "正在更新...",
+      "noUpdatesPossible": "无法从“{statusLabel}”状态进行更新。"
+    },
+    "info": {
+      "shippingAddressTitle": "收货地址",
+      "statusHistoryTitle": "状态历史",
+      "historyUpdaterPrefix": "操作人:",
+      "noHistory": "暂无状态历史记录。"
+    },
+    "items": {
+      "title": "订单商品 ({itemCount})",
+      "footerTotal": "订单总计"
+    },
+    "cancelModal": {
+      "title": "确认取消订单",
+      "confirmationText": "您确定要取消此订单吗？此操作无法撤销。",
+      "reasonLabel": "取消原因 (选填):",
+      "reasonPlaceholder": "请告诉我们您取消的原因...",
+      "confirmButton": "是的，取消订单",
+      "keepButton": "不，保留订单",
+      "closeAriaLabel": "关闭取消对话框"
+    },
+    "statusLabels": {
+      "pending": "待处理",
+      "shipped": "已发货",
+      "delivered": "已送达",
+      "cancelled": "已取消",
+      "hold": "已保留"
+    },
+    "errors": {
+      "statusUpdateGeneric": "更新订单状态失败。",
+      "cancelGeneric": "取消订单失败。"
+    }
+  },
+  "notFound": {
+    "title": "页面未找到 (404)",
+    "message": "哎呀！您要找的页面似乎不在服务区。",
+    "goHomeButton": "返回首页",
+    "exploreProductsButton": "浏览产品"
+  },
+  "checkout": {
+    "pageTitle": "结算",
+    "pageSubtitle": "请核对您的订单并填写收货信息。",
+    "loading": "正在准备结算页面...",
+    "error": {
+      "title": "无法结算",
+      "backToProducts": "返回产品列表",
+      "userSession": "无法验证用户会话，请重新登录。",
+      "loadData": "加载结算数据失败: {message}",
+      "genericLoad": "请稍后重试。",
+      "shippingRequired": "请输入完整的收货地址。",
+      "emptyCart": "您的购物车是空的，无法下单。",
+      "submitGeneric": "下单失败，请检查您的信息并重试。"
+    },
+    "success": {
+      "title": "订单提交成功！",
+      "orderNumberLabel": "您的订单号是:",
+      "thankYouMessage": "感谢您的购买，我们会尽快处理您的订单。",
+      "viewMyOrdersButton": "查看我的订单",
+      "continueShoppingButton": "继续购物"
+    },
+    "shipping": {
+      "title": "收货信息",
+      "addressLabel": "详细收货地址",
+      "addressPlaceholder": "输入街道地址、城市、省份和邮政编码",
+      "addressHint": "请提供完整的配送地址。"
+    },
+    "payment": {
+      "title": "支付信息",
+      "placeholderText": "安全支付处理将在此处集成。",
+      "simulationNote": "(当前模拟下单即支付成功)"
+    },
+    "summary": {
+      "title": "订单摘要",
+      "emptyCart": "您的购物车是空的。",
+      "startShoppingButton": "开始购物",
+      "subtotal": "商品小计",
+      "shipping": "运费",
+      "shippingValue": "免费",
+      "total": "总计",
+      "placeOrderButton": "安全下单",
+      "processingButton": "正在处理..."
+    }
+  },
+  "languageSwitcher": {
+    "changeLanguage": "更改语言",
+    "currentLanguage": "当前语言: {lang}",
+    "languages": {
+      "en": "English"
+    }
+  }
+}

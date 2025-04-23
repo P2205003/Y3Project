@@ -1,0 +1,522 @@
+﻿{
+  "appName": "AURORA",
+  "dates": {
+    "localeCode": "en-US",
+    "relative": {
+      "justNow": "just now",
+      "minuteAgo": "{count} min ago",
+      "minutesAgo": "{count} mins ago",
+      "hourAgo": "{count} hr ago",
+      "hoursAgo": "{count} hrs ago",
+      "dayAgo": "{count} day ago",
+      "daysAgo": "{count} days ago",
+      "weekAgo": "{count} week ago",
+      "weeksAgo": "{count} weeks ago",
+      "monthAgo": "{count} month ago",
+      "monthsAgo": "{count} months ago",
+      "yearAgo": "{count} year ago",
+      "yearsAgo": "{count} years ago",
+      "default": "on {date}"
+    }
+  },
+  "header": {
+    "home": "Home",
+    "products": "Products",
+    "adminPanel": "Admin Panel",
+    "search": {
+      "openAriaLabel": "Open search",
+      "placeholder": "Search products...",
+      "inputAriaLabel": "Search products"
+    },
+    "account": {
+      "menuAriaLabel": "My Account Menu",
+      "greeting": "Hi, {name}",
+      "myOrders": "My Orders",
+      "myProfile": "My Profile",
+      "logout": "Logout",
+      "login": "Login",
+      "signUp": "Sign Up"
+    },
+    "cart": {
+      "title": "View Cart",
+      "ariaLabel": "Shopping Cart"
+    },
+    "mobileMenu": {
+      "toggleAriaLabel": "Toggle Menu"
+    }
+  },
+  "footer": {
+    "tagline": "Crafting sustainable furniture that inspires connection and brightens everyday life.",
+    "social": {
+      "instagram": "Instagram",
+      "pinterest": "Pinterest",
+      "twitter": "Twitter",
+      "facebook": "Facebook"
+    },
+    "about": {
+      "title": "About",
+      "ourStory": "Our Story",
+      "sustainability": "Sustainability",
+      "designProcess": "Design Process",
+      "careers": "Careers",
+      "press": "Press"
+    },
+    "support": {
+      "title": "Support",
+      "contactUs": "Contact Us",
+      "faqs": "FAQs",
+      "shippingReturns": "Shipping & Returns",
+      "warranty": "Warranty",
+      "tradeProgram": "Trade Program"
+    },
+    "bottom": {
+      "contactLabel": "Contact Us:",
+      "copyright": "© {currentYear} {appName}. All Rights Reserved.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
+    }
+  },
+  "accountPopup": {
+    "tabs": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "closeAriaLabel": "Close Account Panel",
+    "loginForm": {
+      "usernameLabel": "Username",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot Password?",
+      "submitButton": "Login",
+      "submittingButton": "Logging in...",
+      "genericError": "Login failed. Please check your credentials.",
+      "networkError": "An error occurred during login. Please try again."
+    },
+    "registerForm": {
+      "fullNameLabel": "Full Name",
+      "usernameLabel": "Username",
+      "emailLabel": "Email Address",
+      "passwordLabel": "Password (min 8 chars)",
+      "confirmPasswordLabel": "Confirm Password",
+      "shippingAddressLabel": "Shipping Address",
+      "submitButton": "Register",
+      "submittingButton": "Registering...",
+      "successMessage": "Registration successful! Please log in.",
+      "error": {
+        "passwordsDoNotMatch": "Passwords do not match.",
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "invalidEmail": "Please enter a valid email address.",
+        "fieldRequired": "Please fill in the {fieldName} field.",
+        "genericError": "Registration failed. Please try again.",
+        "networkError": "An error occurred during registration. Please try again.",
+        "duplicateAttribute": "Duplicate attribute name found: \"{key}\"."
+      }
+    }
+  },
+  "cartPopup": {
+    "title": "Your Cart",
+    "closeAriaLabel": "Close Cart Panel",
+    "item": {
+      "decreaseQuantityAriaLabel": "Decrease quantity of {name}",
+      "increaseQuantityAriaLabel": "Increase quantity of {name}",
+      "removeAriaLabel": "Remove {name}",
+      "confirmRemoveAriaLabel": "Confirm remove",
+      "cancelRemoveAriaLabel": "Cancel remove",
+      "confirmRemoveYes": "Remove",
+      "confirmRemoveNo": "Cancel"
+    },
+    "emptyMessage": "Your cart is currently empty.",
+    "summary": {
+      "subtotal": "Subtotal:",
+      "viewCart": "View Cart",
+      "checkout": "Checkout",
+      "loginToCheckout": "Log in to Checkout"
+    }
+  },
+  "homeView": {
+    "hero": {
+      "title": "Sustainable Craftsmanship,<br>Illuminated Design.",
+      "subtitle": "Discover furniture crafted from responsibly sourced materials, blending timeless aesthetics with modern comfort. Elevate your space consciously with AURORA.",
+      "ctaButton": "Explore Collections"
+    },
+    "featured": {
+      "title": "Curated Comfort, Consciously Crafted",
+      "subtitle": "Explore signature pieces designed with sustainable materials to bring harmony and style to your everyday living.",
+      "loading": "Loading featured products...",
+      "empty": "No featured products available at the moment."
+    },
+    "categories": {
+      "loading": "Loading categories...",
+      "error": "Could not load categories.",
+      "noneFound": "No specific product categories found.",
+      "viewAll": "View All Products"
+    },
+    "philosophy": {
+      "title": "Our Philosophy",
+      "text": "We believe great design should coexist with nature. AURORA is committed to sustainable practices, using responsibly sourced materials and timeless design principles to create furniture that lasts, both in style and substance. Illuminate your home with pieces that feel good, inside and out."
+    },
+    "showcase": {
+      "title": "Inspiring Spaces",
+      "text": "See how our consciously crafted pieces create inviting and stylish environments. Find inspiration for your own illuminated space.",
+      "ctaButton": "View Inspiration"
+    },
+    "testimonials": {
+      "title": "Voices of Delight",
+      "subtitle": "Hear from clients who have transformed their homes with AURORA."
+    },
+    "newsletter": {
+      "title": "Stay Illuminated",
+      "subtitle": "Join our newsletter for exclusive access to new collections, sustainable design tips, and special offers.",
+      "placeholder": "Enter your email address",
+      "ctaButton": "Subscribe",
+      "successMessage": "Thank you for subscribing!",
+      "errorMessage": "Subscription failed. Please try again."
+    }
+  },
+  "productsPage": {
+    "title": "Our Collections",
+    "tagline": "Explore consciously crafted furniture designed to bring harmony and style to your everyday living.",
+    "filters": {
+      "searchLabel": "Search",
+      "searchPlaceholder": "e.g., Serene Sofa",
+      "categoryLabel": "Category",
+      "allCategories": "All Categories",
+      "priceRangeLabel": "Price Range",
+      "minPriceAriaLabel": "Minimum Price",
+      "maxPriceAriaLabel": "Maximum Price",
+      "sortLabel": "Sort By",
+      "sortOptions": {
+        "featured": "Featured",
+        "newest": "Newest",
+        "priceAsc": "Price: Low to High",
+        "priceDesc": "Price: High to Low",
+        "nameAsc": "Name: A to Z",
+        "nameDesc": "Name: Z to A"
+      },
+      "resetButton": "Reset"
+    },
+    "resultsSummary": {
+      "showing": "Showing {count} of {total} results",
+      "forQuery": " for \"{query}\"",
+      "inCategory": " in {category}"
+    },
+    "loading": "Loading products...",
+    "error": {
+      "title": "Oops! Something went wrong.",
+      "tryAgain": "Try Again"
+    },
+    "empty": {
+      "title": "No Matches Found",
+      "message": "We couldn't find any products matching your current filters. Try adjusting your search or filters.",
+      "clearFilters": "Clear Filters"
+    },
+    "pagination": {
+      "pageAriaLabel": "Product pagination",
+      "previousAriaLabel": "Previous page",
+      "previousText": "«",
+      "nextAriaLabel": "Next page",
+      "nextText": "»"
+    }
+  },
+  "productCard": {
+    "viewDetailsAriaLabel": "View details for {name}",
+    "addToCart": "Add to Cart",
+    "addToCartAriaLabel": "Add {name} to cart",
+    "defaultDescription": "High-quality, sustainable furniture piece.",
+    "ratingCount": "({count})",
+    "imageAriaLabel": "{name}"
+  },
+  "lightbox": {
+    "closeAriaLabel": "Close lightbox",
+    "imageLabel": "Image {current} of {total}",
+    "previousAriaLabel": "Previous image",
+    "nextAriaLabel": "Next image",
+    "defaultAltText": "Enlarged product image"
+  },
+  "reviewForm": {
+    "title": "Write Your Review",
+    "ratingLabel": "Your Rating*",
+    "rateAriaLabel": "Rate {n} out of 5 stars",
+    "reviewTitleLabel": "Review Title (Optional)",
+    "reviewTitlePlaceholder": "Summarize your experience",
+    "reviewBodyLabel": "Your Review*",
+    "reviewBodyPlaceholder": "Tell us more about your thoughts...",
+    "submitButton": "Submit Review",
+    "submittingButton": "Submitting...",
+    "validationError": "Please provide a rating and review text.",
+    "submitError": "Failed to submit review. Please try again."
+  },
+  "reviewList": {
+    "heading": "Customer Reviews ({count})",
+    "sortLabel": "Sort by:",
+    "sortOptions": {
+      "helpful": "Most Helpful",
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "ratingHigh": "Highest Rating",
+      "ratingLow": "Lowest Rating"
+    },
+    "loading": "Loading reviews...",
+    "error": {
+      "tryAgain": "Try Again",
+      "defaultLoadError": "Could not load reviews.",
+      "defaultVoteError": "Could not submit your vote.",
+      "loginToVote": "Please log in to vote."
+    },
+    "empty": "Be the first to review this product!",
+    "pagination": {
+      "ariaLabel": "Reviews pagination",
+      "previousAriaLabel": "Previous reviews page",
+      "nextAriaLabel": "Next reviews page",
+      "previousText": "Previous",
+      "nextText": "Next"
+    }
+  },
+  "ratingDistribution": {
+    "title": "Rating Breakdown",
+    "starLabel": "{n} star | {n} stars",
+    "emptyMessage": "No ratings available to display distribution."
+  },
+  "ratingSummary": {
+    "reviewCount": "({count} review) | ({count} reviews)",
+    "noReviews": "(No reviews yet)"
+  },
+  "reviewCard": {
+    "authorPrefix": "by",
+    "anonymous": "Anonymous",
+    "verifiedPurchase": "Verified Purchase",
+    "helpfulCount": "No people found this helpful | {count} person found this helpful | {count} people found this helpful",
+    "helpfulButton": {
+      "helpful": "Helpful",
+      "cancel": "Cancel",
+      "markAsHelpfulTitle": "Mark as helpful",
+      "undoHelpfulTitle": "Undo helpful vote"
+    },
+    "deleteButton": {
+      "confirmText": "Delete",
+      "cancelText": "Cancel"
+    },
+    "sellerResponse": {
+      "title": "Response from Seller:"
+    },
+    "dateRelative": {
+      "justNow": "just now",
+      "minuteAgo": "{count} min ago",
+      "minutesAgo": "{count} mins ago",
+      "hourAgo": "{count} hr ago",
+      "hoursAgo": "{count} hrs ago",
+      "dayAgo": "{count} day ago",
+      "daysAgo": "{count} days ago",
+      "default": "on {date}"
+    }
+  },
+  "productDetail": {
+    "loading": "Illuminating Product Details...",
+    "error": {
+      "title": "Failed to Load Product",
+      "backToProducts": "Back to Products"
+    },
+    "notFound": {
+      "title": "Product Not Found",
+      "message": "Sorry, we couldn't find the product you were looking for."
+    },
+    "gallery": {
+      "imageAlt": "Image of {name}",
+      "imageCountIndicator": "{current} / {total}",
+      "previousAriaLabel": "Previous image",
+      "nextAriaLabel": "Next image",
+      "thumbnailAriaLabel": "View image {index}"
+    },
+    "info": {
+      "specificationsTitle": "Specifications",
+      "noSpecifications": "No specific details provided.",
+      "shippingReturnsTitle": "Shipping & Returns",
+      "shippingInfo": "Standard delivery within 5-7 business days. Expedited options available at checkout.",
+      "returnsInfo": "We offer a 30-day return policy for items in original condition. See our full <a href=\"/shipping-policy\">Shipping & Returns Policy</a> for details.",
+      "careInstructionsTitle": "Care Instructions",
+      "defaultCare": "Please refer to the product tag for specific care instructions. Generally, wipe clean with a soft, damp cloth. Avoid harsh chemicals.",
+      "descriptionTitle": "Description",
+      "noDescription": "No description available."
+    },
+    "actions": {
+      "quantityAriaLabel": "Product quantity",
+      "decreaseQuantityAriaLabel": "Decrease quantity",
+      "increaseQuantityAriaLabel": "Increase quantity",
+      "addToCart": "Add to Cart",
+      "addedToCart": "Added!",
+      "loginToReview": "Please <button class=\"link-button\">log in</button> to write a review."
+    },
+    "reviews": {
+      "title": "Customer Reviews & Ratings",
+      "writeReviewButton": "Write a Review"
+    }
+  },
+  "ordersView": {
+    "title": "My Orders",
+    "subtitle": "Review your past purchases and track their status.",
+    "filters": {
+      "title": "Filter by Status",
+      "allOption": "All Orders",
+      "refreshButton": "Refresh",
+      "refreshingButton": "Refreshing..."
+    },
+    "loading": "Loading your order history...",
+    "error": {
+      "title": "Failed to Load Orders",
+      "tryAgain": "Try Again"
+    },
+    "empty": {
+      "title": "No Orders Found",
+      "filteredMessage": "You don't have any orders with the status \"{statusLabel}\".",
+      "defaultMessage": "You haven't placed any orders yet. Let's change that!",
+      "exploreButton": "Explore Products"
+    },
+    "card": {
+      "orderNumberPrefix": "Order #",
+      "placedOn": "Placed on:",
+      "lastUpdated": "Last updated:",
+      "itemCount": "{count} item | {count} items",
+      "totalPrefix": "Total:",
+      "cancelButton": "Cancel Order",
+      "cancellingButton": "Cancelling...",
+      "detailsButton": "View Details",
+      "cancelConfirm": {
+        "prompt": "Are you sure you want to cancel order #{orderNumber}?",
+        "confirmButton": "Yes, Cancel",
+        "keepButton": "No, Keep Order"
+      }
+    },
+    "pagination": {
+      "ariaLabel": "Orders pagination",
+      "previousAriaLabel": "Previous page",
+      "previousText": "«",
+      "nextAriaLabel": "Next page",
+      "nextText": "»"
+    },
+    "statusLabels": {
+      "pending": "Pending",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "hold": "On Hold"
+    },
+    "errors": {
+      "loadErrorFallback": "Could not load your order history. Please try again.",
+      "cancelErrorFallback": "Could not cancel the order. Please try again."
+    }
+  },
+  "orderDetails": {
+    "backLink": "Back to Orders",
+    "pageTitle": "Order Details",
+    "loading": "Loading your order details...",
+    "errorTitle": "Failed to Load Order",
+    "tryAgainButton": "Try Again",
+    "orderNumberPrefix": "Order #",
+    "summary": {
+      "orderDate": "Order Date:",
+      "statusUpdated": "Status Updated:",
+      "orderTotal": "Order Total:"
+    },
+    "userActions": {
+      "cancelPrompt": "Need to cancel?",
+      "requestCancelButton": "Request Cancellation",
+      "cancellingButton": "Cancelling..."
+    },
+    "adminActions": {
+      "updateStatusTitle": "Update Order Status",
+      "newStatusLabel": "New Status:",
+      "selectStatusPlaceholder": "Select New Status",
+      "notesLabel": "Notes (optional):",
+      "notesPlaceholder": "Add internal notes...",
+      "saveButton": "Save Status Update",
+      "savingButton": "Updating...",
+      "noUpdatesPossible": "No further status updates possible from '{statusLabel}'."
+    },
+    "info": {
+      "shippingAddressTitle": "Shipping Address",
+      "statusHistoryTitle": "Status History",
+      "historyUpdaterPrefix": "By:",
+      "noHistory": "No status history recorded yet."
+    },
+    "items": {
+      "title": "Items in this Order ({itemCount})",
+      "footerTotal": "Order Total"
+    },
+    "cancelModal": {
+      "title": "Confirm Cancellation",
+      "confirmationText": "Are you sure you want to cancel this order? This action cannot be undone.",
+      "reasonLabel": "Reason (Optional):",
+      "reasonPlaceholder": "Why are you cancelling?",
+      "confirmButton": "Yes, Cancel Order",
+      "keepButton": "No, Keep Order",
+      "closeAriaLabel": "Close cancellation dialog"
+    },
+    "statusLabels": {
+      "pending": "Pending",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "hold": "On Hold"
+    },
+    "errors": {
+      "statusUpdateGeneric": "Failed to update order status.",
+      "cancelGeneric": "Failed to cancel order."
+    }
+  },
+  "notFound": {
+    "title": "Page Not Found (404)",
+    "message": "Oops! The page you're looking for seems to have wandered off.",
+    "goHomeButton": "Go Home",
+    "exploreProductsButton": "Explore Products"
+  },
+  "checkout": {
+    "pageTitle": "Checkout",
+    "pageSubtitle": "Review your order and provide shipping details.",
+    "loading": "Preparing your checkout...",
+    "error": {
+      "title": "Checkout Unavailable",
+      "backToProducts": "Back to Products",
+      "userSession": "Could not verify user session. Please log in again.",
+      "loadData": "Failed to load checkout data: {message}",
+      "genericLoad": "Please try again.",
+      "shippingRequired": "Please enter your full shipping address.",
+      "emptyCart": "Your cart is empty. Cannot place order.",
+      "submitGeneric": "Failed to place your order. Please check your details and try again."
+    },
+    "success": {
+      "title": "Order Placed Successfully!",
+      "orderNumberLabel": "Your order number is:",
+      "thankYouMessage": "Thank you for your purchase. We'll process your order shortly.",
+      "viewMyOrdersButton": "View My Orders",
+      "continueShoppingButton": "Continue Shopping"
+    },
+    "shipping": {
+      "title": "Shipping Information",
+      "addressLabel": "Full Shipping Address",
+      "addressPlaceholder": "Enter your street address, city, state, and zip code",
+      "addressHint": "Please provide the complete address for delivery."
+    },
+    "payment": {
+      "title": "Payment Details",
+      "placeholderText": "Secure payment processing will be integrated here.",
+      "simulationNote": "(Currently simulates successful payment on order placement)"
+    },
+    "summary": {
+      "title": "Order Summary",
+      "emptyCart": "Your cart is empty.",
+      "startShoppingButton": "Start Shopping",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "shippingValue": "Free",
+      "total": "Total",
+      "placeOrderButton": "Place Secure Order",
+      "processingButton": "Processing..."
+    }
+  },
+  "languageSwitcher": {
+    "changeLanguage": "Change language",
+    "currentLanguage": "Current Language: {lang}",
+    "languages": {
+      "en": "English"
+    }
+  }
+}

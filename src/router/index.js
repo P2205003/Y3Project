@@ -1,204 +1,179 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
-import MainLayout from '../components/MainLayout.vue';
-import AdminLayout from '../components/AdminLayout.vue';
-import Page1 from '../views/Page1.vue';
-import Page2 from '../views/Page2.vue';
-import ShoppingCart from '../components/ShoppingCart.vue';
-import SearchPage from '../components/SearchPage.vue';
-import ProductPage from '../components/ProductPage.vue';
-import AddItem from '../components/admin/AddItem.vue';
-import Login from '../components/login.vue';
-import Register from '../components/Register.vue';
-import AdminDashboard from '../components/admin/AdminDashboard.vue';
-import AdminProducts from '../components/admin/AdminProducts.vue';
-import AdminOrders from '../components/admin/AdminOrders.vue';
-import AdminUsers from '../components/admin/AdminUsers.vue';
-import AdminSettings from '../components/admin/AdminSettings.vue';
-import Checkout from '../components/Checkout.vue';
-import OrdersHistory from '../components/OrdersHistory.vue';
-import OrderDetails from '../components/OrderDetails.vue';
-import NotFound from '../components/NotFound.vue';
-import AdminOrderDetails from '../components/admin/AdminOrderDetails.vue';
+import HomeView from '../views/HomeView.vue';
+import ProductsView from '../views/ProductsView.vue';
+import ProductDetailView from '../views/ProductDetailView.vue';
 
-// Define a function to check if user is admin
-const isAdmin = async () => {
-  try {
-    const response = await fetch('/api/users/check-admin', {
-      credentials: 'include'
-    });
+import AdminLayout from '../views/AdminView.vue';
 
-    if (response.ok) {
-      const data = await response.json();
-      return data.isAdmin;
-    }
+const OrdersView = () => import('../views/OrdersView.vue');
+const OrderDetailView = () => import('../views/OrderDetailView.vue');
+const CheckoutView = () => import('../views/CheckoutView.vue');
 
-    return false;
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return false;
-  }
-};
-
-const routes = [
-  // User facing routes
-  {
-    path: '/',
-    component: MainLayout,
-    children: [
-      {
-        path: '',
-        name: 'Home',
-        component: Page1
-      },
-      {
-        path: 'page2',
-        name: 'Page2',
-        component: Page2
-      },
-      {
-        path: 'shopping-cart',
-        name: 'ShoppingCart',
-        component: ShoppingCart,
-      },
-      {
-        path: '/checkout',
-        name: 'Checkout',
-        component: Checkout,
-        meta: { requiresAuth: true }
-      },
-      {
-        path: '/orders',
-        name: 'OrdersHistory',
-        component: OrdersHistory,
-        meta: { requiresAuth: true }
-      },
-      {
-        path: '/orders/:id',
-        name: 'OrderDetails',
-        component: OrderDetails,
-        meta: { requiresAuth: true }
-      },
-      {
-        path: 'search',
-        name: 'SearchPage',
-        component: SearchPage
-      },
-      {
-        path: 'product/:id',
-        name: 'ProductPage',
-        component: ProductPage
-      }
-    ]
-  },
-  // Authentication routes
-  {
-    path: '/login',
-    name: 'Login',
-    component: Login
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: Register
-  },
-
-  // Admin routes with AdminLayout
-  {
-    path: '/admin',
-    component: AdminLayout,
-    meta: { requiresAuth: true, requiresAdmin: true },
-    children: [
-      {
-        path: '',
-        name: 'AdminDashboard',
-        component: AdminDashboard
-      },
-      {
-        path: 'products',
-        name: 'AdminProducts',
-        component: AdminProducts
-      },
-      {
-        path: 'orders',
-        name: 'AdminOrders',
-        component: AdminOrders
-      },
-      {
-        path: 'orders/:id',
-        name: 'AdminOrderDetails',
-        component: AdminOrderDetails
-      },
-      {
-        path: 'products/add',
-        name: 'AddItem',
-        component: AddItem
-      },
-      {
-        path: 'users',
-        name: 'AdminUsers',
-        component: AdminUsers
-      },
-      {
-        path: 'settings',
-        name: 'AdminSettings',
-        component: AdminSettings
-      }
-    ]
-  },
-
-  // 404 route
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: NotFound
-  }
-];
+const AdminDashboard = () => import('../views/admin/AdminDashboard.vue');
+const AdminProducts = () => import('../views/admin/AdminProducts.vue');
+const AdminAddItem = () => import('../views/admin/AdminAddItem.vue');
+const AdminOrders = () => import('../views/admin/AdminOrders.vue');
+const AdminUsers = () => import('../views/admin/AdminUsers.vue');
+const AdminSettings = () => import('../views/admin/AdminSettings.vue');
+const AdminOrderDetails = () => import('../views/admin/AdminOrderDetails.vue');
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
-});
-
-// Navigation Guard
-router.beforeEach(async (to, from, next) => {
-  // Check if route requires authentication
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    try {
-      const response = await fetch('/api/users/check-login', {
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (!data.isLoggedIn) {
-        // User is not logged in, redirect to login
-        return next({
-          path: '/login',
-          query: { redirect: to.fullPath }
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+      meta: { title: 'AURORA Furnishings | Sustainable Craftsmanship' }
+    },
+    {
+      path: '/account/profile',
+      name: 'user-profile',
+      // component: () => import('../views/UserProfileView.vue'),
+      component: HomeView, // Placeholder
+      meta: { title: 'My Profile | AURORA', requiresAuth: true }
+    },
+    {
+      path: '/products',
+      name: 'products',
+      component: ProductsView,
+      meta: { title: 'AURORA Furnishings | Explore Collections' }
+    },
+    {
+      path: '/product-detail/:id',
+      name: 'product-detail',
+      component: ProductDetailView,
+      meta: { title: 'Product Details | AURORA Furnishings' },
+      props: true
+    },
+    {
+      path: '/checkout',
+      name: 'checkout',
+      component: CheckoutView,
+      meta: {
+        title: 'Checkout | AURORA Furnishings',
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/orders',
+      name: 'orders-history',
+      component: OrdersView,
+      meta: {
+        title: 'My Orders | AURORA Furnishings',
+        requiresAuth: true
+      }
+    },
+    {
+        path: '/orders/:id',
+        name: 'OrderDetails',
+        component: OrderDetailView, // Correctly points to OrderDetailView
+        meta: {
+            title: 'Order Details | AURORA',
+            requiresAuth: true
+        },
+        props: true // This route correctly has props: true
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../views/NotFoundView.vue'),
+      meta: { title: 'Page Not Found | AURORA Furnishings' }
+    },
+    {
+      path: '/admin',
+      component: AdminLayout,
+      meta: { requiresAuth: true, requiresAdmin: true },
+      children: [
+        {
+          path: '',
+          name: 'AdminDashboard',
+          component: AdminDashboard
+        },
+        {
+          path: 'products',
+          name: 'AdminProducts',
+          component: AdminProducts
+        },
+        {
+          path: 'orders',
+          name: 'AdminOrders',
+          component: AdminOrders
+        },
+        {
+          path: 'orders/:id',
+          name: 'AdminOrderDetails',
+          component: AdminOrderDetails,
+          props: true
+        },
+        {
+          path: 'products/add',
+          name: 'AdminAddItem',
+          component: AdminAddItem
+        },
+        //{
+        //  path: 'users',
+        //  name: 'AdminUsers',
+        //  component: AdminUsers
+        //},
+        //{
+        //  path: 'settings',
+        //  name: 'AdminSettings',
+        //  component: AdminSettings
+        //}
+      ]
+    },
+  ],
+  // ... scrollBehavior ...
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) { return savedPosition; }
+    else if (to.hash) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({ el: to.hash, behavior: 'smooth', top: document.querySelector(to.hash)?.offsetTop - 80 });
+            }, 300);
         });
-      }
-
-      // If route requires admin privileges
-      if (to.matched.some(record => record.meta.requiresAdmin)) {
-        const hasAdminAccess = await isAdmin();
-
-        if (!hasAdminAccess) {
-          // User is not an admin, redirect to home
-          console.warn('Unauthorized access attempt to admin route:', to.path);
-          return next({ path: '/' });
-        }
-      }
-
-      // User has necessary permissions
-      next();
-    } catch (error) {
-      console.error('Auth check error:', error);
-      next('/login');
+    } else {
+        if (from.name === 'products' && to.name === 'products') { return; }
+        return { top: 0, behavior: 'smooth' };
     }
-  } else {
-    // Route doesn't require authentication
-    next();
   }
 });
+
+// ... beforeEach navigation guard ...
+router.beforeEach(async (to, from, next) => {
+  // Set document title
+  const defaultTitle = 'AURORA Furnishings';
+  document.title = to.meta?.title || defaultTitle;
+
+  // Check if the route requires authentication
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+
+  if (requiresAuth) {
+    // Check login status
+    let isLoggedIn = false;
+    try {
+        const response = await fetch('/api/users/check-login', { credentials: 'include' });
+        if (response.ok) {
+            const data = await response.json();
+            isLoggedIn = data.isLoggedIn;
+        }
+    } catch (error) {
+        console.error('Error checking login status for route guard:', error);
+        isLoggedIn = false;
+    }
+
+    if (!isLoggedIn) {
+      console.log(`Route guard: User not authenticated for "${to.path}". Redirecting.`);
+      next({ name: 'home' }); // Redirect to home
+    } else {
+      next(); // User is logged in, proceed
+    }
+  } else {
+    next(); // Route does not require auth
+  }
+});
+
 
 export default router;
