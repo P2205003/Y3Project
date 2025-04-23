@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <!-- Main Content: Form & Preview (Updated) -->
+    <!-- Main Content: Form & Preview -->
     <div v-if="!successMessage" class="add-item-layout">
       <!-- Form Panel -->
       <div class="admin-panel form-panel">
@@ -99,19 +99,55 @@
                 </div>
               </div>
               <div class="form-column">
-                <!-- Images -->
+                <!-- Images (Modified for Upload) -->
                 <div class="form-group images-section">
                   <label>Product Images <span class="required">*</span></label>
-                  <div v-for="(imageUrl, index) in formData.images" :key="`img-${index}`" class="image-row">
-                    <input type="url" v-model="formData.images[index]" placeholder="https://example.com/image.jpg" class="enhanced-input image-input" :required="index === 0">
-                    <button type="button" @click="removeImage(index)" class="action-btn delete-btn image-remove-btn" :disabled="formData.images.length === 1 && index === 0" title="Remove Image">
-                      <font-awesome-icon icon="trash-alt" />
-                    </button>
+                  <div v-for="(imageUrl, index) in formData.images" :key="`img-slot-${index}`" class="image-upload-row">
+                    <!-- Hidden File Input Triggered by Label -->
+                    <input type="file"
+                           :id="`image-input-${index}`"
+                           @change="handleFileChange($event, index)"
+                           accept="image/jpeg, image/png, image/webp, image/gif"
+                           style="display: none;">
+                    <div class="image-preview-area">
+                      <!-- Existing Image or Uploaded Image Preview -->
+                      <img v-if="imageUrl && isUrlValid(imageUrl)" :src="imageUrl" :alt="`Product Image ${index + 1}`" class="image-preview-img">
+                      <!-- Local Preview -->
+                      <img v-else-if="localPreviews[index]" :src="localPreviews[index]" alt="Local Preview" class="image-preview-img">
+                      <!-- Uploading State -->
+                      <div v-else-if="uploadStatus[index] === 'uploading'" class="image-status-overlay uploading">
+                        <font-awesome-icon icon="spinner" spin />
+                        <span>Uploading...</span>
+                      </div>
+                      <!-- Error State -->
+                      <div v-else-if="uploadStatus[index] === 'error'" class="image-status-overlay error">
+                        <font-awesome-icon icon="times-circle" />
+                        <span>Error</span>
+                      </div>
+                      <!-- Empty State / Upload Trigger -->
+                      <label v-else :for="`image-input-${index}`" class="image-upload-trigger">
+                        <font-awesome-icon icon="camera" />
+                        <span>{{ index === 0 ? 'Add Main Image' : 'Add Image' }}</span>
+                      </label>
+                    </div>
+                    <div class="image-controls">
+                      <span class="image-label">{{ index === 0 ? 'Main Image' : `Image ${index + 1}` }}</span>
+                      <button type="button"
+                              @click="removeImage(index)"
+                              class="action-btn delete-btn image-remove-btn"
+                              :disabled="!canRemoveImage(index)"
+                              title="Remove Image">
+                        <font-awesome-icon icon="trash-alt" />
+                      </button>
+                      <div v-if="uploadErrors[index]" class="upload-error-text">
+                        {{ uploadErrors[index] }}
+                      </div>
+                    </div>
                   </div>
                   <button type="button" @click="addImage" class="button enhanced-button secondary add-image-btn">
-                    <font-awesome-icon icon="plus" /> Add Image URL
+                    <font-awesome-icon icon="plus" /> Add Another Image
                   </button>
-                  <p class="help-text">First image is the main image. Enter valid URLs.</p>
+                  <p class="help-text">Upload JPEG, PNG, WEBP, or GIF images. Max 5MB per image.</p>
                 </div>
               </div>
             </div>
@@ -191,10 +227,10 @@
             <router-link :to="{ name: 'AdminProducts' }" class="button enhanced-button secondary cancel-btn">
               Cancel
             </router-link>
-            <button type="submit" class="button enhanced-button primary save-btn" :disabled="isSubmitting">
-              <font-awesome-icon icon="spinner" spin v-if="isSubmitting" />
+            <button type="submit" class="button enhanced-button primary save-btn" :disabled="isSubmitting || isAnyImageUploading">
+              <font-awesome-icon icon="spinner" spin v-if="isSubmitting || isAnyImageUploading" />
               <font-awesome-icon icon="save" v-else />
-              {{ isSubmitting ? 'Saving...' : (isEditing ? 'Update Product' : 'Add Product') }}
+              {{ isSubmitting ? 'Saving...' : (isAnyImageUploading ? 'Uploading...' : (isEditing ? 'Update Product' : 'Add Product')) }}
             </button>
           </div>
         </form>
@@ -212,17 +248,25 @@
           </select>
         </div>
         <div class="preview-content">
-          <!-- Image Previews -->
+          <!-- Image Previews (Uses same logic as form preview) -->
           <div class="image-preview-container">
             <label>Image Previews</label>
             <div class="preview-list">
-              <div v-for="(imageUrl, index) in formData.images" :key="`preview-${index}`" class="image-preview">
-                <img v-if="imageUrl && isUrlValid(imageUrl)" :src="imageUrl" :alt="`Preview ${index + 1}`" class="preview-image" @error="onPreviewImageError">
+              <div v-for="(imageUrl, index) in formData.images" :key="`live-preview-${index}`" class="image-preview">
+                <img v-if="imageUrl && isUrlValid(imageUrl)" :src="imageUrl" :alt="`Preview ${index + 1}`" class="preview-image">
+                <img v-else-if="localPreviews[index]" :src="localPreviews[index]" alt="Local Preview" class="preview-image">
+                <div v-else-if="uploadStatus[index] === 'uploading'" class="preview-placeholder uploading-preview">
+                  <font-awesome-icon icon="spinner" spin />
+                </div>
+                <div v-else-if="uploadStatus[index] === 'error'" class="preview-placeholder error-preview">
+                  <font-awesome-icon icon="times-circle" />
+                </div>
                 <div v-else class="preview-placeholder">
                   <font-awesome-icon icon="image" />
                 </div>
                 <span class="image-number">{{ index === 0 ? 'Main' : `Img ${index + 1}` }}</span>
               </div>
+              <!-- Add placeholders if fewer images than slots? Optional -->
             </div>
           </div>
           <hr class="preview-divider">
@@ -252,7 +296,7 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, computed, reactive, watch } from 'vue';
+  import { ref, onMounted, computed, reactive, watch, onUnmounted } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
   import { SUPPORTED_LOCALES } from '@/config/i18n.js';
@@ -260,18 +304,21 @@
   import {
     faPlusCircle, faPlus, faTrashAlt, faImage, faSave, faSpinner,
     faCheckCircle, faEye, faListAlt, faChevronLeft, faTags, faLanguage, faFlagUsa,
-    faTimesCircle
+    faTimesCircle, faCamera // <-- Added faCamera, faTimesCircle
   } from '@fortawesome/free-solid-svg-icons';
 
   library.add(
     faPlusCircle, faPlus, faTrashAlt, faImage, faSave, faSpinner,
     faCheckCircle, faEye, faListAlt, faChevronLeft, faTags, faLanguage, faFlagUsa,
-    faTimesCircle
+    faTimesCircle, faCamera // <-- Added faCamera, faTimesCircle
   );
 
 
   const router = useRouter();
   const route = useRoute();
+  const MAX_FILE_SIZE_MB = 5;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
   // --- Helper: Slugify ---
   const slugify = (text) => {
@@ -302,12 +349,16 @@
   const createdProductId = ref(null);
   const createdProductNumber = ref('');
   const categories = ref([]);
-  const isNewProduct = ref(!route.params.id); // Determine if adding or editing
+  const isNewProduct = ref(!route.params.id);
   const isEditing = computed(() => !isNewProduct.value);
   const productIdToEdit = ref(route.params.id || null);
 
+  // Image Upload State
+  const uploadStatus = ref({}); // { index: 'uploading' | 'error' | 'success' }
+  const uploadErrors = ref({}); // { index: 'Error message' }
+  const localPreviews = ref({}); // { index: 'blob:...' }
+
   // --- Form Data ---
-  // Use reactive for nested objects like translations
   const initialFormDataState = () => ({
     _id: null,
     productNumber: '',
@@ -316,42 +367,52 @@
     description: '',
     category: '',
     slug: '',
-    attributes: [], // Array of {key: '', value: ''} for base English attributes
-    images: [''],
+    attributes: [],
+    images: [''], // Start with one empty slot for the main image
     enabled: true,
-    translations: {} // Holds translation data keyed by language code
+    translations: {}
   });
 
   const formData = reactive(initialFormDataState());
 
-  // Initialize translation structure for supported languages
   const initializeTranslations = () => {
-    formData.translations = {}; // Ensure it's reset
+    formData.translations = {};
     SUPPORTED_LOCALES.forEach(lang => {
       if (lang.code !== 'en') {
         formData.translations[lang.code] = {
-          name: '',
-          description: '',
-          category: '',
-          attributes: {
-            keys: {},   // Maps baseKey -> translatedKey string
-            values: {}  // Maps baseKey -> comma-separated translatedValues string
-          }
+          name: '', description: '', category: '',
+          attributes: { keys: {}, values: {} }
         };
       }
     });
   }
-  initializeTranslations(); // Initial setup
+  initializeTranslations();
 
   // --- UI State ---
   const supportedLocales = ref(SUPPORTED_LOCALES);
-  const activeTranslationTab = ref(supportedLocales.value.find(l => l.code !== 'en')?.code || null); // Default to first non-english tab
-  const activePreviewLang = ref('en'); // Default preview to English
+  const activeTranslationTab = ref(supportedLocales.value.find(l => l.code !== 'en')?.code || null);
+  const activePreviewLang = ref('en');
 
   // --- Computed ---
   const activePreviewLangName = computed(() => {
     return supportedLocales.value.find(l => l.code === activePreviewLang.value)?.name || 'English';
   });
+
+  // Computed property to check if any image is currently uploading
+  const isAnyImageUploading = computed(() => {
+    return Object.values(uploadStatus.value).some(status => status === 'uploading');
+  });
+
+  // Computed property to check if an image can be removed
+  const canRemoveImage = (index) => {
+    // Count how many slots have a URL or a local preview or are currently uploading
+    const filledSlots = formData.images.reduce((count, url, i) => {
+      return count + ((url || localPreviews.value[i] || uploadStatus.value[i] === 'uploading') ? 1 : 0);
+    }, 0);
+    // Allow removal if there's more than one filled slot, OR if it's the only slot but it's filled (to allow clearing it)
+    return filledSlots > 1 || (filledSlots === 1 && (formData.images[index] || localPreviews.value[index] || uploadStatus.value[index] === 'uploading'));
+  };
+
 
   // --- Methods ---
   const fetchCategories = async () => {
@@ -364,23 +425,131 @@
     }
   };
 
-  const addImage = () => { formData.images.push(''); };
+  // Reset image upload states
+  const resetImageStates = () => {
+    // Revoke any existing blob URLs first
+    Object.values(localPreviews.value).forEach(URL.revokeObjectURL);
+    uploadStatus.value = {};
+    uploadErrors.value = {};
+    localPreviews.value = {};
+  };
 
+  const addImage = () => {
+    formData.images.push(''); // Add an empty slot
+  };
+
+  // Modified removeImage: Clears the slot instead of splicing
   const removeImage = (index) => {
-    if (formData.images.length > 1) {
-      formData.images.splice(index, 1);
-    } else if (formData.images.length === 1 && index === 0) {
-      formData.images[0] = '';
+    // Revoke local preview URL if it exists
+    if (localPreviews.value[index]) {
+      URL.revokeObjectURL(localPreviews.value[index]);
+    }
+    // Clear state for this index
+    delete uploadStatus.value[index];
+    delete uploadErrors.value[index];
+    delete localPreviews.value[index];
+
+    // Set the image URL to empty string
+    formData.images[index] = '';
+
+    // Optional: If this makes all slots empty, ensure at least one empty slot remains
+    const hasAnyImage = formData.images.some(url => url !== '');
+    if (!hasAnyImage && formData.images.length > 1) {
+      // If removing the last actual image leaves multiple empty slots,
+      // reduce to just one empty slot.
+      formData.images = [''];
+      resetImageStates(); // Reset all states as indices are gone
+    } else if (!hasAnyImage && formData.images.length === 0) {
+      // Ensure there's always at least one slot if all were removed somehow
+      formData.images = [''];
     }
   };
 
-  const onPreviewImageError = (event) => {
-    // Instead of hiding, maybe show placeholder icon inside the div
-    const parent = event.target.parentElement;
-    if (parent) {
-      event.target.style.display = 'none'; // Hide broken img tag
-      const placeholder = parent.querySelector('.preview-placeholder');
-      if (placeholder) placeholder.style.display = 'flex'; // Show placeholder div
+  const handleFileChange = (event, index) => {
+    const file = event.target.files[0];
+    event.target.value = null; // Allow selecting the same file again
+
+    if (!file) return;
+
+    // Clear previous errors/status for this slot
+    delete uploadErrors.value[index];
+    uploadStatus.value[index] = '';
+    formData.images[index] = ''; // Clear any previous URL
+
+    // Revoke previous local preview if exists
+    if (localPreviews.value[index]) {
+      URL.revokeObjectURL(localPreviews.value[index]);
+      delete localPreviews.value[index];
+    }
+
+    // --- Validation ---
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      uploadStatus.value[index] = 'error';
+      uploadErrors.value[index] = 'Invalid file type. Use JPEG, PNG, GIF, WEBP.';
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      uploadStatus.value[index] = 'error';
+      uploadErrors.value[index] = `File too large (Max ${MAX_FILE_SIZE_MB}MB).`;
+      return;
+    }
+
+    // --- Set loading state and create local preview ---
+    uploadStatus.value[index] = 'uploading';
+    localPreviews.value[index] = URL.createObjectURL(file);
+
+    // --- Start upload ---
+    uploadImage(file, index);
+  };
+
+  const uploadImage = async (file, index) => {
+    const body = new FormData();
+    body.append('imageFile', file); // Key 'imageFile' MUST match backend (e.g., multer fieldname)
+
+    try {
+      const response = await fetch('/api/upload/image', { // The new backend endpoint
+        method: 'POST',
+        body: body,
+        // No 'Content-Type' header needed for FormData, browser sets it with boundary
+        credentials: 'include', // If authentication is needed for upload endpoint
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok || !responseData.success) {
+        throw new Error(responseData.message || 'Upload failed.');
+      }
+
+      // --- Success ---
+      formData.images[index] = responseData.imageUrl; // Store the final URL
+      uploadStatus.value[index] = 'success'; // Or just clear status: delete uploadStatus.value[index]
+      // Clean up local preview now that we have the real URL
+      if (localPreviews.value[index]) {
+        URL.revokeObjectURL(localPreviews.value[index]);
+        delete localPreviews.value[index];
+      }
+
+    } catch (error) {
+      console.error(`Error uploading image at index ${index}:`, error);
+      uploadStatus.value[index] = 'error';
+      uploadErrors.value[index] = error.message || 'Upload failed. Please try again.';
+      // Keep local preview on error? Or clear it? Let's clear it for consistency.
+      if (localPreviews.value[index]) {
+        URL.revokeObjectURL(localPreviews.value[index]);
+        delete localPreviews.value[index];
+      }
+      formData.images[index] = ''; // Ensure URL is cleared on error
+    } finally {
+      // If status is still 'uploading' after try/catch (e.g., network error), mark as error
+      if (uploadStatus.value[index] === 'uploading') {
+        uploadStatus.value[index] = 'error';
+        uploadErrors.value[index] = uploadErrors.value[index] || 'Network error during upload.';
+        if (localPreviews.value[index]) {
+          URL.revokeObjectURL(localPreviews.value[index]);
+          delete localPreviews.value[index];
+        }
+        formData.images[index] = '';
+      }
     }
   };
 
@@ -389,8 +558,9 @@
     createdProductId.value = null;
     createdProductNumber.value = '';
     errorMessage.value = '';
-    Object.assign(formData, initialFormDataState()); // Reset all fields
-    initializeTranslations(); // Re-initialize translation structure
+    Object.assign(formData, initialFormDataState());
+    resetImageStates(); // Clear image statuses
+    initializeTranslations();
     activeTranslationTab.value = supportedLocales.value.find(l => l.code !== 'en')?.code || null;
     activePreviewLang.value = 'en';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -402,8 +572,7 @@
     window.open(productUrl, '_blank');
   };
 
-  // Update attribute methods to specify 'base' or a language code
-  const addAttribute = (type) => { // Type 'base' is the only one needed now
+  const addAttribute = (type) => {
     if (type === 'base') {
       formData.attributes.push({ key: '', value: '' });
     }
@@ -413,11 +582,9 @@
     if (type === 'base') {
       const removedKey = formData.attributes[index]?.key;
       formData.attributes.splice(index, 1);
-      // Also remove corresponding translation entries if the base key is removed
       if (removedKey) {
         SUPPORTED_LOCALES.forEach(lang => {
           if (lang.code !== 'en' && formData.translations[lang.code]) {
-            // Use Vue.delete or recreate object if direct deletion isn't reactive
             if (formData.translations[lang.code].attributes.keys) {
               delete formData.translations[lang.code].attributes.keys[removedKey];
             }
@@ -430,41 +597,33 @@
     }
   };
 
-
   // --- Preview Helpers ---
   const getPreviewField = (field) => {
     if (activePreviewLang.value === 'en') {
       return formData[field];
     }
-    // Check if translations exist for the active language and the specific field
-    return formData.translations?.[activePreviewLang.value]?.[field] || formData[field]; // Fallback to base
+    return formData.translations?.[activePreviewLang.value]?.[field] || formData[field];
   };
 
   const getPreviewAttributeKey = (baseKey) => {
-    if (activePreviewLang.value === 'en' || !baseKey) {
-      return baseKey;
-    }
-    // Check if translations and the specific key translation exist
+    if (activePreviewLang.value === 'en' || !baseKey) return baseKey;
     return formData.translations?.[activePreviewLang.value]?.attributes?.keys?.[baseKey] || baseKey;
   };
 
   const getPreviewAttributeValue = (baseKey, baseValue) => {
-    if (activePreviewLang.value === 'en' || !baseKey) {
-      return baseValue; // Return original comma-separated string
-    }
-    // Check if translations and the specific value translation exist
+    if (activePreviewLang.value === 'en' || !baseKey) return baseValue;
     return formData.translations?.[activePreviewLang.value]?.attributes?.values?.[baseKey] || baseValue;
   };
-
 
   // --- Fetch Product for Editing ---
   const fetchProductForEditing = async (id) => {
     console.log(`Fetching product ${id} for editing...`);
-    isSubmitting.value = true; // Use for loading state
+    isSubmitting.value = true;
     errorMessage.value = '';
+    resetImageStates(); // Clear any previous upload states before fetching
+
     try {
-      // Fetch RAW product data including translations map
-      const response = await fetch(`/api/products/admin/${id}`); // Use admin endpoint to get raw data
+      const response = await fetch(`/api/products/admin/${id}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to fetch product data (Status: ${response.status})`);
@@ -480,46 +639,35 @@
       formData.category = productData.category || '';
       formData.slug = productData.slug || '';
       formData.enabled = productData.enabled;
+      // Ensure there's at least one slot, even if images array is empty/null
       formData.images = productData.images?.length ? [...productData.images] : [''];
 
-      // Populate base attributes (convert Map/Object from DB to array for form)
+      // Populate base attributes
       formData.attributes = [];
       if (productData.attributes && typeof productData.attributes === 'object') {
-        // Handle both Map from direct Mongoose fetch and Object from JSON parse
-        const attributesSource = productData.attributes instanceof Map
-          ? productData.attributes
-          : Object.entries(productData.attributes);
-
+        const attributesSource = productData.attributes instanceof Map ? productData.attributes : Object.entries(productData.attributes);
         for (const [key, value] of attributesSource) {
-          // Ensure value is treated as an array, then join
           const valueString = Array.isArray(value) ? value.join(', ') : String(value || '');
           formData.attributes.push({ key, value: valueString });
         }
       }
 
-
-      // Populate translations (handle Map/Object from DB)
-      initializeTranslations(); // Reset first
+      // Populate translations
+      initializeTranslations();
       if (productData.translations && typeof productData.translations === 'object') {
-        const translationsSource = productData.translations instanceof Map
-          ? productData.translations
-          : Object.entries(productData.translations);
-
+        const translationsSource = productData.translations instanceof Map ? productData.translations : Object.entries(productData.translations);
         for (const [langCode, transData] of translationsSource) {
-          if (formData.translations[langCode]) { // Check if it's a supported language
+          if (formData.translations[langCode]) {
             formData.translations[langCode].name = transData.name || '';
             formData.translations[langCode].description = transData.description || '';
             formData.translations[langCode].category = transData.category || '';
 
-            // Populate translated attributes
             const transAttrKeys = transData.attributes?.keys || {};
             const transAttrValues = transData.attributes?.values || {};
-
             const keysSource = transAttrKeys instanceof Map ? transAttrKeys : Object.entries(transAttrKeys);
             for (const [baseKey, translatedKey] of keysSource) {
               formData.translations[langCode].attributes.keys[baseKey] = translatedKey;
             }
-
             const valuesSource = transAttrValues instanceof Map ? transAttrValues : Object.entries(transAttrValues);
             for (const [baseKey, translatedValueArr] of valuesSource) {
               formData.translations[langCode].attributes.values[baseKey] = Array.isArray(translatedValueArr) ? translatedValueArr.join(', ') : String(translatedValueArr);
@@ -527,7 +675,6 @@
           }
         }
       }
-
 
     } catch (error) {
       console.error("Error fetching product for editing:", error);
@@ -541,20 +688,27 @@
   // --- Submit Handler ---
   const handleSubmit = async () => {
     errorMessage.value = ''; // Clear previous errors
+
     // --- Validation ---
     if (!formData.name || formData.price === null || formData.price < 0) {
       errorMessage.value = "Product Name and a valid Price are required.";
       return;
     }
-    const validImages = formData.images.filter(url => url && isUrlValid(url)); // Use helper
+    // Ensure uploads are finished
+    if (isAnyImageUploading.value) {
+      errorMessage.value = 'Please wait for all image uploads to complete.';
+      return;
+    }
+    // Filter out empty strings AND invalid URLs before validation
+    const validImages = formData.images.filter(url => url && isUrlValid(url));
     if (validImages.length === 0) {
-      errorMessage.value = 'Please provide at least one valid Image URL (starting with http/https).';
+      errorMessage.value = 'Please upload at least one valid Product Image.';
       return;
     }
     // Validate base attribute pairs
     const baseAttributeKeys = new Set();
     for (const attr of formData.attributes) {
-      const key = attr.key?.trim(); // Use optional chaining
+      const key = attr.key?.trim();
       const value = attr.value?.trim();
       if ((key && !value) || (!key && value)) {
         errorMessage.value = `Base attribute '${key || value}' is incomplete. Please provide both name and value(s).`;
@@ -572,16 +726,16 @@
     const payload = {
       name: formData.name.trim(),
       price: parseFloat(formData.price),
-      description: formData.description?.trim() || '', // Handle potential null/undefined
+      description: formData.description?.trim() || '',
       category: formData.category?.trim() || '',
-      slug: formData.slug?.trim() || slugify(formData.name.trim()), // Auto-generate slug if empty
-      images: validImages,
+      slug: formData.slug?.trim() || slugify(formData.name.trim()),
+      images: validImages, // Send only the valid, final URLs
       enabled: formData.enabled,
-      attributes: {}, // Base attributes object (key: string -> value: string[])
-      translations: {} // Translations object (langCode: { name?, desc?, cat?, attributes? })
+      attributes: {},
+      translations: {}
     };
 
-    // Process Base Attributes (from array of {key, value} to object {key: [values]})
+    // Process Base Attributes
     formData.attributes.forEach(attr => {
       const key = attr.key?.trim();
       const value = attr.value?.trim();
@@ -589,37 +743,29 @@
         payload.attributes[key] = value.split(',').map(v => v.trim()).filter(Boolean);
       }
     });
-    // Ensure attributes is not sent if empty (optional, depends on backend)
-    // if (Object.keys(payload.attributes).length === 0) delete payload.attributes;
-
 
     // Process Translations
     for (const langCode in formData.translations) {
       const trans = formData.translations[langCode];
-      const payloadTrans = {}; // Build translation object only with provided fields
+      const payloadTrans = {};
 
       if (trans.name?.trim()) payloadTrans.name = trans.name.trim();
       if (trans.description?.trim()) payloadTrans.description = trans.description.trim();
       if (trans.category?.trim()) payloadTrans.category = trans.category.trim();
 
-      // Process translated attributes for this language
       const transAttrPayload = { keys: {}, values: {} };
       if (trans.attributes) {
-        // Translated Keys
         if (trans.attributes.keys) {
           for (const baseKey in trans.attributes.keys) {
             const translatedKey = trans.attributes.keys[baseKey]?.trim();
-            // Include only if base key exists in payload.attributes and translation is not empty
             if (payload.attributes[baseKey] && translatedKey) {
               transAttrPayload.keys[baseKey] = translatedKey;
             }
           }
         }
-        // Translated Values
         if (trans.attributes.values) {
           for (const baseKey in trans.attributes.values) {
             const translatedValueString = trans.attributes.values[baseKey]?.trim();
-            // Include only if base key exists and translation is not empty
             if (payload.attributes[baseKey] && translatedValueString) {
               transAttrPayload.values[baseKey] = translatedValueString.split(',').map(v => v.trim()).filter(Boolean);
             }
@@ -627,27 +773,18 @@
         }
       }
 
-      // Add attributes to translation payload only if they contain data
       if (Object.keys(transAttrPayload.keys).length > 0 || Object.keys(transAttrPayload.values).length > 0) {
         if (Object.keys(transAttrPayload.keys).length === 0) delete transAttrPayload.keys;
         if (Object.keys(transAttrPayload.values).length === 0) delete transAttrPayload.values;
         payloadTrans.attributes = transAttrPayload;
       }
 
-      // Only add the language to payload if there's actual translated data
       if (Object.keys(payloadTrans).length > 0) {
         payload.translations[langCode] = payloadTrans;
       }
     }
-    // Remove translations object if it's empty
-    if (Object.keys(payload.translations).length === 0) {
-      delete payload.translations;
-    }
-    // Remove attributes object if it's empty
-    if (Object.keys(payload.attributes).length === 0) {
-      delete payload.attributes;
-    }
-
+    if (Object.keys(payload.translations).length === 0) delete payload.translations;
+    if (Object.keys(payload.attributes).length === 0) delete payload.attributes;
 
     console.log("Payload prepared:", JSON.stringify(payload, null, 2));
 
@@ -666,8 +803,7 @@
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: `HTTP error ${response.status}` }));
-        // Attempt to provide more specific feedback
-        if (errorData.errors) { // Mongoose validation error structure
+        if (errorData.errors) {
           const validationMessages = Object.values(errorData.errors).map(e => e.message).join(' ');
           throw new Error(`Validation Error: ${validationMessages}`);
         }
@@ -681,10 +817,13 @@
       successTitle.value = isEditing.value ? 'Product Updated!' : 'Product Added!';
       successMessage.value = `Product "${resultProduct.name}" (${resultProduct.productNumber || 'N/A'}) saved successfully.`;
 
-      // If editing, maybe just show success and stay? If adding, allow adding another.
+      // Reset upload states after successful save
+      // resetImageStates(); - Keep images visible after save
+
       if (isEditing.value) {
-        // Optionally refetch to confirm, or just show success
-        // fetchProductForEditing(formData._id);
+        // Re-fetch to show potentially updated data (like productNumber if it was generated on backend update?)
+        // Or just update necessary fields locally from resultProduct if needed.
+        // For now, just showing the success message is likely enough.
       }
 
     } catch (error) {
@@ -695,15 +834,20 @@
     }
   };
 
-
   // --- Lifecycle ---
   onMounted(() => {
     fetchCategories();
     if (productIdToEdit.value) {
       fetchProductForEditing(productIdToEdit.value);
     } else {
-      initializeTranslations(); // Ensure clean slate for adding
+      initializeTranslations();
+      resetImageStates(); // Ensure clean state for adding new
     }
+  });
+
+  // Clean up blob URLs when component is unmounted
+  onUnmounted(() => {
+    Object.values(localPreviews.value).forEach(URL.revokeObjectURL);
   });
 
 </script>
@@ -887,6 +1031,8 @@
     order: 2;
     position: sticky;
     top: calc(60px + 1.5rem);
+    max-height: calc(100vh - 60px - 3rem); /* Adjust based on header/padding */
+    overflow-y: auto;
   }
 
   .form-grid {
@@ -925,35 +1071,172 @@
     text-align: center;
   }
 
-  .attribute-row, .image-row {
+  .attribute-row {
     display: grid;
     gap: 0.75rem;
     margin-bottom: 0.75rem;
     align-items: center;
-  }
-
-  .attribute-row {
     grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) auto;
   }
 
-  .image-row {
-    grid-template-columns: 1fr auto;
-  }
-
-  .attribute-remove-btn, .image-remove-btn {
+  .attribute-remove-btn {
     padding: 0.6rem;
     line-height: 1;
     margin: 0;
   }
 
-  .add-attribute-btn, .add-image-btn {
+  .add-attribute-btn {
     width: auto;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
   }
 
-    .add-attribute-btn svg, .add-image-btn svg {
+    .add-attribute-btn svg {
+      margin-right: 0.4em;
+    }
+
+
+  /* --- Image Upload Styles --- */
+  .image-upload-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start; /* Align items to the top */
+    border-bottom: 1px dashed var(--border-color-light);
+    padding-bottom: 1.5rem;
+  }
+
+    .image-upload-row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+  .image-preview-area {
+    width: 120px;
+    height: 120px;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden; /* Clip image corners */
+    background-color: var(--bg-off-light);
+    flex-shrink: 0;
+  }
+
+  .image-preview-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .image-upload-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    transition: background-color 0.2s, color 0.2s;
+    text-align: center;
+    padding: 0.5rem;
+  }
+
+    .image-upload-trigger:hover {
+      background-color: var(--border-color-light);
+      color: var(--primary);
+    }
+
+    .image-upload-trigger svg {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .image-upload-trigger span {
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+  .image-status-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    backdrop-filter: blur(2px);
+  }
+
+    .image-status-overlay.uploading svg {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .image-status-overlay.error svg {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--secondary);
+    }
+
+    .image-status-overlay span {
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+  .image-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-grow: 1; /* Take remaining space */
+  }
+
+  .image-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .image-remove-btn {
+    padding: 0.5rem; /* Smaller padding */
+    line-height: 1;
+    margin: 0;
+    align-self: flex-start; /* Align button to the start */
+  }
+
+    .image-remove-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+  .upload-error-text {
+    font-size: 0.8rem;
+    color: var(--secondary);
+    margin-top: 0.25rem;
+  }
+
+
+  .add-image-btn {
+    width: auto;
+    margin-top: 1rem; /* Space above add button */
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+    .add-image-btn svg {
       margin-right: 0.4em;
     }
 
@@ -962,6 +1245,8 @@
     color: var(--text-muted);
     margin-top: 0.5rem;
   }
+  /* --- End Image Upload Styles --- */
+
 
   .form-actions {
     margin-top: 2rem;
@@ -995,6 +1280,7 @@
   .save-btn svg {
     margin-right: 0.4em;
   }
+
   /* Preview Panel */
   .preview-panel .panel-title {
     margin-bottom: 1rem;
@@ -1047,6 +1333,14 @@
     font-size: 1.5rem;
     margin-bottom: 0.25rem;
   }
+
+    .preview-placeholder.uploading-preview svg {
+      color: var(--primary);
+    }
+
+    .preview-placeholder.error-preview svg {
+      color: var(--secondary);
+    }
 
   .image-number {
     font-size: 0.75rem;
@@ -1155,6 +1449,8 @@
 
     .preview-panel {
       position: static;
+      max-height: none;
+      overflow-y: visible;
     }
   }
 
@@ -1164,12 +1460,31 @@
     }
 
     .attribute-row {
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr auto; /* Stack attribute inputs */
     }
 
-      .attribute-row input:last-of-type {
-        margin-top: 0.5rem;
+      .attribute-row input:nth-of-type(2) {
+        margin-top: 0.5rem; /* Add space between stacked inputs */
       }
+
+    .image-upload-row {
+      flex-direction: column; /* Stack preview and controls */
+      align-items: center; /* Center items when stacked */
+    }
+
+    .image-preview-area {
+      margin-bottom: 1rem;
+    }
+
+    .image-controls {
+      width: 100%;
+      align-items: center;
+      text-align: center;
+    }
+
+    .image-remove-btn {
+      align-self: center;
+    }
 
     .form-actions {
       justify-content: center;

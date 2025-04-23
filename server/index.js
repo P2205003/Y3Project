@@ -4,20 +4,27 @@ import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import MongoStore from 'connect-mongo';
-import 'dotenv/config'; // Load environment variables
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
 // Import Routes
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-import reviewRoutes from './routes/reviewRoutes.js'; // <--- Import new routes
+import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 // Import Middleware
 import { isAuthenticated } from './middleware/auth.js';
 
 const app = express();
+
+// --- Determine __dirname for static path ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors({
@@ -57,13 +64,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// --- Static File Serving ---
+// Serve files from 'public/uploads' directory at the '/uploads' URL path
+// This makes files in public/uploads/images accessible via http://yourserver.com/uploads/images/filename.jpg
+const publicUploadsPath = path.join(__dirname, '..', 'public', 'uploads');
+console.log(`Serving static files from ${publicUploadsPath} at /uploads`);
+app.use('/uploads', express.static(publicUploadsPath));
+
+// --- Routes ---
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // --- Example Protected Route --- (Keep existing)
 app.get('/api/protected', isAuthenticated, (req, res) => {

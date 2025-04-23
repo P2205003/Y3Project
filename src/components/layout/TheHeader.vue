@@ -54,12 +54,12 @@
                 <span>{{ t('header.account.myOrders') }}</span>
               </button>
             </router-link>
-            <router-link to="/account/profile" custom v-slot="{ navigate }">
+            <!-- router-link to="/account/profile" custom v-slot="{ navigate }">
               <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
                 <font-awesome-icon icon="user-cog" fixed-width />
                 <span>{{ t('header.account.myProfile') }}</span>
               </button>
-            </router-link>
+            <router-link -->
             <button class="dropdown-item logout-item" role="menuitem" @click="$emit('logout')">
               <font-awesome-icon icon="sign-out-alt" fixed-width />
               <span>{{ t('header.account.logout') }}</span>
