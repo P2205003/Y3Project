@@ -185,7 +185,9 @@
 
   // --- Methods ---
   const formatCurrency = (amount) => {
-    return Number(amount).toFixed(2);
+    // Ensure amount is a number before calling toFixed
+    const numAmount = Number(amount);
+    return isNaN(numAmount) ? '0.00' : numAmount.toFixed(2);
   };
 
   const formatDate = (dateString) => {
@@ -202,54 +204,83 @@
       'pending': 'Pending', 'shipped': 'Shipped', 'delivered': 'Delivered',
       'cancelled': 'Cancelled', 'hold': 'On Hold'
     };
-    return labels[status] || status;
+    return labels[status?.toLowerCase()] || status || 'Unknown'; // Added lowercase and fallback
   };
 
+  // --- UPDATED fetchDashboardData function ---
   const fetchDashboardData = async () => {
-    // --- Fetch Stats ---
+    // Reset states
     loadingStats.value = true;
+    loadingOrders.value = true;
     statsError.value = null;
-    try {
-      // --- Placeholder API call simulation ---
-      await new Promise(resolve => setTimeout(resolve, 600));
-      // Replace with actual API call: const statsResponse = await fetch('/api/admin/stats');
-      // if (!statsResponse.ok) throw new Error('Failed to load stats');
-      // stats.value = await statsResponse.json();
+    ordersError.value = null;
 
-      // --- Dummy Data for Stats ---
-      stats.value = {
-        totalOrders: 178,
-        totalRevenue: 14890.50,
-        activeProducts: 52,
-        totalUsers: 245
-      };
+    // --- Fetch Stats ---
+    try {
+      // --- ACTUAL API CALL for Stats ---
+      console.log('Fetching admin stats...'); // Debug log
+      const statsResponse = await fetch('/api/admin/stats', {
+        credentials: 'include' // Important for sending cookies/auth tokens
+      });
+
+      if (!statsResponse.ok) {
+        // Handle specific auth errors if possible
+        if (statsResponse.status === 401 || statsResponse.status === 403) {
+           console.error('Authorization error fetching stats:', statsResponse.status);
+           statsError.value = 'You are not authorized to view statistics.';
+           // Optionally redirect to login or show a more prominent error
+           // router.push('/login'); // Example redirect
+        } else {
+          throw new Error(`HTTP error ${statsResponse.status} while fetching stats`);
+        }
+      } else {
+        const statsData = await statsResponse.json();
+        console.log('Received stats data:', statsData); // Debug log
+        stats.value = statsData; // Assign fetched data
+      }
+
     } catch (error) {
       console.error('Error fetching stats:', error);
-      statsError.value = 'Could not load statistics.';
+      // Set error message only if it hasn't been set by specific status handling
+      if (!statsError.value) {
+          statsError.value = 'Could not load statistics. Please try again later.';
+      }
     } finally {
       loadingStats.value = false;
     }
 
     // --- Fetch Recent Orders ---
-    loadingOrders.value = true;
-    ordersError.value = null;
     try {
-      // --- Placeholder API call simulation ---
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Replace with actual API call: fetch('/api/orders/admin/all?limit=5&sort=purchaseDate:desc')
-      const ordersResponse = await fetch('/api/orders/admin/all?limit=5&sort=purchaseDate:desc', { credentials: 'include' });
-      if (!ordersResponse.ok) throw new Error('Failed to load recent orders');
-      const ordersData = await ordersResponse.json();
-      recentOrders.value = ordersData.orders || []; // Ensure it's an array
+      // --- ACTUAL API CALL for Recent Orders ---
+      console.log('Fetching recent orders...'); // Debug log
+      const ordersResponse = await fetch('/api/orders/admin/all?limit=5&sort=purchaseDate:desc', {
+        credentials: 'include' // Important for sending cookies/auth tokens
+      });
 
+      if (!ordersResponse.ok) {
+         if (ordersResponse.status === 401 || ordersResponse.status === 403) {
+           console.error('Authorization error fetching orders:', ordersResponse.status);
+           ordersError.value = 'You are not authorized to view orders.';
+         } else {
+          throw new Error(`HTTP error ${ordersResponse.status} while fetching recent orders`);
+         }
+      } else {
+        const ordersData = await ordersResponse.json();
+        console.log('Received orders data:', ordersData); // Debug log
+        // Ensure ordersData.orders is an array, even if the API returns null/undefined
+        recentOrders.value = Array.isArray(ordersData?.orders) ? ordersData.orders : [];
+      }
 
     } catch (error) {
       console.error('Error fetching recent orders:', error);
-      ordersError.value = 'Could not load recent orders.';
+       if (!ordersError.value) {
+          ordersError.value = 'Could not load recent orders. Please try again later.';
+       }
     } finally {
       loadingOrders.value = false;
     }
   };
+  // --- END OF UPDATED function ---
 
   // --- Lifecycle ---
   onMounted(() => {

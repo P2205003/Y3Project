@@ -12,6 +12,7 @@ import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js'; // <--- Import new routes
+import adminRoutes from './routes/adminRoutes.js';
 
 // Import Middleware
 import { isAuthenticated } from './middleware/auth.js';
@@ -61,7 +62,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api', reviewRoutes); // <--- Register new routes (prefix with /api)
+app.use('/api', reviewRoutes);
+app.use('/api/admin', adminRoutes);
 
 // --- Example Protected Route --- (Keep existing)
 app.get('/api/protected', isAuthenticated, (req, res) => {
