@@ -185,6 +185,120 @@ router.get('/categories', async (req, res) => {
   }
 });
 
+// *** NEW ROUTE: Get Top Categories by Product Count ***
+router.get('/categories/top', async (req, res) => {
+  try {
+    // Use the helper function to get the locale
+    const locale = getPreferredLanguage(req); // Gets 'en', 'zh', etc.
+    const defaultLang = 'en'; // Define default/base language
+
+    console.log(`Fetching top categories for locale: ${locale}`);
+
+    // Aggregation pipeline
+    const categoriesWithCounts = await Product.aggregate([
+      // 1. Filter for active products with a valid category
+      {
+        $match: {
+          enabled: true, // Only count categories from enabled products
+          category: { $exists: true, $ne: null, $ne: "" }
+        }
+      },
+      // 2. Group by the base category name
+      {
+        $group: {
+          _id: '$category', // The base category name (e.g., "Living Room")
+          count: { $sum: 1 },
+          // Attempt to get the translated category name for the specific locale
+          // If the locale is 'en' or the translation doesn't exist for a product in the group, this might be null/undefined
+          translatedName: { $first: `$translations.${locale}.category` }
+        }
+      },
+      // 3. Sort by product count descending
+      { $sort: { count: -1 } }
+      // 4. Optional: Limit the number of categories returned by the API itself
+      // { $limit: 10 } // Example: only process top 10
+    ]);
+
+    // 5. Map the results to the desired format, handling translation fallback
+    const results = categoriesWithCounts.map(item => {
+      const baseName = item._id;
+      // Use the translated name if locale is not default AND translatedName exists/is non-empty
+      // Otherwise, fallback to the base name (_id)
+      const displayName = (locale !== defaultLang && item.translatedName)
+        ? item.translatedName
+        : baseName;
+
+      return {
+        baseName: baseName,       // e.g., "Living Room" (for query param)
+        displayName: displayName, // e.g., "客厅" or "Living Room" (for display)
+        count: item.count         // Number of products
+      };
+    });
+
+    res.json(results);
+
+  } catch (error) {
+    console.error('Error fetching top categories:', error);
+    res.status(500).json({ message: 'Error fetching top categories' });
+  }
+});// *** NEW ROUTE: Get Top Categories by Product Count ***
+router.get('/categories/top', async (req, res) => {
+  try {
+    // Use the helper function to get the locale
+    const locale = getPreferredLanguage(req); // Gets 'en', 'zh', etc.
+    const defaultLang = 'en'; // Define default/base language
+
+    console.log(`Fetching top categories for locale: ${locale}`);
+
+    // Aggregation pipeline
+    const categoriesWithCounts = await Product.aggregate([
+      // 1. Filter for active products with a valid category
+      {
+        $match: {
+          enabled: true, // Only count categories from enabled products
+          category: { $exists: true, $ne: null, $ne: "" }
+        }
+      },
+      // 2. Group by the base category name
+      {
+        $group: {
+          _id: '$category', // The base category name (e.g., "Living Room")
+          count: { $sum: 1 },
+          // Attempt to get the translated category name for the specific locale
+          // If the locale is 'en' or the translation doesn't exist for a product in the group, this might be null/undefined
+          translatedName: { $first: `$translations.${locale}.category` }
+        }
+      },
+      // 3. Sort by product count descending
+      { $sort: { count: -1 } }
+      // 4. Optional: Limit the number of categories returned by the API itself
+      // { $limit: 10 } // Example: only process top 10
+    ]);
+
+    // 5. Map the results to the desired format, handling translation fallback
+    const results = categoriesWithCounts.map(item => {
+      const baseName = item._id;
+      // Use the translated name if locale is not default AND translatedName exists/is non-empty
+      // Otherwise, fallback to the base name (_id)
+      const displayName = (locale !== defaultLang && item.translatedName)
+        ? item.translatedName
+        : baseName;
+
+      return {
+        baseName: baseName,       // e.g., "Living Room" (for query param)
+        displayName: displayName, // e.g., "客厅" or "Living Room" (for display)
+        count: item.count         // Number of products
+      };
+    });
+
+    res.json(results);
+
+  } catch (error) {
+    console.error('Error fetching top categories:', error);
+    res.status(500).json({ message: 'Error fetching top categories' });
+  }
+});
+
 // --- Public GET routes (Apply translations) ---
 
 // GET / (List enabled products with pagination & translations)
@@ -234,7 +348,6 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 // GET /search (Apply translations)
 router.get('/search', async (req, res) => {

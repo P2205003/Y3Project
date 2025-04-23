@@ -121,14 +121,15 @@
       "removeAriaLabel": "Remove {name}",
       "confirmRemoveAriaLabel": "Confirm remove",
       "cancelRemoveAriaLabel": "Cancel remove",
-      "confirmRemoveYes": "Yes",
-      "confirmRemoveNo": "No"
+      "confirmRemoveYes": "Remove",
+      "confirmRemoveNo": "Cancel"
     },
     "emptyMessage": "Your cart is currently empty.",
     "summary": {
       "subtotal": "Subtotal:",
       "viewCart": "View Cart",
-      "checkout": "Checkout"
+      "checkout": "Checkout",
+      "loginToCheckout": "Log in to Checkout"
     }
   },
   "homeView": {
@@ -144,12 +145,10 @@
       "empty": "No featured products available at the moment."
     },
     "categories": {
-      "newArrivals": "New Arrivals",
-      "livingRoom": "Living Room",
-      "bedroom": "Bedroom",
-      "dining": "Dining",
-      "lighting": "Lighting",
-      "viewAll": "View All"
+      "loading": "Loading categories...",
+      "error": "Could not load categories.",
+      "noneFound": "No specific product categories found.",
+      "viewAll": "View All Products"
     },
     "philosophy": {
       "title": "Our Philosophy",
@@ -291,6 +290,10 @@
       "cancel": "Cancel",
       "markAsHelpfulTitle": "Mark as helpful",
       "undoHelpfulTitle": "Undo helpful vote"
+    },
+    "deleteButton": {
+      "confirmText": "Delete",
+      "cancelText": "Cancel"
     },
     "sellerResponse": {
       "title": "Response from Seller:"

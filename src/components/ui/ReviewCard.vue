@@ -6,7 +6,7 @@
         <StarRatingDisplay :rating="review.rating" class="review-card__stars" />
         <span class="review-card__author">{{ t('reviewCard.authorPrefix') }} {{ review.username || t('reviewCard.anonymous') }}</span>
         <span v-if="review.isVerifiedPurchase" class="review-card__verified" :title="t('reviewCard.verifiedPurchase')">
-          <font-awesome-icon icon="check" /> {{ t('reviewCard.verifiedPurchaseShort') }}
+          <font-awesome-icon icon="check" /> {{ t('reviewCard.verifiedPurchase') }}
         </span>
       </div>
 

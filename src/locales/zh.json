@@ -121,14 +121,15 @@
       "removeAriaLabel": "移除 {name}",
       "confirmRemoveAriaLabel": "确认移除",
       "cancelRemoveAriaLabel": "取消移除",
-      "confirmRemoveYes": "是",
-      "confirmRemoveNo": "否"
+      "confirmRemoveYes": "移除",
+      "confirmRemoveNo": "取消"
     },
     "emptyMessage": "您的购物车当前是空的。",
     "summary": {
       "subtotal": "小计:",
       "viewCart": "查看购物车",
-      "checkout": "去结算"
+      "checkout": "去结算",
+      "loginToCheckout": "请登录以结账"
     }
   },
   "homeView": {
@@ -144,11 +145,9 @@
       "empty": "当前暂无推荐产品。"
     },
     "categories": {
-      "newArrivals": "新品上市",
-      "livingRoom": "客厅",
-      "bedroom": "卧室",
-      "dining": "餐厅",
-      "lighting": "灯具",
+      "loading": "加载分类中...",
+      "error": "无法加载分类。",
+      "noneFound": "未找到指定的产品分类。",
       "viewAll": "查看全部"
     },
     "philosophy": {
@@ -291,6 +290,10 @@
       "cancel": "取消",
       "markAsHelpfulTitle": "标记为有帮助",
       "undoHelpfulTitle": "撤销“有帮助”"
+    },
+    "deleteButton": {
+      "confirmText": "删除",
+      "cancelText": "取消"
     },
     "sellerResponse": {
       "title": "卖家回复："

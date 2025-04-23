@@ -84,17 +84,36 @@
         <strong id="cart-subtotal-value">{{ formatCurrency(subtotal) }}</strong>
       </div>
       <div class="cart-actions">
-        <router-link to="/cart" class="button secondary-button" @click="$emit('close')">{{ t('cartPopup.summary.viewCart') }}</router-link>
-        <router-link to="/checkout" class="button primary-button" @click="$emit('close')">{{ t('cartPopup.summary.checkout') }}</router-link>
+        <!-- ======== MODIFIED SECTION START ======== -->
+        <!-- If Logged In: Show Checkout Link -->
+        <router-link v-if="isUserLoggedIn"
+                     to="/checkout"
+                     class="button primary-button checkout-btn"
+                     @click="$emit('close')">
+          {{ t('cartPopup.summary.checkout') }}
+        </router-link>
+        <!-- If Logged Out: Show Login Button -->
+        <button v-else
+                @click="handleLoginForCheckout"
+                class="button primary-button login-required-btn">
+          <!-- Optional: Add lock icon -->
+          <font-awesome-icon icon="lock" class="button-icon" />
+          {{ t('cartPopup.summary.loginToCheckout') }}
+        </button>
+        <!-- ======== MODIFIED SECTION END ======== -->
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-  import { ref, watch } from 'vue';
-  import { useI18n } from 'vue-i18n'; // Import useI18n
+  // --- Import `inject` and `computed` ---
+  import { ref, watch, inject, computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useRouter } from 'vue-router';
+  // --- Make sure FontAwesomeIcon is imported if you add the icon ---
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  // --- Ensure 'lock' icon is added in main.js or locally ---
 
   // Get translation function
   const { t } = useI18n();
@@ -114,82 +133,97 @@
   const emit = defineEmits(['close', 'update-quantity', 'remove-item']);
   const router = useRouter();
 
+  // --- Inject App Context ---
+  const appContext = inject('appContext', {
+    isLoggedIn: ref(false), // Default state if not provided
+    openAccountPopup: () => console.warn('openAccountPopup called before appContext provided')
+  });
+
+  // --- Computed property for login state ---
+  const isUserLoggedIn = computed(() => appContext?.isLoggedIn?.value ?? false);
+
   const MAX_QUANTITY = 99;
   const itemPendingRemovalKey = ref(null);
 
   // Generates a unique key for v-for based on product ID and attributes
   const getItemKey = (item) => {
-    // Ensure attributes is an object before stringifying
     const attrString = JSON.stringify(item.attributes && typeof item.attributes === 'object' ? item.attributes : {});
     return `${item.productId}_${attrString}`;
   };
 
-  // Formats currency (assumes USD for now)
+  // Formats currency
   const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
   });
   const formatCurrency = (amount) => {
-    // Handle potential non-numeric input gracefully
     return currencyFormatter.format(Number(amount) || 0);
   }
 
-
-  // Capitalizes the first letter of a string
+  // Capitalizes the first letter
   const capitalize = (s) => {
     if (typeof s !== 'string' || !s) return '';
-    // Improved capitalization to handle kebab-case or snake_case
     const formatted = s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ' '));
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
-
-  // Emits event to update quantity in parent (App.vue)
+  // Emits event to update quantity
   const updateQuantity = (item, change) => {
-    itemPendingRemovalKey.value = null; // Cancel any pending removal
+    itemPendingRemovalKey.value = null;
     emit('update-quantity', {
       productId: item.productId,
       change: change,
-      attributes: item.attributes || {} // Pass attributes for identification
+      attributes: item.attributes || {}
     });
   };
 
-  // Sets the item key that is pending removal confirmation
+  // Sets the item key pending removal
   const requestRemoveItem = (item) => {
     itemPendingRemovalKey.value = getItemKey(item);
   };
 
-  // Emits event to remove item after confirmation
+  // Emits event to remove item
   const confirmRemove = (item) => {
     if (itemPendingRemovalKey.value === getItemKey(item)) {
       emit('remove-item', {
         productId: item.productId,
-        attributes: item.attributes || {} // Pass attributes for identification
+        attributes: item.attributes || {}
       });
-      itemPendingRemovalKey.value = null; // Clear pending state
+      itemPendingRemovalKey.value = null;
     }
   };
 
-  // Cancels the removal request
+  // Cancels removal request
   const cancelRemove = () => {
     itemPendingRemovalKey.value = null;
   };
 
-  // Handles Escape key press to close the popup
+  // --- Function to handle clicking the "Log in to Checkout" button ---
+  const handleLoginForCheckout = () => {
+    console.log("Login required for checkout. Opening account popup.");
+    appContext?.openAccountPopup?.('login'); // Request login view
+    if (!appContext?.openAccountPopup) {
+      console.warn("App Context or openAccountPopup method not available.");
+    }
+    emit('close'); // Close the cart popup
+  };
+  // --- End new function ---
+
+  // Handles Escape key press
   const handleKeydown = (event) => {
     if (event.key === 'Escape' && props.isActive) {
       emit('close');
     }
   };
 
-  // Adds/removes Escape key listener based on popup visibility
+  // Adds/removes Escape key listener
   watch(() => props.isActive, (newValue) => {
     if (newValue) {
       document.addEventListener('keydown', handleKeydown);
-      itemPendingRemovalKey.value = null; // Reset pending removal on open
+      itemPendingRemovalKey.value = null;
     } else {
       document.removeEventListener('keydown', handleKeydown);
-      itemPendingRemovalKey.value = null; // Reset on close
+      itemPendingRemovalKey.value = null;
     }
   });
 
@@ -249,10 +283,21 @@
     display: block;
   }
 
-  .cart-actions .button {
-    flex-grow: 1;
-    text-align: center;
+  .cart-actions {
+    margin-top: 1rem; /* Added margin for separation */
+    display: flex; /* Use flex for single button alignment */
+    justify-content: center; /* Center the button */
   }
+
+    /* Ensure both buttons take full width within actions */
+    .cart-actions .button {
+      flex-grow: 1;
+      text-align: center;
+      display: inline-flex; /* Aligns icon and text */
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em; /* Space between icon and text */
+    }
 
   .quantity-btn:disabled {
     opacity: 0.5;
@@ -349,5 +394,11 @@
   .quantity-btn {
     padding: 0.3rem 0.6rem; /* Adjust padding */
     font-size: 1rem; /* Adjust size */
+  }
+
+  /* Optional: Style for the icon if added */
+  .button-icon {
+    font-size: 0.9em; /* Adjust icon size relative to text */
+    /* margin-right: 0.5em; /* Use gap in flex instead */
   }
 </style>
