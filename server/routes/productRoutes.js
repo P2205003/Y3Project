@@ -45,27 +45,48 @@ const validateProduct = (req, res, next) => {
 
 // --- Utility to apply translations ---
 // Takes the raw product data (object, from .lean()) and the target language code
+// --- Utility to apply translations ---
+// Takes the raw product data (object, from .lean()) and the target language code
 function applyTranslations(productData, lang) {
   if (!productData) return null; // Handle null input
 
-  // Start with a copy of the base product data
-  // Important: Ensure attributes is copied as a plain object
+  // --- Step 1: Create the base output object ---
+  // Start with essential fields and explicitly copy base attributes
   const output = {
-    ...productData,
-    attributes: productData.attributes ? { ...productData.attributes } : {} // Copy attributes
-  };
+    _id: productData._id,
+    name: productData.name,                   // Base name
+    description: productData.description,     // Base description
+    price: productData.price,
+    category: productData.category,           // Base category
+    enabled: productData.enabled,             // Keep enabled status
+    images: productData.images,
+    slug: productData.slug,
+    productNumber: productData.productNumber, // Keep product number
+    attributes: productData.attributes ? { ...productData.attributes } : {}, // *** Base attributes (plain object copy) ***
+    averageRating: productData.averageRating,
+    reviewCount: productData.reviewCount,
+    ratingDistribution: productData.ratingDistribution ? { ...productData.ratingDistribution } : {}, // Copy rating dist
+    createdAt: productData.createdAt,         // Keep timestamps if needed
+    updatedAt: productData.updatedAt,
 
-  // Check if translation is needed/possible
+    // --- Fields specifically useful for the frontend ---
+    // Explicitly add baseCategory and baseAttributes to the response object
+    // The frontend already expects 'baseCategory' and uses 'baseAttributes'
+    baseCategory: productData.category, // Store original base category name
+    baseAttributes: productData.attributes ? { ...productData.attributes } : {}, // Send base attributes separately
+  };
+  // Note: We DON'T include the raw `productData.translations` map in the final output.
+
+
+  // --- Step 2: Check if translation is needed/possible ---
   const needsTranslation = lang && lang !== 'en' && productData.translations && productData.translations[lang];
 
-  // If no translation needed or available, return the base object
+  // If no translation needed (e.g., lang is 'en' or no translation available), return the base output constructed above
   if (!needsTranslation) {
-    // Clean up: Remove raw translations map if present
-    delete output.translations;
     return output;
   }
 
-  // --- Apply Translations ---
+  // --- Step 3: Apply Translations (ONLY if needed and available) ---
   const translation = productData.translations[lang];
 
   // Translate direct fields if they exist in the translation
@@ -74,42 +95,52 @@ function applyTranslations(productData, lang) {
   if (translation.category) output.category = translation.category;
 
   // --- Translate Attributes ---
-  // Only proceed if both base attributes and translated attributes data exist
+  // Only proceed if translation provides attribute data AND base attributes exist
   if (translation.attributes && productData.attributes && typeof productData.attributes === 'object') {
-    const translatedAttributesOutput = {};
-    const baseAttributes = productData.attributes; // Already a plain object from .lean()
-    const translatedAttrKeys = translation.attributes.keys || {};   // Assume plain object
-    const translatedAttrValues = translation.attributes.values || {}; // Assume plain object
+    const translatedAttributesOutput = {}; // Start with an empty object for translated attributes
+    const baseAttributes = productData.attributes; // Base attributes (plain obj from lean)
+    const translatedAttrKeys = translation.attributes.keys || {};   // Map: baseKey -> translatedKey
+    const translatedAttrValues = translation.attributes.values || {}; // Map: baseKey -> [translatedValues]
 
-    // Iterate over BASE attributes
+    // Iterate over BASE attributes to ensure all are considered
     Object.entries(baseAttributes).forEach(([baseKey, baseValues]) => {
-      // 1. Get the translated KEY (fallback to base key)
+      // 1. Determine the key to use in the output (translated or base)
       const translatedKey = translatedAttrKeys[baseKey] || baseKey;
 
-      // 2. Get the translated VALUES array (fallback to base values array)
-      // Ensure baseValues is treated as an array if it's not (though schema defines it as such)
+      // 2. Determine the values to use in the output (translated or base)
       const defaultValues = Array.isArray(baseValues) ? baseValues : [baseValues].filter(Boolean);
-      let finalValues = translatedAttrValues[baseKey] || defaultValues;
+      let finalValues = defaultValues; // Start with base values as default
 
-      // Ensure final values are an array
+      // Check if translated values exist *specifically for this baseKey*
+      if (translatedAttrValues.hasOwnProperty(baseKey)) {
+        const potentialTranslated = translatedAttrValues[baseKey];
+        // Use the translated values ONLY if they are provided as a valid array
+        if (Array.isArray(potentialTranslated)) {
+          finalValues = potentialTranslated; // Use the translated array (it could be empty if translation intended to remove options)
+        }
+        // If translatedAttrValues[baseKey] exists but isn't an array, we ignore it and stick with defaultValues
+      }
+
+      // Ensure finalValues is always an array for consistency downstream
       if (!Array.isArray(finalValues)) {
         finalValues = [finalValues].filter(Boolean);
       }
 
-      // 3. Add to the output object using the translated key and values
-      if (finalValues.length > 0) { // Only add if there are values
+      // 3. Add to the output object using the translated key and determined values
+      // Add the attribute if it has values OR if it was explicitly present in the translation values map
+      // (This allows translations to result in an empty value array like `Color: []` if intended)
+      if (finalValues.length > 0 || translatedAttrValues.hasOwnProperty(baseKey)) {
         translatedAttributesOutput[translatedKey] = finalValues;
       }
     });
-    output.attributes = translatedAttributesOutput; // Replace original attributes with translated ones
-  } else {
-    // If no translated attributes, ensure output.attributes is still the plain object copy
-    output.attributes = productData.attributes ? { ...productData.attributes } : {};
+
+    // *** Replace the 'attributes' field in the output object with the translated version ***
+    output.attributes = translatedAttributesOutput;
   }
+  // If `translation.attributes` was missing, `output.attributes` remains the base version set in Step 1.
 
-  // --- Clean up ---
-  delete output.translations; // Remove the raw translations map from the output
 
+  // --- Step 4: Return the potentially modified output object ---
   return output;
 }
 
@@ -290,24 +321,32 @@ router.get('/:id', async (req, res) => {
   try {
     const lang = getPreferredLanguage(req); // Get preferred language
 
+    // Basic ID validation (keep existing checks)
+    if (req.params.id === 'admin' || req.params.id === 'categories' || req.params.id === 'search') {
+      // Handle these special cases or return 404 if they aren't actual routes handled elsewhere
+      console.warn(`Potential route conflict detected for ID: ${req.params.id}`);
+      return res.status(404).json({ message: 'Resource not found or invalid route' });
+    }
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      if (req.params.id === 'admin' || req.params.id === 'categories') { /* ... */ }
       return res.status(400).json({ message: 'Invalid product ID format' });
     }
 
-    // Fetch the product including translations and base attributes
+    // Fetch the product including translations map
     const productFromDB = await Product.findById(req.params.id)
-      .select('-__v') // Include all fields except __v
+      .select('-__v') // Select fields needed, including 'translations'
       .lean(); // Use lean() for plain object
 
     if (!productFromDB) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Apply translations (this modifies the copy)
+    // *** Apply translations using the REFINED function ***
     const translatedProduct = applyTranslations(productFromDB, lang);
 
-    res.json(translatedProduct); // Return the translated product document
+    // The frontend already expects 'baseAttributes' which is now included by applyTranslations
+    // console.log('Sending translatedProduct:', JSON.stringify(translatedProduct, null, 2)); // Optional: Log final output
+
+    res.json(translatedProduct); // Return the processed product document
 
   } catch (error) {
     console.error(`Error fetching product by ID ${req.params.id}:`, error);
