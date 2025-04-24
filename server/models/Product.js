@@ -61,33 +61,67 @@ const productSchema = new mongoose.Schema({
 // --- Keep Existing Static Methods (generateProductNumber, recalculateRating) ---
 // Ensure generateProductNumber logic handles potential concurrent requests if needed
 productSchema.statics.generateProductNumber = async function () {
+  // --- Calculate Date Prefix ---
   const date = new Date();
-  const year = date.getFullYear().toString().substr(-2);
-  const month = ('0' + (date.getMonth() + 1)).slice(-2);
-  const day = ('0' + date.getDate()).slice(-2);
-  const prefix = `PROD-${year}${month}${day}-`;
+  const year = date.getFullYear().toString().substr(-2); // e.g., '24'
+  const month = ('0' + (date.getMonth() + 1)).slice(-2); // e.g., '04' (Month is 0-indexed)
+  const day = ('0' + date.getDate()).slice(-2); // e.g., '25'
+  const prefix = `PROD-${year}${month}${day}-`; // e.g., 'PROD-240425-'
 
-  const latestProduct = await this.findOne({
-    productNumber: new RegExp(`^${prefix}`)
-  }).sort({ productNumber: -1 });
+  let latestProduct = null;
+  try {
+    // --- Find the most recent product added today ---
+    latestProduct = await this.findOne({
+      productNumber: new RegExp(`^${prefix}`) // Find products starting with today's prefix
+    })
+      .sort({ productNumber: -1 }); // Get the one with the highest number
 
-  let sequence = 1;
+  } catch (dbError) {
+    console.error("Database error fetching latest product number:", dbError);
+    // Rethrow or handle as critical failure, as sequence might be wrong
+    // For now, we'll log and let it potentially default/fallback below
+    // depending on whether latestProduct remains null.
+    // Consider throwing dbError; if sequence MUST be reliably incremented.
+  }
+
+  let sequence = 1; // Default sequence is 1 (for the first product of the day)
+
+  // --- Calculate Sequence ---
   if (latestProduct && latestProduct.productNumber) {
+    // If a product from today was found...
     try {
-      const latestSequence = parseInt(latestProduct.productNumber.split('-')[3]); // Adjusted index assuming format PROD-YYMMDD-NNNN
-      if (!isNaN(latestSequence)) {
-        sequence = latestSequence + 1;
+      // Extract the sequence part (NNNN) from 'PROD-YYMMDD-NNNN'
+      const latestSequenceStr = latestProduct.productNumber.split('-')[2]; // CORRECTED: Index 2
+
+      // Parse the sequence string into an integer
+      const latestSequence = parseInt(latestSequenceStr);
+
+      // Check if parsing was successful (split found something and parseInt returned a number)
+      if (latestSequenceStr !== undefined && !isNaN(latestSequence)) {
+        sequence = latestSequence + 1; // Increment the sequence
+      } else {
+        // Fallback if parsing failed (e.g., malformed number like 'PROD-YYMMDD-ABC')
+        console.warn(`Could not parse sequence number from: "${latestProduct.productNumber}". Falling back to count.`);
+        const countToday = await this.countDocuments({ productNumber: new RegExp(`^${prefix}`) });
+        sequence = countToday + 1; // Use count + 1 (might still collide if count is stale, but better than nothing)
       }
     } catch (e) {
-      console.warn("Could not parse sequence from product number:", latestProduct.productNumber);
-      // Attempt fallback or reset if parsing fails severely
+      // Fallback for any unexpected error during split/parseInt
+      console.error(`Error parsing sequence number from "${latestProduct.productNumber}":`, e);
       const countToday = await this.countDocuments({ productNumber: new RegExp(`^${prefix}`) });
-      sequence = countToday + 1;
+      sequence = countToday + 1; // Use count + 1 as fallback
     }
   }
-  return `${prefix}${('0000' + sequence).slice(-4)}`;
-};
+  // If no product was found for today (latestProduct is null), sequence remains 1.
 
+  // --- Format the final product number ---
+  const finalProductNumber = `${prefix}${('0000' + sequence).slice(-4)}`; // Pad sequence with leading zeros (e.g., 1 -> '0001')
+
+  // --- Log the result (using optional chaining for safety) ---
+  console.log(`[generateProductNumber] Prefix: ${prefix}, LatestFound: ${latestProduct?.productNumber}, CalculatedSequence: ${sequence}, FinalNumber: ${finalProductNumber}`);
+
+  return finalProductNumber;
+};
 
 // Ensure recalculateRating handles potential errors and edge cases
 productSchema.statics.recalculateRating = async function (productId) {
