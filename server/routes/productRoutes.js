@@ -474,108 +474,135 @@ router.get('/:id', async (req, res) => {
 
 // POST / (Add NEW product - Accept translations)
 router.post('/', isAuthenticated, isAdmin, validateProduct, async (req, res) => {
-  try {
-    let slug = slugify(req.body.name);
-    // Ensure slug uniqueness
-    if (slug) {
-      let counter = 1;
-      const baseSlug = slug;
-      while (await Product.findOne({ slug })) {
-        slug = `${baseSlug}-${counter++}`;
+  const MAX_RETRIES = 3; // Set a reasonable limit for retries
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // --- Generate Slug (can often stay outside the retry loop if unique check is robust) ---
+      let slug = slugify(req.body.name);
+      if (slug) {
+        let counter = 1;
+        const baseSlug = slug;
+        // This loop tries to ensure slug uniqueness *before* attempting save
+        while (await Product.findOne({ slug })) {
+          slug = `${baseSlug}-${counter++}`;
+        }
+      } else {
+        slug = `product-${Date.now()}`; // Fallback slug
       }
-    } else {
-      slug = `product-${Date.now()}`;
-    }
 
-    const productNumber = await Product.generateProductNumber(); // Ensure this method exists and works
+      // --- Generate Product Number (INSIDE the retry loop) ---
+      // This needs to be regenerated on each attempt in case the first attempt failed due to a collision
+      const productNumber = await Product.generateProductNumber();
 
-    // Prepare product data from request body
-    const productData = {
-      name: req.body.name,
-      price: req.body.price,
-      description: req.body.description || '',
-      category: req.body.category || '',
-      images: req.body.images || [],
-      enabled: req.body.enabled !== undefined ? req.body.enabled : true,
-      productNumber,
-      slug,
-      attributes: new Map(), // Initialize as Map
-      translations: new Map(), // Initialize as Map
-      averageRating: 0,
-      reviewCount: 0,
-      ratingDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
-    };
+      // --- Prepare Product Data (INSIDE the retry loop) ---
+      const productData = {
+        name: req.body.name,
+        price: req.body.price,
+        description: req.body.description || '',
+        category: req.body.category || '',
+        images: req.body.images || [],
+        enabled: req.body.enabled !== undefined ? req.body.enabled : true,
+        productNumber, // Use the number generated in *this* attempt
+        slug,          // Use the unique slug generated earlier
+        attributes: new Map(),
+        translations: new Map(),
+        averageRating: 0,
+        reviewCount: 0,
+        ratingDistribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
+      };
 
-    // Process base attributes (expecting { key: string, value: string[] } object from frontend form)
-    if (req.body.attributes && typeof req.body.attributes === 'object') {
-      for (const [key, value] of Object.entries(req.body.attributes)) {
-        // Ensure value is an array of strings and key is not empty
-        if (key && Array.isArray(value) && value.every(v => typeof v === 'string') && value.length > 0) {
-          productData.attributes.set(key.trim(), value.map(v => v.trim()).filter(Boolean));
+      // --- Process Base Attributes (INSIDE the retry loop) ---
+      if (req.body.attributes && typeof req.body.attributes === 'object') {
+        for (const [key, value] of Object.entries(req.body.attributes)) {
+          if (key && Array.isArray(value) && value.every(v => typeof v === 'string') && value.length > 0) {
+            productData.attributes.set(key.trim(), value.map(v => v.trim()).filter(Boolean));
+          }
         }
       }
-    }
 
-    // Process translations (expecting { langCode: { name, description, category, attributes: { keys: {}, values: {} } } })
-    if (req.body.translations && typeof req.body.translations === 'object') {
-      for (const [langCode, transData] of Object.entries(req.body.translations)) {
-        // Basic validation: check if langCode is supported (optional but recommended)
-        // if (!['en', 'zh'].includes(langCode)) continue; // Example validation
+      // --- Process Translations (INSIDE the retry loop) ---
+      if (req.body.translations && typeof req.body.translations === 'object') {
+        for (const [langCode, transData] of Object.entries(req.body.translations)) {
+          const translationEntry = {};
+          if (transData.name) translationEntry.name = transData.name.trim();
+          if (transData.description) translationEntry.description = transData.description.trim();
+          if (transData.category) translationEntry.category = transData.category.trim();
 
-        const translationEntry = {}; // Build entry dynamically
-        if (transData.name) translationEntry.name = transData.name.trim();
-        if (transData.description) translationEntry.description = transData.description.trim();
-        if (transData.category) translationEntry.category = transData.category.trim();
-
-        // Process translated attributes within the translation entry
-        if (transData.attributes) {
-          const attributesSubDoc = { keys: new Map(), values: new Map() };
-          // Translated Keys (maps baseKey -> translatedKey)
-          if (transData.attributes.keys && typeof transData.attributes.keys === 'object') {
-            for (const [baseKey, translatedKey] of Object.entries(transData.attributes.keys)) {
-              // Ensure baseKey exists in the base attributes and translatedKey is a non-empty string
-              if (baseKey && translatedKey && typeof translatedKey === 'string' && productData.attributes.has(baseKey)) {
-                attributesSubDoc.keys.set(baseKey.trim(), translatedKey.trim());
+          if (transData.attributes) {
+            const attributesSubDoc = { keys: new Map(), values: new Map() };
+            // Translated Keys
+            if (transData.attributes.keys && typeof transData.attributes.keys === 'object') {
+              for (const [baseKey, translatedKey] of Object.entries(transData.attributes.keys)) {
+                // Ensure baseKey exists before adding translated key
+                if (baseKey && translatedKey && typeof translatedKey === 'string' && productData.attributes.has(baseKey.trim())) {
+                  attributesSubDoc.keys.set(baseKey.trim(), translatedKey.trim());
+                }
               }
             }
-          }
-          // Translated Values (maps baseKey -> array of translatedValue strings)
-          if (transData.attributes.values && typeof transData.attributes.values === 'object') {
-            for (const [baseKey, translatedValues] of Object.entries(transData.attributes.values)) {
-              // Ensure it's a non-empty array of strings and base key exists
-              if (baseKey && productData.attributes.has(baseKey) && Array.isArray(translatedValues) && translatedValues.every(v => typeof v === 'string') && translatedValues.length > 0) {
-                attributesSubDoc.values.set(baseKey.trim(), translatedValues.map(v => v.trim()).filter(Boolean));
+            // Translated Values
+            if (transData.attributes.values && typeof transData.attributes.values === 'object') {
+              for (const [baseKey, translatedValues] of Object.entries(transData.attributes.values)) {
+                // Ensure baseKey exists and values are valid before adding
+                if (baseKey && productData.attributes.has(baseKey.trim()) && Array.isArray(translatedValues) && translatedValues.every(v => typeof v === 'string') && translatedValues.length > 0) {
+                  attributesSubDoc.values.set(baseKey.trim(), translatedValues.map(v => v.trim()).filter(Boolean));
+                }
               }
             }
+            // Add attributes sub-doc only if it has data
+            if (attributesSubDoc.keys.size > 0 || attributesSubDoc.values.size > 0) {
+              translationEntry.attributes = attributesSubDoc;
+            }
           }
-          // Add attributes sub-document only if it has data
-          if (attributesSubDoc.keys.size > 0 || attributesSubDoc.values.size > 0) {
-            // Clean up empty maps before saving if needed (Mongoose should handle this)
-            // if (attributesSubDoc.keys.size === 0) delete attributesSubDoc.keys; // Optional cleanup
-            // if (attributesSubDoc.values.size === 0) delete attributesSubDoc.values;
-            translationEntry.attributes = attributesSubDoc;
+          // Only add translation if there's something translated
+          if (Object.keys(translationEntry).length > 0) {
+            productData.translations.set(langCode, translationEntry);
           }
-        }
-
-        // Only add translation if there's something translated
-        if (Object.keys(translationEntry).length > 0) {
-          productData.translations.set(langCode, translationEntry);
         }
       }
+
+      // --- Create and Save (INSIDE the retry loop) ---
+      const product = new Product(productData);
+      const newProduct = await product.save(); // Attempt to save to DB
+
+      // --- Success ---
+      return res.status(201).json(newProduct); // If save succeeds, return response and exit
+
+    } catch (error) {
+      // --- Check for the SPECIFIC duplicate key error on productNumber ---
+      if (error.code === 11000 && error.keyPattern && error.keyPattern.productNumber === 1) {
+        console.warn(`Attempt ${attempt}: Duplicate productNumber (${error.keyValue.productNumber}) detected. Retrying...`);
+        if (attempt === MAX_RETRIES) {
+          console.error("Max retries reached for product creation due to duplicate productNumber.");
+          // Give up after max retries and return an error
+          return res.status(500).json({ message: 'Failed to create product after multiple attempts due to product number conflict. Please try again later.' });
+        }
+        // Optional small delay before retrying to potentially allow other operations to complete
+        // await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+        // Loop will continue to the next attempt
+      }
+      // --- Handle potential slug duplicate error (though the while loop should minimize this) ---
+      else if (error.code === 11000 && error.keyPattern && error.keyPattern.slug === 1) {
+        console.error("Error creating product: Duplicate slug detected after check.", error.keyValue);
+        // Don't retry for slug issues, it means the initial check failed somehow or another race condition happened.
+        return res.status(409).json({ // 409 Conflict is appropriate
+          message: `Failed to create product: Slug "${error.keyValue.slug}" already exists. Try a different product name or manually adjust the slug.`,
+          field: 'slug'
+        });
+      }
+      // --- Handle Mongoose Validation Errors ---
+      else if (error.name === 'ValidationError') {
+        console.error("Validation Error creating product:", error.errors);
+        // Don't retry validation errors, return 400
+        return res.status(400).json({ message: 'Validation failed', errors: error.errors });
+      }
+      // --- Handle any other unexpected errors ---
+      else {
+        console.error(`Error creating product on attempt ${attempt}:`, error);
+        // Don't retry unknown errors, return 500
+        return res.status(500).json({ message: error.message || 'Error creating product' });
+      }
     }
-    // Mongoose handles empty Maps correctly, no need to delete if size is 0 before saving
-
-    const product = new Product(productData);
-    const newProduct = await product.save();
-
-    res.status(201).json(newProduct); // Return the newly created product (raw data)
-
-  } catch (error) {
-    // ... (existing error handling) ...
-    if (error.code === 11000) { /* ... */ }
-    else if (error.name === 'ValidationError') { /* ... */ }
-    console.error("Error creating product:", error);
-    res.status(500).json({ message: error.message || 'Error creating product' });
   }
 });
 
