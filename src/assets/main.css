@@ -3257,6 +3257,7 @@ footer .social-links svg {
         border-color: var(--primary);
         background-color: var(--primary);
         color: var(--white);
+        background-image: none;
     }
 
     .swatch-button:hover:not(.active) {
