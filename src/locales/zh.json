@@ -31,6 +31,7 @@
     "account": {
       "menuAriaLabel": "我的账户菜单",
       "greeting": "您好, {name}",
+      "greetingShort": "你好, {name}",
       "myOrders": "我的订单",
       "myProfile": "我的资料",
       "logout": "登出",
