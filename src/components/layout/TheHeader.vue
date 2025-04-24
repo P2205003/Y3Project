@@ -1,4 +1,3 @@
-<!-- src/components/layout/TheHeader.vue -->
 <template>
   <header id="header" :class="{ scrolled: isScrolled }">
     <router-link to="/" class="logo">{{ t('appName') }}</router-link>
@@ -9,7 +8,10 @@
         <li><router-link to="/">{{ t('header.home') }}</router-link></li>
         <li><router-link to="/products">{{ t('header.products') }}</router-link></li>
         <li v-if="isAdmin">
-          <router-link to="/admin" class="admin-link">{{ t('header.adminPanel') }}</router-link>
+          <router-link to="/admin" class="admin-link">
+            <font-awesome-icon icon="user-shield" />
+            <span>{{ t('header.adminPanel') }}</span>
+          </router-link>
         </li>
       </ul>
     </nav>
@@ -32,6 +34,17 @@
                ref="searchInputRef">
       </div>
 
+      <!-- Cart -->
+      <button id="cart-popup-trigger"
+              :title="t('header.cart.title')"
+              :aria-label="t('header.cart.ariaLabel')"
+              aria-haspopup="true"
+              :aria-expanded="false"
+              @click="$emit('toggleCart')">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M17,18C15.89,18 15,18.89 15,20A2,2 0 0,0 17,22A2,2 0 0,0 19,20C19,18.89 18.1,18 17,18M1,2V4H3L6.6,11.59L5.24,14.04C5.09,14.32 5,14.64 5,15A2,2 0 0,0 7,17H19V15H7.42A0.25,0.25 0 0,1 7.17,14.75L8.1,13H15.55C16.3,13 16.96,12.58 17.3,11.97L20.88,5.5C20.95,5.34 21,5.17 21,5A1,1 0 0,0 20,4H5.21L4.27,2M7,18C5.89,18 5,18.89 5,20A2,2 0 0,0 7,22A2,2 0 0,0 9,20C9,18.89 8.1,18 7,18Z"></path></svg>
+        <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
+      </button>
+
       <!-- Account Dropdown -->
       <div class="account-menu-container">
         <button id="account-dropdown-trigger"
@@ -45,7 +58,6 @@
           <!-- Logged In State -->
           <template v-if="isLoggedIn && currentUser">
             <div class="dropdown-item user-info" role="menuitem" aria-disabled="true">
-              <!-- Use interpolation for greeting -->
               <span>{{ t('header.account.greeting', { name: currentUser.fullName || currentUser.username }) }}</span>
             </div>
             <router-link :to="{ name: 'orders-history' }" custom v-slot="{ navigate }">
@@ -54,12 +66,6 @@
                 <span>{{ t('header.account.myOrders') }}</span>
               </button>
             </router-link>
-            <!-- router-link to="/account/profile" custom v-slot="{ navigate }">
-              <button class="dropdown-item" role="menuitem" @click="navigate(); $emit('toggleAccountDropdown', false)">
-                <font-awesome-icon icon="user-cog" fixed-width />
-                <span>{{ t('header.account.myProfile') }}</span>
-              </button>
-            <router-link -->
             <button class="dropdown-item logout-item" role="menuitem" @click="$emit('logout')">
               <font-awesome-icon icon="sign-out-alt" fixed-width />
               <span>{{ t('header.account.logout') }}</span>
@@ -79,18 +85,14 @@
         </div>
       </div>
 
-      <!-- Cart -->
-      <button id="cart-popup-trigger"
-              :title="t('header.cart.title')"
-              :aria-label="t('header.cart.ariaLabel')"
-              aria-haspopup="true"
-              :aria-expanded="false"
-              @click="$emit('toggleCart')">
-        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M17,18C15.89,18 15,18.89 15,20A2,2 0 0,0 17,22A2,2 0 0,0 19,20C19,18.89 18.1,18 17,18M1,2V4H3L6.6,11.59L5.24,14.04C5.09,14.32 5,14.64 5,15A2,2 0 0,0 7,17H19V15H7.42A0.25,0.25 0 0,1 7.17,14.75L8.1,13H15.55C16.3,13 16.96,12.58 17.3,11.97L20.88,5.5C20.95,5.34 21,5.17 21,5A1,1 0 0,0 20,4H5.21L4.27,2M7,18C5.89,18 5,18.89 5,20A2,2 0 0,0 7,22A2,2 0 0,0 9,20C9,18.89 8.1,18 7,18Z"></path></svg>
-        <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
-      </button>
+      <!-- Header Greeting -->
+      <transition name="greeting-fade-slide">
+        <span v-if="isLoggedIn && currentUser" class="header-greeting">
+          {{ t('header.account.greetingShort', { name: currentUser.fullName || currentUser.username }) }}
+        </span>
+      </transition>
 
-      <!-- Language Switcher **** -->
+      <!-- Language Switcher -->
       <LanguageSwitcher />
 
       <!-- Mobile Menu Toggle -->
@@ -106,16 +108,15 @@
 </template>
 
 <script setup>
+  // Script content remains the same
   import { ref, watch, nextTick, onMounted } from 'vue';
   import LanguageSwitcher from '../ui/LanguageSwitcher.vue';
-  import { useI18n } from 'vue-i18n'; // <-- Import useI18n
+  import { useI18n } from 'vue-i18n';
   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
   import { useRouter, useRoute } from 'vue-router';
 
-  // --- Get the translation function ---
   const { t } = useI18n();
 
-  // --- Props definition ---
   const props = defineProps({
     isScrolled: Boolean,
     isMobileMenuActive: Boolean,
@@ -135,7 +136,6 @@
     }
   });
 
-  // --- Emits definition ---
   const emit = defineEmits([
     'toggleMenu',
     'toggleSearch',
@@ -145,7 +145,6 @@
     'logout'
   ]);
 
-  // --- Reactive state ---
   const searchInputRef = ref(null);
   const searchQuery = ref('');
   const isAdmin = ref(false);
@@ -153,18 +152,14 @@
   const router = useRouter();
   const route = useRoute();
 
-  // --- **MOVE FUNCTION DEFINITION HERE** ---
   const checkAdminStatus = async () => {
     if (props.isLoggedIn) {
-      console.log('Checking admin status...');
       try {
         const response = await fetch('/api/users/check-admin', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           isAdmin.value = data.isAdmin;
-          console.log('Admin status:', isAdmin.value);
         } else {
-          console.warn('Failed to check admin status, assuming not admin.');
           isAdmin.value = false;
         }
       } catch (error) {
@@ -176,7 +171,6 @@
     }
   };
 
-  // --- Watchers ---
   watch(() => props.isSearchActive, (newValue) => {
     if (newValue) {
       nextTick(() => {
@@ -185,8 +179,6 @@
     }
   });
 
-  // --- Watch login status to re-check admin status ---
-  // Now this watch can safely call checkAdminStatus
   watch(() => props.isLoggedIn, (newValue) => {
     checkAdminStatus();
   }, { immediate: true });
@@ -197,38 +189,94 @@
     }
   });
 
-  // --- Methods ---
   const handleSearch = () => {
     const query = {};
     const searchTerm = searchQuery.value.trim();
     if (searchTerm) {
       query.q = searchTerm;
     }
-    console.log(`Navigating to search with query:`, query);
     router.push({ name: 'products', query });
   };
 
-  // --- Lifecycle Hooks ---
   onMounted(() => {
     if (route.name === 'products' && route.query.q) {
       searchQuery.value = route.query.q;
     }
-    // checkAdminStatus() is already called by the immediate watcher
   });
-
 </script>
 
 <style scoped>
   .header-actions {
-    gap: 0.8rem; /* Maybe increase gap slightly */
+    gap: 0.8rem;
+    display: flex;
+    align-items: center;
   }
 
-  /* Optional: Add specific styles for the logged-in user info or logout item */
+  /* ****** UPDATED: Header Greeting Styles (Thin Rounded Border) ****** */
+  .header-greeting {
+    display: inline-block;
+    /* Subtle border */
+    border: 1px solid var(--border-color); /* Use standard border color */
+    border-radius: 20px; /* Keep the pill shape */
+    padding: 0.1rem 0.7rem; /* Minimal vertical, moderate horizontal padding */
+    background-color: transparent; /* No background */
+    /* Subtle text styling */
+    font-size: 0.85rem; /* Keep it slightly smaller */
+    font-weight: 500;
+    color: var(--text-muted);
+    line-height: 1.3; /* Adjust for vertical centering within padding */
+    /* Text handling */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    /* Alignment & Spacing */
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    transition: color 0.2s ease, border-color 0.2s ease; /* Added border transition */
+    cursor: default;
+  }
+
+  /* Optional: Slightly change border on header scroll if needed */
+  /* #header.scrolled .header-greeting {
+    border-color: #ccc;
+  } */
+
+  /* Hide on very small screens if needed */
+  @media (max-width: 420px) {
+    .header-greeting {
+      display: none;
+    }
+  }
+  /* ****** END: Header Greeting Styles ****** */
+
+
+  /* Greeting Animation Styles (No Change Needed) */
+  .greeting-fade-slide-enter-active,
+  .greeting-fade-slide-leave-active {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .greeting-fade-slide-enter-from,
+  .greeting-fade-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  .greeting-fade-slide-enter-to,
+  .greeting-fade-slide-leave-from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* --- Styles for Dropdown, Admin Link etc. (Keep previous version's styles) --- */
+
+  /* User Info in Dropdown */
   .dropdown-item.user-info {
     font-weight: 600;
     color: var(--text-dark);
-    cursor: default; /* Not clickable */
-    background-color: var(--bg-off-light); /* Subtle background */
+    cursor: default;
+    background-color: var(--bg-off-light);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 0.5rem;
     padding-top: 0.9rem;
@@ -239,16 +287,17 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 150px; /* Adjust as needed */
-      display: inline-block; /* Needed for text-overflow */
+      max-width: 150px;
+      display: inline-block;
       vertical-align: middle;
     }
 
     .dropdown-item.user-info:hover {
-      background-color: var(--bg-off-light); /* Don't change on hover */
+      background-color: var(--bg-off-light);
       color: var(--text-dark);
     }
 
+  /* Logout Item in Dropdown */
   .dropdown-item.logout-item {
     color: var(--secondary);
     border-top: 1px solid var(--border-color);
@@ -257,40 +306,40 @@
 
     .dropdown-item.logout-item:hover,
     .dropdown-item.logout-item:focus-visible {
-      background-color: #ffe8e8; /* Light red background on hover */
-      color: #c82333; /* Darker red text */
+      background-color: #ffe8e8;
+      color: #c82333;
       outline: none;
     }
 
       .dropdown-item.logout-item:hover .svg-inline--fa,
       .dropdown-item.logout-item:focus-visible .svg-inline--fa {
-        color: #c82333; /* Darker red icon */
+        color: #c82333;
       }
 
-  /* Ensure router-link items close dropdown */
+  /* General Dropdown Item */
   .dropdown-item {
-    display: flex; /* Use flex for alignment */
-    align-items: center; /* Vertically center icon and text */
-    gap: 0.8rem; /* Space between icon and text */
-    width: 100%; /* Ensure button takes full width */
-    text-align: left; /* Align text left */
-    background: none; /* Remove default button background */
-    border: none; /* Remove default button border */
-    padding: 0.8rem 1.2rem; /* Match existing padding */
-    font-size: 0.9rem; /* Match existing font size */
-    font-family: var(--font-body); /* Match existing font family */
-    color: var(--text-dark); /* Match existing color */
-    cursor: pointer; /* Ensure cursor indicates clickability */
-    white-space: nowrap; /* Prevent text wrapping */
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    cursor: pointer;
+    white-space: nowrap;
     transition: background-color var(--transition-fast), color var(--transition-fast);
   }
 
     .dropdown-item .svg-inline--fa {
-      width: 16px; /* Ensure fixed width for alignment */
-      text-align: center; /* Center icon if needed */
+      width: 16px;
+      text-align: center;
       color: var(--text-muted);
       transition: color var(--transition-fast);
-      flex-shrink: 0; /* Prevent icon from shrinking */
+      flex-shrink: 0;
     }
 
     .dropdown-item:hover,
@@ -305,13 +354,71 @@
         color: var(--primary);
       }
 
-  /* **NEW: Style for Admin Link in main nav** */
-  .admin-link {
-    font-weight: bold;
-    color: var(--primary-dark); /* Example: Make it stand out slightly */
+  /* Admin Link Style */
+  nav#main-nav ul li .admin-link {
+    background-color: rgba(254, 202, 87, 0.15);
+    color: #b58011;
+    border: 1px solid rgba(254, 202, 87, 0.4);
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    transition: all var(--transition-fast);
+    transform: none;
+    box-shadow: none;
   }
 
-    .admin-link:hover {
-      color: var(--primary);
+    nav#main-nav ul li .admin-link .svg-inline--fa {
+      font-size: 0.9em;
+      opacity: 0.9;
     }
+
+    nav#main-nav ul li .admin-link:hover,
+    nav#main-nav ul li .admin-link:focus-visible {
+      background-color: var(--accent);
+      color: var(--bg-dark);
+      border-color: var(--accent);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 4px 10px rgba(254, 202, 87, 0.3);
+      outline: none;
+    }
+
+      nav#main-nav ul li .admin-link:hover .svg-inline--fa,
+      nav#main-nav ul li .admin-link:focus-visible .svg-inline--fa {
+        color: var(--bg-dark);
+        opacity: 1;
+      }
+
+  /* Mobile Menu Adjustments for Admin Link */
+  @media (max-width: 1024px) {
+    nav#main-nav ul li .admin-link {
+      display: flex;
+      width: 100%;
+      padding: 0.8rem 0;
+      border-radius: 0;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 1.1rem;
+      box-shadow: none;
+      justify-content: flex-start;
+    }
+
+      nav#main-nav ul li .admin-link:hover,
+      nav#main-nav ul li .admin-link:focus-visible {
+        color: var(--primary);
+        background: none;
+        transform: translateX(5px);
+        box-shadow: none;
+      }
+
+        nav#main-nav ul li .admin-link:hover .svg-inline--fa,
+        nav#main-nav ul li .admin-link:focus-visible .svg-inline--fa {
+          color: var(--primary);
+        }
+  }
 </style>

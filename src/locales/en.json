@@ -30,7 +30,8 @@
     },
     "account": {
       "menuAriaLabel": "My Account Menu",
-      "greeting": "Hi, {name}",
+      "greeting": "Hello, {name}",
+      "greetingShort": "Hi, {name}",
       "myOrders": "My Orders",
       "myProfile": "My Profile",
       "logout": "Logout",
